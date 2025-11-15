@@ -6,7 +6,7 @@ import '../../utils/file_utils.dart';
 import '../../utils/video_uploader.dart';
 import '../../utils/video_player_utils.dart';
 import '../../providers/video_provider.dart';
-import '../../providers/tag_provider.dart';
+// import '../../providers/tag_provider.dart';
 import '../../models/video.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -167,8 +167,11 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
     return SingleChildScrollView(
       child: Column(
         children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: _playerUtils.getPlayerWidget(),
+          ),
           // 视频播放器
-          _playerUtils.getPlayerWidget(),
 
           // 文件信息
           if (_sourceFile != null)

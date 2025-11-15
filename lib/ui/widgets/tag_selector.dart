@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/tag_provider.dart';
-import '../../models/tag.dart';
+// import '../../models/tag.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class TagSelector extends StatefulWidget {

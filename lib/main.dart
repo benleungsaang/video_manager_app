@@ -8,10 +8,13 @@ import 'ui/pages/home_page.dart';
 import 'utils/file_utils.dart'; // 引入文件工具类
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // 确保添加这行
   // 初始化Hive数据库
   await HiveService.init();
 
-// 初始化时生成所有视频的缩略图（如果缺失）
+  runApp(const MyApp());
+
+  // 初始化时生成所有视频的缩略图（如果缺失）
   final videoProvider = VideoProvider();
   videoProvider.loadVideos();
   final videoPaths = videoProvider.videos
@@ -23,8 +26,6 @@ void main() async {
     // 重新加载视频列表（更新缩略图路径）
     videoProvider.loadVideos();
   }
-
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
