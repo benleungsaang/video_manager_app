@@ -1,3 +1,23 @@
+2025-11-16
+
+上传日常修改好的代码到GIT
+
+# 确认当前准备上传的代码
+git status 
+
+# 同意缓存代码
+git add .
+
+# 对当前上传文件做注释
+git commit -m "在家修改: 能正常运行基本功能的第一版"
+
+# 查看有哪些分支 
+git branch -a
+
+# 将本地的 master 上传到仓库的 main
+git push -u origin master:main
+
+
 1、前述代码调整了部分依赖配置：
   flutter_debounce: ^0.0.2
 主要用于防抖，即自动保存/自动触发搜索之类，不需要，并且库已被官方弃用，删除
@@ -34,7 +54,104 @@
 删除了 【 主页/上传页 】 上的上传状态显示
 针对简化本地复制逻辑，调整 【 video_uploader 】删除进度模拟
 
-先完成当前结构，后续应该在 【 上传页 】 中设置，选择视频后自动填写标题
+
+===============================================
+2025-11-17
+
+
+开始第二阶段基础功能开发：
+以dhttpd + shelf开发平板启动本地 HTTP 服务，支持内网Web 端访问并功能复用，平板端功能：
+◦ 状态控制：启动 / 停止服务器，按钮状态切换（绿色启动→红色停止）
+◦ 连接信息：显示内网 IP + 端口（默认 8080，可修改 1024-65535 范围）
+◦ 连接监控：显示当前连接设备数及设备类型（如 “2 台设备连接：电脑 1 台，手机 1 台”）
+3.2 Web 端访问逻辑
+◦ 访问方式：浏览器输入平板内网地址（如 http://192.168.1.105:8080）
+◦ 功能复用：Web 端通过 Flutter WebView 加载 APP 页面，复用所有 UI 组件与业务逻辑，VideoGrid等组件中添加响应式布局，适配不同设备屏幕尺寸
+◦ 视频播放兼容性：Web 端视频播放依赖浏览器支持，需确保video_player和chewie的 Web 实现正常工作
+◦ 数据交互：Web 端操作通过 HTTP 请求调用平板服务器接口，业务逻辑统一由平板处理，Web 端能访问本地文件系统，通过 HTTP 上传视频到平板
+◦ 跨域支持：服务器配置 CORS，允许内网所有设备访问
+◦ 添加 WebSocket 实时同步多设备同时操作的状态
+
+
+===============================================
+
+server_service.dart中补充了两个导入
+import 'package:flutter/foundation.dart';
+状态管理：通过ChangeNotifier实现状态变化通知（如服务器启停、连接数变化），方便 UI 层监听更新。
+
+import 'dart:io';
+用于Web端页面，静态资源服务
+final server = await serve 中的 serve
+
+
+===============================================
+
+web_access_page.dart补充了一个依赖
+import 'package:webview_flutter/webview_flutter.dart';
+之前没提及这个依赖要添加
+
+
+===============================================
+
+下一步要完善文件上传功能
+文件上传逻辑：/upload接口仅读取内容，未实现文件保存到本地的功能。
+
+Web 端视频播放适配和更详细的设备信息统计。
+
+
+===============================================
+
+要让 Web 端通过浏览器访问并复用平板端的web_access_page.dart相关 UI，需要执行Flutter Web 编译，将 Flutter 代码编译为 Web 端可运行的静态资源（HTML/CSS/JS），然后让本地 HTTP 服务器托管这些资源
+
+1. 确保 Flutter 项目支持 Web 平台
+# 在项目根目录执行
+flutter config --enable-web # 启用 Web 支持
+
+2. 编译 Flutter Web 静态资源
+将整个 Flutter 项目（包括web_access_page.dart等 UI 组件）编译为 Web 端可运行的文件
+
+flutter build web
+
+
+编译成功后，会在项目根目录生成 build/web 文件夹，包含以下核心文件：
+	index.html：Web 入口页面
+	main.dart.js：Flutter 代码编译后的 JS 文件
+	assets/：静态资源（图片、字体等）
+
+还需要将 Web 资源嵌入平板 APP 并正确读取路径
+
+
+
+===============================================
+
+1. 配置 pubspec.yaml，将 Web 资源纳入 APP 资源
+打开 pubspec.yaml，添加 build/web 目录到资源列表：
+
+flutter:
+  assets:
+    - build/web/
+    - build/web/assets/
+    - build/web/assets/fonts/
+
+flutter clean
+flutter build web
+
+
+Flutter 的最新变更从 3.19 后移除 AssetManifest.json
+改用 AssetManifest API 或 AssetManifest.bin
+需要需要调整资源复制逻辑以适配这一变化。
+
+API默认会复制assets下的packages文件夹
+但反而不会复制assets下的任何文件，包括根目录以及fonts等文件，需要显式在依赖中注明，有点奇怪
+
+
+
+
+
+
+
+
+
 
 
 

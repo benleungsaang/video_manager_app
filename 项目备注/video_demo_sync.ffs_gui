@@ -68,6 +68,7 @@
             <Item>\.git\</Item>
             <Item>\web\</Item>
             <Item>\项目备注\</Item>
+            <Item>*.log |</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

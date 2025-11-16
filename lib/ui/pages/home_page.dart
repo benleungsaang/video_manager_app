@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:video_manager_app/ui/pages/server_control_page.dart';
 import 'package:video_manager_app/utils/file_utils.dart';
 import '../widgets/video_grid.dart';
 import '../widgets/upload_button.dart';
@@ -36,6 +37,17 @@ class _HomePageState extends State<HomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const TagManagementPage(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.cloud),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ServerControlPage(),
                   ),
                 );
               },

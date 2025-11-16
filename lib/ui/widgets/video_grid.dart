@@ -15,11 +15,14 @@ class VideoGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 平板端使用2列网格
+    // 根据屏幕宽度决定列数
+    final screenWidth = MediaQuery.of(context).size.width;
+    int crossAxisCount = screenWidth > 800 ? 3 : 2; // 大屏幕3列，小屏幕2列
+
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, // 2列布局
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         childAspectRatio: 0.8, // 宽高比
