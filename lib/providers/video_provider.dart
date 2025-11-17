@@ -29,7 +29,7 @@ class VideoProvider with ChangeNotifier {
     await _repository.saveVideo(video);
     loadVideos(); // 重新加载列表
   }
-
+ 
   // 删除视频
   Future<void> deleteVideo(String id) async {
     await _repository.deleteVideo(id);

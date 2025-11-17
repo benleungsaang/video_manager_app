@@ -7,7 +7,7 @@ import 'file_utils.dart'; // 引入文件工具类
 
 class VideoUploader {
   // 本地视频复制处理（复制到APP目录）
-  static Future<void> copyToAppDirectory(
+  static Future<Video> copyToAppDirectory(
     File sourceFile,
     String title,
     List<String> tagIds,
@@ -39,14 +39,9 @@ class VideoUploader {
 
       // 保存视频信息
       await videoProvider.saveVideo(video);
+      return video;
     } catch (e) {
       throw Exception('文件复制失败: ${e.toString()}');
     }
   }
-
-  // 检查视频大小是否超过限制
-  // static bool checkVideoSizeLimit(File file, {int maxSizeGB = 10}) {
-  //   final maxSizeBytes = maxSizeGB * 1024 * 1024 * 1024;
-  //   return file.lengthSync() <= maxSizeBytes;
-  // }
 }

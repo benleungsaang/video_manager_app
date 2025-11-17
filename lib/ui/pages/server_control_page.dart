@@ -47,7 +47,8 @@ class _ServerControlPageState extends State<ServerControlPage> {
                     } else {
                       try {
                         final port = int.parse(_portController.text);
-                        await serverService.startServer(customPort: port);
+                        // await serverService.startServer(customPort: port);
+                        await serverService.startServer();
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(e.toString())),
