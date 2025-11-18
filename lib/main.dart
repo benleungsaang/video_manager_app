@@ -16,8 +16,10 @@ void main() async {
   runApp(const MyApp());
 
   // 初始化时生成所有视频的缩略图（如果缺失）
-  final videoProvider = VideoProvider();
-  videoProvider.loadVideos();
+  final tagProvider = TagProvider()..loadTags();
+  final videoProvider = VideoProvider()..loadVideos();
+  final serverService = ServerService();
+  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
   final videoPaths = videoProvider.videos
       .where((v) => v.thumbnailPath == null)
       .map((v) => v.filePath)

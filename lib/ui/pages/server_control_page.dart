@@ -132,9 +132,9 @@ class _ServerControlPageState extends State<ServerControlPage> {
                             fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     if (serverService.isRunning)
-                      Text('${serverService.connectionCount} 台设备连接: '
-                          '${_getDeviceSummary(serverService.clientDevices)}'),
-                    if (!serverService.isRunning) const Text('服务器未运行'),
+                      // Text('${serverService.connectionCount} 台设备连接: '
+                      //     '${_getDeviceSummary(serverService.clientDevices)}'),
+                      if (!serverService.isRunning) const Text('服务器未运行'),
                   ],
                 ),
               ],

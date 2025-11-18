@@ -5,7 +5,8 @@
         android:label="video_manager_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true" 
+        android:usesCleartextTraffic="true"
+        android:debuggable="true"
         >  <!-- android:usesCleartextTraffic="true"  允许HTTP访问 -->
         <activity
             android:name=".MainActivity"

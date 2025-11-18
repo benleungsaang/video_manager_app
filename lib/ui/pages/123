@@ -26,10 +26,10 @@ class _WebAccessPageState extends State<WebAccessPage> {
   late WebViewController _controller;
   // 存储JS调用的处理函数
   final Map<String, Function(List<dynamic>)> _jsHandlers = {};
-
   @override
   void initState() {
     super.initState();
+    _controller.webdebuggingEnabled = true; // 启用WebView调试
     // 初始化平台特定参数
     final params = _createPlatformParams();
 
@@ -45,6 +45,10 @@ class _WebAccessPageState extends State<WebAccessPage> {
           print('页面JS错误: ${message.message}');
         },
       )
+      ..addJavaScriptChannel('RESULT_CHANNEL', onMessageReceived: (message) {
+        print('JS 执行结果: ${message.message}');
+      })
+
       // 添加主通信通道
       ..addJavaScriptChannel(
         'FLUTTER_CHANNEL',
@@ -112,7 +116,11 @@ class _WebAccessPageState extends State<WebAccessPage> {
         window.addEventListener('unhandledrejection', function(e) {
           JS_ERROR_CHANNEL.postMessage('Promise错误: ' + e.reason);
         });
-      ''');
+      ''').then((_) {
+        print('JS 初始化代码执行完成'); // 确认 JS 代码已执行
+      }).catchError((error) {
+        print('JS 初始化失败: $error'); // 捕获 JS 执行错误
+      });
 
     // 配置平台特定功能
     _configurePlatformFeatures();
@@ -387,10 +395,14 @@ class _WebAccessPageState extends State<WebAccessPage> {
   Widget build(BuildContext context) {
     return Consumer<ServerService>(
       builder: (context, serverService, child) {
+        print('WebAccessPage 构建，服务器状态: ${serverService.isRunning}');
+        print('服务器本地IP: ${serverService.localIp}, 端口: ${serverService.port}');
         if (serverService.isRunning && serverService.localIp != null) {
+          final url = 'http://${serverService.localIp}:${serverService.port}';
+          print('开始加载 URL： $url');
           // 使用最新的loadRequest方法
           _controller.loadRequest(
-            Uri.parse('http://${serverService.localIp}:${serverService.port}'),
+            Uri.parse(url),
           );
         }
 
@@ -407,4 +419,8 @@ class _WebAccessPageState extends State<WebAccessPage> {
       },
     );
   }
+}
+
+extension on WebViewController {
+  set webdebuggingEnabled(bool webdebuggingEnabled) {}
 }

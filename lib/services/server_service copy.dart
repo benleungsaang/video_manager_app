@@ -161,66 +161,105 @@ class ServerService with ChangeNotifier {
     }
 
     await _getLocalIp();
-    final router = _createRouter();
 
-    // 1. 基础日志中间件
-    final logMiddleware = logRequests(
-      logger: (message, isError) {
-        if (isError) {
-          print('[错误 ERROR] $message');
-        } else {
-          print('[正常 INFO] $message');
-        }
-      },
-    );
+    final router = Router();
 
-    // 2. CORS跨域中间件
     final corsMiddleware = corsHeaders(
       headers: {
         ACCESS_CONTROL_ALLOW_ORIGIN: '*',
         ACCESS_CONTROL_ALLOW_METHODS: 'GET, POST, PUT, DELETE, OPTIONS',
-        ACCESS_CONTROL_ALLOW_HEADERS: 'Content-Type, Authorization',
-        ACCESS_CONTROL_MAX_AGE: '86400', // 24小时缓存预检请求
+        ACCESS_CONTROL_ALLOW_HEADERS: 'Content-Type',
       },
     );
 
-    // 3. 错误处理中间件
-    final errorHandlerMiddleware = createMiddleware(
-      errorHandler: (Object error, StackTrace stackTrace) {
-        print('服务器错误: $error\n$stackTrace');
-        return Response.internalServerError(
-          body: json.encode({
-            'error': '服务器内部错误',
-            'message': kReleaseMode ? null : error.toString(),
-          }),
-          headers: {'Content-Type': 'application/json'},
-        );
-      },
+    // WebSocket连接处理（增强版）
+    router.get(
+      '/ws',
+      webSocketHandler((WebSocketChannel channel, Request request) {
+        print('检测到WebSocket连接请求，开始处理');
+        String? clientId;
+        final deviceType = _getDeviceType(request.headers['user-agent']);
+
+        // 生成临时ID，直到客户端发送身份验证
+        final tempId = 'temp_${DateTime.now().microsecondsSinceEpoch}';
+        // print(
+        // '新客户端临时连接: temp_${DateTime.now().microsecondsSinceEpoch}, 设备类型: $deviceType');
+        _connectedClients[tempId] = channel;
+        _clientDevices[tempId] = deviceType;
+
+        _broadcastConnectionStatus();
+
+        // 向客户端发送连接成功消息
+        final welcomeMessage = WebSocketMessage(
+            type: MessageType.acknowledge.toString().split('.').last,
+            data: {'message': '连接成功，请发送身份信息', 'tempId': tempId});
+        channel.sink.add(json.encode(welcomeMessage.toJson()));
+
+        // 监听客户端消息
+        final subscription = channel.stream.listen((message) {
+          try {
+            // 处理消息
+            _handleClientMessage(message, channel, tempId, (String newId) {
+              clientId = newId;
+            });
+          } catch (e) {
+            print('处理消息错误: $e');
+            final errorMsg = WebSocketMessage(
+                type: MessageType.error.toString().split('.').last,
+                clientId: clientId ?? tempId,
+                data: {'message': '消息处理错误: ${e.toString()}'});
+            channel.sink.add(json.encode(errorMsg.toJson()));
+          }
+        }, onDone: () {
+          // 客户端断开连接
+          final removedId = clientId ?? tempId;
+          _connectedClients.remove(removedId);
+          _clientDevices.remove(removedId);
+          print('客户端断开连接: $removedId');
+          _broadcastConnectionStatus();
+        }, onError: (error) {
+          print('WebSocket错误: $error');
+          final errorId = clientId ?? tempId;
+          final errorMsg = WebSocketMessage(
+              type: MessageType.error.toString().split('.').last,
+              clientId: errorId,
+              data: {'message': '连接错误: ${error.toString()}'});
+          channel.sink.add(json.encode(errorMsg.toJson()));
+        });
+
+        // 处理连接关闭
+        channel.sink.done.then((_) {
+          subscription.cancel();
+        });
+      }),
     );
 
-    // 4. 请求超时中间件
-    // final timeoutMiddleware = createMiddleware(
-    //   requestHandler: (Request request, PipelineHandler next) {
-    //     return next(request).timeout(
-    //       const Duration(seconds: 30),
-    //       onTimeout: () => Response(
-    //         HttpStatus.gatewayTimeout,
-    //         body: json.encode({'error': '请求超时'}),
-    //         headers: {'Content-Type': 'application/json'},
-    //       ),
-    //     );
-    //   },
-    // );
+    // 文件上传接口
+    router.post('/upload', (Request request) async {
+      return Response.ok('上传成功');
+    });
 
-    // 组合中间件
-    final middlewarePipeline = Pipeline()
-        .addMiddleware(logMiddleware)
-        .addMiddleware(corsMiddleware)
-        .addMiddleware(errorHandlerMiddleware);
-    // .addMiddleware(timeoutMiddleware);
+    // 配置静态资源服务
+    final tempDir = await getTemporaryDirectory();
+    final webAssetsDir = Directory('${tempDir.path}/web');
+
+    if (!await webAssetsDir.exists()) {
+      await _copyWebAssets();
+    }
+
+    final staticHandler = createStaticHandler(
+      webAssetsDir.path,
+      defaultDocument: 'index.html',
+      listDirectories: false,
+    );
+
+    router.all('/<path|.*>', staticHandler);
 
     _server = await serve(
-      middlewarePipeline.addHandler(router.call),
+      const Pipeline()
+          .addMiddleware(logRequests())
+          .addMiddleware(corsMiddleware)
+          .addHandler(router.call),
       InternetAddress.anyIPv4,
       _port,
     );
@@ -228,128 +267,6 @@ class ServerService with ChangeNotifier {
     _isRunning = true;
     notifyListeners();
     print('服务器启动于 http://${_localIp}:${_port}');
-  }
-
-  Router _createRouter() {
-    final router = Router();
-    // WebSocket连接处理
-    router.get('/ws', (Request request) {
-      print('检测到 WebSocket 请求 ${request.url} ${request.params}');
-      return webSocketHandler((WebSocketChannel channel) {
-        _handleWebSocketConnection(channel, request);
-      })(request);
-    });
-
-    // // 文件上传接口
-    router.post('/upload', _handleFileUpload);
-
-    // 配置静态资源服务
-    router.all('/<path|.*>', _createStaticHandler());
-
-    return router;
-  }
-
-  // 提取WebSocket处理为独立方法
-  void _handleWebSocketConnection(WebSocketChannel channel, Request request) {
-    print('检测到WebSocket连接请求，开始处理');
-    String? clientId;
-    final deviceType = _getDeviceType(request.headers['user-agent']);
-
-    // 生成临时ID，直到客户端发送身份验证
-    final tempId = 'temp_${DateTime.now().microsecondsSinceEpoch}';
-    _connectedClients[tempId] = channel;
-    _clientDevices[tempId] = deviceType;
-    // 发送连接通知（使用正确的clientId）
-    _broadcastConnectionStatus();
-
-    // 向客户端发送连接成功消息
-    // final welcomeMessage = WebSocketMessage(
-    //     type: MessageType.acknowledge.toString().split('.').last,
-    //     data: {'message': '连接成功，请发送身份信息', 'tempId': tempId});
-    // channel.sink.add(json.encode(welcomeMessage.toJson()));
-
-    // 监听客户端消息
-    final subscription = channel.stream.listen(
-      (message) {
-        // try {
-        // 解析消息时添加类型检查
-        _handleClientMessage(message, channel, tempId, (String newId) {
-          clientId = newId;
-        });
-        //   _broadcastMessage(json.encode(
-        //       {'type': 'response', 'clientId': clientId, 'data': '处理成功'}));
-        // } catch (e) {
-        //   channel.sink.add(json.encode({
-        //     'type': 'error',
-        //     'data': {'message': e.toString()}
-        //   }));
-        // }
-      },
-      onDone: () {
-        _connectedClients.remove(channel);
-        _clientDevices.remove(clientId);
-        _broadcastConnectionStatus();
-      },
-    );
-
-    // 处理连接关闭
-    channel.sink.done.then((_) {
-      subscription.cancel();
-    });
-  }
-
-  // 提取静态资源处理器
-  Handler _createStaticHandler() {
-    return (Request request) async {
-      final tempDir = await getTemporaryDirectory();
-      final webAssetsDir = Directory('${tempDir.path}/web');
-      print('处理静态资源请求: ${request.url.path}');
-      print('静态资源目录: ${webAssetsDir.path}');
-
-      if (!await webAssetsDir.exists()) {
-        try {
-          await _copyWebAssets();
-        } catch (e) {
-          return Response.internalServerError(
-            body: json.encode({'error': '静态资源加载失败: ${e.toString()}'}),
-          );
-        }
-      }
-
-      return createStaticHandler(
-        webAssetsDir.path,
-        defaultDocument: 'index.html',
-        listDirectories: false,
-      )(request);
-    };
-  }
-
-  // 优化文件上传处理
-  Future<Response> _handleFileUpload(Request request) async {
-    try {
-      // 这里可以添加实际的文件上传处理逻辑
-      return Response.ok(json.encode({'status': '上传成功'}),
-          headers: {'Content-Type': 'application/json'});
-    } catch (e) {
-      return Response.badRequest(
-        body: json.encode({'error': '上传失败: ${e.toString()}'}),
-        headers: {'Content-Type': 'application/json'},
-      );
-    }
-  }
-
-  // 修复广播消息逻辑
-  void _broadcastMessage(dynamic message) {
-    for (final client in _connectedClients.values) {
-      try {
-        // 修复判断逻辑：只有当连接未关闭时才发送消息
-        if (client.closeCode == null) {
-          client.sink.add(message);
-        }
-      } catch (e) {
-        print('广播消息失败: $e');
-      }
-    }
   }
 
   Future<void> stopServer() async {
@@ -380,8 +297,8 @@ class ServerService with ChangeNotifier {
       String tempId, Function(String) setClientId) {
     try {
       // 解析消息
-      // print('收到原始消息: $message');
       Map<String, dynamic> messageJson;
+
       if (message is String) {
         messageJson = json.decode(message);
       } else if (message is List<int>) {
@@ -389,68 +306,59 @@ class ServerService with ChangeNotifier {
       } else {
         throw FormatException('不支持的消息格式');
       }
-      print('收到消息: $messageJson');
-      // final wsMessage = WebSocketMessage.fromJson(messageJson);
-      // print(
-      //     '解析后的消息对象: type=${wsMessage.type}, clientId=${wsMessage.clientId}, data=${wsMessage.data}');
+
+      final wsMessage = WebSocketMessage.fromJson(messageJson);
+
       // 处理身份验证消息（首次消息应该是身份验证）
-      // if (wsMessage.type == 'identify' && wsMessage.data is Map) {
-      //   final clientId = wsMessage.data['clientId'] as String?;
+      if (wsMessage.type == 'identify' && wsMessage.data is Map) {
+        final clientId = wsMessage.data['clientId'] as String?;
 
-      //   if (clientId == null || clientId.isEmpty) {
-      //     throw Exception('客户端ID不能为空');
-      //   }
+        if (clientId == null || clientId.isEmpty) {
+          throw Exception('客户端ID不能为空');
+        }
 
-      // // 检查客户端ID是否已存在
-      // if (_connectedClients.containsKey(clientId)) {
-      //   // 生成一个新的唯一ID
-      //   final newClientId =
-      //       '${clientId}_${DateTime.now().microsecondsSinceEpoch}';
-      //   final errorMsg = WebSocketMessage(
-      //       type: MessageType.error.toString().split('.').last,
-      //       data: {'message': 'ID已存在，已分配新ID', 'newClientId': newClientId});
-      //   channel.sink.add(json.encode(errorMsg.toJson()));
-      //   print('客户端ID冲突，分配新ID: $newClientId');
-      //   _updateClientId(tempId, newClientId, setClientId);
-      // } else {
-      //   // 使用客户端提供的ID
-      //   print('使用客户端提供的ID 创建用户: $clientId');
-      //   _updateClientId(tempId, clientId, setClientId);
-      // }
+        // 检查客户端ID是否已存在
+        if (_connectedClients.containsKey(clientId)) {
+          // 生成一个新的唯一ID
+          final newClientId =
+              '${clientId}_${DateTime.now().microsecondsSinceEpoch}';
+          final errorMsg = WebSocketMessage(
+              type: MessageType.error.toString().split('.').last,
+              data: {'message': 'ID已存在，已分配新ID', 'newClientId': newClientId});
+          channel.sink.add(json.encode(errorMsg.toJson()));
+          _updateClientId(tempId, newClientId, setClientId);
+        } else {
+          // 使用客户端提供的ID
+          _updateClientId(tempId, clientId, setClientId);
+        }
 
-      // 发送确认消息
-      // final ackMsg = WebSocketMessage(
-      //     type: MessageType.acknowledge.toString().split('.').last,
-      //     clientId: wsMessage.data['clientId'],
-      //     data: {'message': '身份验证成功'});
-      // channel.sink.add(json.encode(ackMsg.toJson()));
-      // return;
-      // }
+        // 发送确认消息
+        final ackMsg = WebSocketMessage(
+            type: MessageType.acknowledge.toString().split('.').last,
+            clientId: wsMessage.data['clientId'],
+            data: {'message': '身份验证成功'});
+        channel.sink.add(json.encode(ackMsg.toJson()));
+        return;
+      }
 
-      // // 验证客户端是否已认证
-      // if (wsMessage.clientId == null ||
-      //     !_connectedClients.containsKey(wsMessage.clientId)) {
-      //   throw Exception('未认证的客户端，请先发送身份信息');
-      // }
+      // 验证客户端是否已认证
+      if (wsMessage.clientId == null ||
+          !_connectedClients.containsKey(wsMessage.clientId)) {
+        throw Exception('未认证的客户端，请先发送身份信息');
+      }
 
       // 根据消息类型处理
-      // switch (wsMessage.type) {
-      //   // case 'chat':
-      //   //   _handleChatMessage(wsMessage);
-      //   //   break;
-      //   // case 'command':
-      //   //   _handleCommandMessage(wsMessage);
-      //   //   break;
-      //   case 'getVideos':
-      //     final response = _webApiHandler.handleRequest(wsMessage);
-      //     channel.sink.add(json.encode(response.toJson()));
-      //     break;
-      //   default:
-      //     // 未知消息类型，广播出去
-      //     _broadcastMessage(json.encode(wsMessage.toJson()));
-      // }
-      final response = _webApiHandler.handleRequest(message);
-      channel.sink.add(json.encode(response));
+      switch (wsMessage.type) {
+        case 'chat':
+          _handleChatMessage(wsMessage);
+          break;
+        case 'command':
+          _handleCommandMessage(wsMessage);
+          break;
+        default:
+          // 未知消息类型，广播出去
+          _broadcastMessage(json.encode(wsMessage.toJson()));
+      }
     } catch (e) {
       print('消息处理错误: $e');
       final errorMsg = WebSocketMessage(
@@ -463,8 +371,6 @@ class ServerService with ChangeNotifier {
   // 更新客户端ID（从临时ID到正式ID）
   void _updateClientId(
       String oldId, String newId, Function(String) setClientId) {
-    print('更新客户端ID: $oldId -> $newId');
-    print('当前连接的客户端: ${_connectedClients.keys.toList()}');
     if (_connectedClients.containsKey(oldId)) {
       final channel = _connectedClients[oldId]!;
       _connectedClients.remove(oldId);
@@ -545,18 +451,18 @@ class ServerService with ChangeNotifier {
   }
 
   // 广播消息给所有连接的客户端
-  // void _broadcastMessage(dynamic message) {
-  //   for (final client in _connectedClients.values) {
-  //     try {
-  //       if (client.closeCode == null) {
-  //         continue;
-  //       }
-  //       client.sink.add(message);
-  //     } catch (e) {
-  //       print('广播消息失败: $e');
-  //     }
-  //   }
-  // }
+  void _broadcastMessage(dynamic message) {
+    for (final client in _connectedClients.values) {
+      try {
+        if (client.closeCode == null) {
+          continue;
+        }
+        client.sink.add(message);
+      } catch (e) {
+        print('广播消息失败: $e');
+      }
+    }
+  }
 
   // 发送消息给特定客户端
   void _sendToClient(String clientId, dynamic message) {

@@ -1,38 +1,593 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频管理Web端 1.3</title>
+  <!-- 引入Tailwind CSS用于快速构建UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入Font Awesome图标库 -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="video_manager_app">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <!-- 配置Tailwind自定义颜色 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+          },
+        },
+      }
+    }
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  </script>
 
-  <title>video_manager_app</title>
-  <link rel="manifest" href="manifest.json">
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+      .upload-area {
+        border: 2px dashed #cbd5e1;
+        transition: all 0.3s ease;
+      }
+      .upload-area:hover {
+        border-color: #3b82f6;
+      }
+    }
+  </style>
 </head>
-<body>
-  <script src="flutter_bootstrap.js" async></script>
+<body class="bg-gray-50 min-h-screen">
+  <!-- 顶部导航栏 -->
+  <header class="bg-white shadow-md">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-primary">视频管理系统</h1>
+
+      <!-- 搜索框 -->
+      <div class="flex-1 max-w-md mx-8">
+        <div class="relative">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="搜索视频标题或标签..."
+            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+      </div>
+
+      <!-- 标签管理按钮 -->
+      <button id="tag-management-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition">
+        <i class="fa fa-tags mr-1"></i> 标签管理
+      </button>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <!-- 上传区域 -->
+    <div id="upload-area" class="upload-area rounded-xl p-8 mb-8 text-center cursor-pointer">
+      <input type="file" id="file-input" accept="video/*" class="hidden">
+      <i class="fa fa-cloud-upload text-5xl text-gray-400 mb-4"></i>
+      <h2 class="text-xl font-semibold text-gray-700 mb-2">拖放视频到此处上传</h2>
+      <p class="text-gray-500 mb-4">或点击选择视频文件</p>
+      <button id="upload-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+        选择视频
+      </button>
+    </div>
+
+    <!-- 标签筛选区域 -->
+    <div id="tag-filter" class="mb-6 flex flex-wrap gap-2">
+      <span class="text-gray-600 font-medium">筛选标签:</span>
+      <!-- 标签会通过JavaScript动态生成 -->
+    </div>
+
+    <!-- 视频列表区域 -->
+    <div id="video-grid" class="video-grid">
+      <!-- 视频卡片会通过JavaScript动态生成 -->
+      <div class="text-center text-gray-500 py-12">
+        <i class="fa fa-film text-4xl mb-4"></i>
+        <p>暂无视频，请上传视频文件</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- 标签管理模态框 -->
+  <div id="tag-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl w-full max-w-md p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">标签管理</h3>
+        <button id="close-tag-modal" class="text-gray-500 hover:text-gray-700">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- 添加新标签 -->
+      <div class="flex mb-6">
+        <input
+          type="text"
+          id="new-tag-input"
+          placeholder="输入新标签名称"
+          class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+        <button id="add-tag-btn" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90">
+          添加
+        </button>
+      </div>
+
+      <!-- 标签列表 -->
+      <div id="tag-list" class="max-h-60 overflow-y-auto mb-4">
+        <!-- 标签项会通过JavaScript动态生成 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    // 与Flutter原生通信的通道
+    const flutterChannel = {
+      // 记录连接状态的Promise
+      _connectionPromise: null,
+
+      // 初始化WebSocket连接
+      _initWebSocket() {
+        console.log('flutterChannel => 初始化WebSocket连接...');
+        if (this._connectionPromise) {
+          return this._connectionPromise;
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        this._ws = new WebSocket(wsUrl);
+
+         // 创建连接状态的Promise
+        this._connectionPromise = new Promise((resolve, reject) => {
+          this._ws.onopen = () => {
+            console.log(`当前网络地址: ${wsProtocol}//${window.location.host}/ws`)
+            console.log('WebSocket连接已建立');
+            resolve(); // 连接成功， resolve Promise
+          };
+          this._ws.onclose = () => {
+            console.log('WebSocket连接已关闭');
+            this._connectionPromise = null; // 重置连接状态
+          };
+          this._ws.onerror = (error) => {
+            console.error('WebSocket连接错误:', error);
+            reject(error); // 连接失败， reject Promise
+            this._connectionPromise = null;
+          };
+        });
+
+        return this._connectionPromise;
+      },
+
+      // 发送请求并等待响应（确保连接建立后再发送）
+      _sendRequest(action, params = {}) {
+        console.log(`flutterChannel => 发送请求: ${action}`, params);
+        console.log('WebSocket状态:', this._ws.readyState); // 1=OPEN，0=CONNECTING，2=CLOSING，3=CLOSED
+        return new Promise(async (resolve, reject) => {
+          try {
+            // 等待WebSocket连接完成（如果未连接或连接中）
+            if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
+              await this._initWebSocket(); // 等待连接成功
+            }
+
+            // 生成唯一ID用于匹配响应
+            const requestId = Date.now().toString();
+            const request = { id: requestId, action, params };
+
+            // 监听响应
+            const listener = (event) => {
+              console.log('收到WebSocket响应:', event.data); // 添加此行
+              const response = JSON.parse(event.data);
+              if (response.id === requestId) {
+                this._ws.removeEventListener('message', listener);
+                resolve(response);
+              }
+            };
+            this._ws.addEventListener('message', listener);
+
+            // 发送请求（此时连接已确保是OPEN状态）
+            console.log('flutterChannel => 发送请求:', JSON.stringify(request));
+            this._ws.send(JSON.stringify(request));
+          } catch (error) {
+            reject(error); // 捕获连接失败或发送失败的错误
+          }
+        });
+      },
+
+      // 标签相关接口
+      getTags: () => flutterChannel._sendRequest('getTags'),
+      addTag: (tagName) => flutterChannel._sendRequest('createTag', { name: tagName }),
+      deleteTag: (tagId) => flutterChannel._sendRequest('deleteTag', { id: tagId }),
+
+      // 视频相关接口
+      getVideos: () => flutterChannel._sendRequest('getVideos'),
+
+
+      
+      uploadVideo: (file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => {
+            const base64Data = reader.result.split(',')[1];
+            flutterChannel._sendRequest('uploadVideo', {
+              name: file.name,
+              base64Data: base64Data
+            }).then(resolve);
+          };
+        });
+      }
+    };
+
+    // DOM元素引用
+    const elements = {
+      uploadArea: document.getElementById('upload-area'),
+      fileInput: document.getElementById('file-input'),
+      uploadBtn: document.getElementById('upload-btn'),
+      videoGrid: document.getElementById('video-grid'),
+      searchInput: document.getElementById('search-input'),
+      tagFilter: document.getElementById('tag-filter'),
+      tagManagementBtn: document.getElementById('tag-management-btn'),
+      tagModal: document.getElementById('tag-modal'),
+      closeTagModal: document.getElementById('close-tag-modal'),
+      newTagInput: document.getElementById('new-tag-input'),
+      addTagBtn: document.getElementById('add-tag-btn'),
+      tagList: document.getElementById('tag-list')
+    };
+
+    // 状态管理
+    const state = {
+      videos: [],
+      tags: [],
+      selectedTagIds: []
+    };
+
+    // 初始化函数
+    async function init() {
+      console.log('初始化函数 init() 被调用');
+      // 加载视频和标签数据
+      await loadVideos();
+      await loadTags();
+
+      // 绑定事件监听器
+      bindEvents();
+    }
+
+    // 加载视频列表
+    async function loadVideos() {
+      console.log('加载视频列表 loadVideos() 被调用');
+      try {
+        const videos = await flutterChannel.getVideos();
+        console.log('getVideos响应:', videos); // 添加此行
+        state.videos = videos;
+        renderVideoGrid();
+      } catch (error) {
+        console.error('加载视频失败:', error);
+      }
+    }
+
+    // 加载标签列表
+    async function loadTags() {
+      console.log('加载标签列表 loadTags() 被调用');
+      try {
+        const tags = await flutterChannel.getTags();
+        state.tags = tags;
+        renderTagFilters();
+        renderTagList();
+      } catch (error) {
+        console.error('加载标签失败:', error);
+      }
+    }
+
+    // 渲染视频网格
+    function renderVideoGrid() {
+      // 应用标签筛选
+      let filteredVideos = state.videos;
+      if (state.selectedTagIds.length > 0) {
+        filteredVideos = state.videos.filter(video =>
+          state.selectedTagIds.every(tagId => video.tagIds.includes(tagId))
+        );
+      }
+
+      // 应用搜索筛选
+      const searchTerm = elements.searchInput.value.toLowerCase();
+      if (searchTerm) {
+        filteredVideos = filteredVideos.filter(video =>
+          video.title.toLowerCase().includes(searchTerm) ||
+          video.tags.some(tag => tag.name.toLowerCase().includes(searchTerm))
+        );
+      }
+
+      if (filteredVideos.length === 0) {
+        elements.videoGrid.innerHTML = `
+          <div class="text-center text-gray-500 py-12">
+            <i class="fa fa-search text-4xl mb-4"></i>
+            <p>未找到匹配的视频</p>
+          </div>
+        `;
+        return;
+      }
+
+      elements.videoGrid.innerHTML = filteredVideos.map(video => `
+        <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition">
+          <div class="relative aspect-video bg-gray-100">
+            ${video.thumbnailPath ?
+              `<img src="data:image/jpeg;base64,${video.thumbnailBase64}" alt="${video.title}" class="w-full h-full object-cover">` :
+              `<i class="fa fa-film text-5xl text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>`
+            }
+            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+              ${formatDuration(video.duration)}
+            </div>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-gray-800 mb-2 truncate">${video.title}</h3>
+            <div class="flex flex-wrap gap-1 mb-3">
+              ${video.tags.map(tag => `
+                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>
+              `).join('')}
+            </div>
+            <div class="text-xs text-gray-500">
+              ${formatDate(video.uploadTime)}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 渲染标签筛选器
+    function renderTagFilters() {
+      if (state.tags.length === 0) {
+        elements.tagFilter.innerHTML = '<span class="text-gray-600 font-medium">暂无标签</span>';
+        return;
+      }
+
+      elements.tagFilter.innerHTML = `
+        <span class="text-gray-600 font-medium">筛选标签:</span>
+        ${state.selectedTagIds.length > 0 ? `
+          <button id="clear-tags" class="text-gray-500 hover:text-gray-700">
+            <i class="fa fa-times-circle"></i> 清除筛选
+          </button>
+        ` : ''}
+        ${state.tags.map(tag => `
+          <button
+            class="tag-filter-btn px-3 py-1 rounded-full text-sm ${
+              state.selectedTagIds.includes(tag.id)
+                ? 'bg-primary text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }"
+            data-tag-id="${tag.id}"
+          >
+            ${tag.name}
+          </button>
+        `).join('')}
+      `;
+
+      // 绑定标签筛选事件
+      document.querySelectorAll('.tag-filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const tagId = e.currentTarget.dataset.tagId;
+          toggleTagFilter(tagId);
+        });
+      });
+
+      // 绑定清除筛选事件
+      const clearBtn = document.getElementById('clear-tags');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', clearTagFilters);
+      }
+    }
+
+    // 渲染标签列表（管理模态框中）
+    function renderTagList() {
+      if (state.tags.length === 0) {
+        elements.tagList.innerHTML = '<p class="text-gray-500 text-center py-4">暂无标签</p>';
+        return;
+      }
+
+      elements.tagList.innerHTML = state.tags.map(tag => `
+        <div class="flex justify-between items-center p-2 border-b last:border-0">
+          <span>${tag.name}</span>
+          <div class="flex items-center">
+            <span class="text-xs text-gray-500 mr-3">${tag.videoCount}个视频</span>
+            <button class="delete-tag-btn text-red-500 hover:text-red-700" data-tag-id="${tag.id}">
+              <i class="fa fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      // 绑定删除标签事件
+      document.querySelectorAll('.delete-tag-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const tagId = e.currentTarget.dataset.tagId;
+          await flutterChannel.deleteTag(tagId);
+          await loadTags(); // 重新加载标签
+          await loadVideos(); // 重新加载视频
+        });
+      });
+    }
+
+    // 切换标签筛选状态
+    function toggleTagFilter(tagId) {
+      setState(prev => {
+        if (prev.selectedTagIds.includes(tagId)) {
+          return {
+            selectedTagIds: prev.selectedTagIds.filter(id => id !== tagId)
+          };
+        } else {
+          return {
+            selectedTagIds: [...prev.selectedTagIds, tagId]
+          };
+        }
+      });
+    }
+
+    // 清除所有标签筛选
+    function clearTagFilters() {
+      setState({ selectedTagIds: [] });
+    }
+
+    // 更新状态并重新渲染
+    function setState(updater) {
+      if (typeof updater === 'function') {
+        state = { ...state, ...updater(state) };
+      } else {
+        state = { ...state, ...updater };
+      }
+      renderVideoGrid();
+      renderTagFilters();
+    }
+
+    // 绑定所有事件处理程序
+    function bindEvents() {
+      // 上传区域点击事件
+      elements.uploadArea.addEventListener('click', () => {
+        elements.fileInput.click();
+      });
+
+      // 上传按钮点击事件
+      elements.uploadBtn.addEventListener('click', () => {
+        elements.fileInput.click();
+      });
+
+      // 文件选择事件
+      elements.fileInput.addEventListener('change', async (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          // 显示上传中状态
+          elements.uploadArea.innerHTML = `
+            <i class="fa fa-spinner fa-spin text-5xl text-gray-400 mb-4"></i>
+            <p class="text-gray-500">正在上传: ${file.name}</p>
+          `;
+
+          try {
+            // 调用Flutter上传视频
+            await flutterChannel.uploadVideo(file);
+            // 上传完成后重新加载视频列表
+            await loadVideos();
+            // 重置上传区域
+            elements.uploadArea.innerHTML = `
+              <i class="fa fa-cloud-upload text-5xl text-gray-400 mb-4"></i>
+              <h2 class="text-xl font-semibold text-gray-700 mb-2">拖放视频到此处上传</h2>
+              <p class="text-gray-500 mb-4">或点击选择视频文件</p>
+              <button id="upload-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+                选择视频
+              </button>
+            `;
+            // 重新绑定上传按钮事件
+            elements.uploadBtn = document.getElementById('upload-btn');
+            elements.uploadBtn.addEventListener('click', () => {
+              elements.fileInput.click();
+            });
+          } catch (error) {
+            console.error('上传失败:', error);
+            elements.uploadArea.innerHTML = `
+              <i class="fa fa-exclamation-triangle text-5xl text-red-400 mb-4"></i>
+              <h2 class="text-xl font-semibold text-red-700 mb-2">上传失败</h2>
+              <p class="text-gray-500 mb-4">请重试或选择其他文件</p>
+              <button id="upload-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+                重新上传
+              </button>
+            `;
+            elements.uploadBtn = document.getElementById('upload-btn');
+            elements.uploadBtn.addEventListener('click', () => {
+              elements.fileInput.click();
+            });
+          }
+        }
+      });
+
+      // 拖放上传事件
+      elements.uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        elements.uploadArea.classList.add('border-primary');
+      });
+
+      elements.uploadArea.addEventListener('dragleave', () => {
+        elements.uploadArea.classList.remove('border-primary');
+      });
+
+      elements.uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        elements.uploadArea.classList.remove('border-primary');
+
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          const file = e.dataTransfer.files[0];
+          if (file.type.startsWith('video/')) {
+            // 处理视频文件
+            elements.fileInput.files = e.dataTransfer.files;
+            const event = new Event('change');
+            elements.fileInput.dispatchEvent(event);
+          } else {
+            alert('请上传视频文件');
+          }
+        }
+      });
+
+      // 搜索输入事件
+      elements.searchInput.addEventListener('input', renderVideoGrid);
+
+      // 标签管理按钮事件
+      elements.tagManagementBtn.addEventListener('click', () => {
+        elements.tagModal.classList.remove('hidden');
+      });
+
+      // 关闭标签模态框事件
+      elements.closeTagModal.addEventListener('click', () => {
+        elements.tagModal.classList.add('hidden');
+      });
+
+      // 添加标签按钮事件
+      elements.addTagBtn.addEventListener('click', async () => {
+        const tagName = elements.newTagInput.value.trim();
+        if (tagName) {
+          await flutterChannel.addTag(tagName);
+          elements.newTagInput.value = '';
+          await loadTags(); // 重新加载标签
+        }
+      });
+
+      // 按Enter键添加标签
+      elements.newTagInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          elements.addTagBtn.click();
+        }
+      });
+    }
+
+    // 工具函数：格式化时长
+    function formatDuration(seconds) {
+      if (!seconds) return '00:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 工具函数：格式化日期
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    }
+
+    // 初始化应用
+    window.addEventListener('load', async () => {
+      try {
+        // 先等待WebSocket连接成功，再执行初始化逻辑
+        await flutterChannel._initWebSocket();
+        init(); // 原有初始化逻辑（此时可安全调用getVideos/getTags）
+      } catch (error) {
+        console.error('初始化WebSocket失败，无法加载数据:', error);
+      }
+    });
+  </script>
 </body>
 </html>
