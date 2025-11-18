@@ -4,14 +4,17 @@ import 'package:path_provider/path_provider.dart';
 import '../models/video.dart';
 import '../providers/video_provider.dart';
 import 'file_utils.dart'; // 引入文件工具类
+import '../../utils/video_player_utils.dart';
 
 class VideoUploader {
   // 本地视频复制处理（复制到APP目录）
+  final VideoPlayerUtils _playerUtils = VideoPlayerUtils();
   static Future<Video> copyToAppDirectory(
     File sourceFile,
     String title,
     List<String> tagIds,
     VideoProvider videoProvider,
+    int durationTime,
   ) async {
     try {
       // 获取APP的视频存储目录
@@ -35,6 +38,7 @@ class VideoUploader {
         fileSize: await targetFile.length(),
         tagIds: tagIds,
         thumbnailPath: thumbnailPath, // 保存缩略图路径
+        duration: durationTime,
       );
 
       // 保存视频信息

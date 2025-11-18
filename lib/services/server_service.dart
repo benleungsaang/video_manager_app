@@ -82,7 +82,6 @@ class ServerService with ChangeNotifier {
       videoProvider: videoProvider,
     );
     _isInitialized = true;
-    print('当前_webApiHandler初始化状态：${_isInitialized}');
   }
 
   // void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
@@ -346,8 +345,8 @@ class ServerService with ChangeNotifier {
     return (Request request) async {
       final tempDir = await getTemporaryDirectory();
       final webAssetsDir = Directory('${tempDir.path}/web');
-      print('处理静态资源请求: ${request.url.path}');
-      print('静态资源目录: ${webAssetsDir.path}');
+      // print('处理静态资源请求: ${request.url.path}');
+      // print('静态资源目录: ${webAssetsDir.path}');
 
       if (!await webAssetsDir.exists()) {
         try {

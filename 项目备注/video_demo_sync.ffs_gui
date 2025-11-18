@@ -24,7 +24,6 @@
             <Item>*\thumbs.db</Item>
             <Item>\node_modules\</Item>
             <Item>\public\image\</Item>
-            <Item>\build\</Item>
             <Item>\android\build\</Item>
             <Item>\lib\generated\</Item>
             <Item>*.g.dart</Item>
@@ -66,9 +65,25 @@
             <Item>\windows\</Item>
             <Item>\备注文件\</Item>
             <Item>\.git\</Item>
-            <Item>\web\</Item>
             <Item>\项目备注\</Item>
-            <Item>*.log |</Item>
+            <Item>*.log</Item>
+            <Item>*\native_assets\</Item>
+            <Item>*\main.dart.js</Item>
+            <Item>*\flutter_service_worker.js</Item>
+            <Item>*\flutter_bootstrap.js</Item>
+            <Item>*\flutter.js</Item>
+            <Item>*\manifest.json</Item>
+            <Item>\build\web\assets\</Item>
+            <Item>\build\web\canvaskit\</Item>
+            <Item>\build\web\icons\Icon-192.png</Item>
+            <Item>*\favicon.png</Item>
+            <Item>\build\web\version.json</Item>
+            <Item>\build\web\.last_build_id</Item>
+            <Item>*.png</Item>
+            <Item>\lib\ui\pages\123</Item>
+            <Item>\build\</Item>
+            <Item>\web\assets\fonts\</Item>
+            <Item>\web\assets\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

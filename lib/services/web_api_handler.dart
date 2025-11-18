@@ -1,4 +1,6 @@
 // lib/services/web_api_handler.dart
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import '../providers/tag_provider.dart';
 import '../providers/video_provider.dart';
@@ -47,12 +49,31 @@ class WebApiHandler {
           return {'success': true};
 
         // 视频相关接口
+        // 获取视频列表
         case 'getVideos':
           // 获取所有视频并转换为JSON
           return {
             'success': true,
             'data': videoProvider.videos.map(_videoToJson).toList()
           };
+        // 获取缩略图
+        case 'getThumbnail':
+          // 获取视频缩略图
+          final String videoId = params['videoId'];
+          final Video? video = videoProvider.getVideoById(videoId);
+          if (video != null && video.thumbnailPath != null) {
+            // 读取缩略图文件并转换为base64
+            final File thumbnailFile = File(video.thumbnailPath!);
+            final List<int> bytes = await thumbnailFile.readAsBytes();
+            final String base64Data = base64Encode(bytes);
+            // 统一格式：将数据放在data字段中
+            return {
+              'success': true,
+              'data': {'base64': base64Data}
+            };
+          } else {
+            return {'success': false, 'error': '缩略图不存在'};
+          }
 
         // case 'uploadVideo':
         //   // 处理视频上传
@@ -94,6 +115,8 @@ class WebApiHandler {
       'thumbnailPath': video.thumbnailPath,
       'tagIds': video.tagIds,
       'uploadTime': video.uploadTime.toIso8601String(),
+      'fileSize': video.fileSize,
+      'duration': video.duration,
     };
   }
 }

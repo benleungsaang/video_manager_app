@@ -76,4 +76,10 @@ class VideoPlayerUtils {
     final duration = _videoController.value.duration;
     return '${duration.inMinutes.toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}';
   }
+
+  // 获取视频时长（格式化）
+  int getdDuration() {
+    if (!_isInitialized) return 0;
+    return _videoController.value.duration.inSeconds;
+  }
 }

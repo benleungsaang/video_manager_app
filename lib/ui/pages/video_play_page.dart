@@ -107,6 +107,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         // 更新已有视频信息
         _existingVideo!.title = _titleController.text.trim();
         _existingVideo!.tagIds = _selectedTagIds;
+        _existingVideo!.duration = _playerUtils.getdDuration();
 
         // 如果没有缩略图，生成一个
         if (_existingVideo!.thumbnailPath == null ||
@@ -119,12 +120,14 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         await videoProvider.saveVideo(_existingVideo!);
         Fluttertoast.showToast(msg: '信息已更新');
       } else {
+        final durationTime = _playerUtils.getdDuration();
         // 新视频：复制到APP目录并保存信息
         await VideoUploader.copyToAppDirectory(
           _sourceFile!,
           _titleController.text.trim(),
           _selectedTagIds,
           videoProvider,
+          durationTime,
         );
         Fluttertoast.showToast(msg: '视频已添加到库中');
         _isSaved = true;
