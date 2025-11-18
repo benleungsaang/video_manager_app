@@ -13,13 +13,13 @@ void main() async {
   // 初始化Hive数据库
   await HiveService.init();
 
-  runApp(const MyApp());
-
   // 初始化时生成所有视频的缩略图（如果缺失）
   final tagProvider = TagProvider()..loadTags();
   final videoProvider = VideoProvider()..loadVideos();
   final serverService = ServerService();
-  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
+
+  serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
+
   final videoPaths = videoProvider.videos
       .where((v) => v.thumbnailPath == null)
       .map((v) => v.filePath)
@@ -29,6 +29,18 @@ void main() async {
     // 重新加载视频列表（更新缩略图路径）
     videoProvider.loadVideos();
   }
+
+  // runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: videoProvider), // 使用已创建的实例
+        ChangeNotifierProvider.value(value: tagProvider), // 使用已创建的实例
+        ChangeNotifierProvider.value(value: serverService), // 使用已初始化的实例
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -46,7 +58,7 @@ class MyApp extends StatelessWidget {
         // 【视频/标签】 操作能力：提供加载、创建、更新、删除标签的方法（如 createTag()、deleteTag() 等），子组件调用后会同步更新全局状态。
         ChangeNotifierProvider(create: (_) => VideoProvider()..loadVideos()),
         ChangeNotifierProvider(create: (_) => TagProvider()..loadTags()),
-        ChangeNotifierProvider(create: (_) => ServerService()),
+        // ChangeNotifierProvider(create: (_) => ServerService()),
       ],
       child: MaterialApp(
         title: '视频管理APP',

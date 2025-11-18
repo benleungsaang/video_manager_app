@@ -133,72 +133,90 @@
 
     // 与Flutter原生通信的通道
     const flutterChannel = {
-      // 记录连接状态的Promise
-      _connectionPromise: null,
+      // 存储WebSocket实例
+      _ws: null,
+      // 存储请求的回调函数，用requestId映射
+      _callbacks: new Map(),
 
       // 初始化WebSocket连接
       _initWebSocket() {
-        console.log('flutterChannel => 初始化WebSocket连接...');
-        if (this._connectionPromise) {
-          return this._connectionPromise;
+        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+          return Promise.resolve();
         }
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-        this._ws = new WebSocket(wsUrl);
+        return new Promise((resolve, reject) => {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+          this._ws = new WebSocket(wsUrl);
 
-         // 创建连接状态的Promise
-        this._connectionPromise = new Promise((resolve, reject) => {
           this._ws.onopen = () => {
-            console.log(`当前网络地址: ${wsProtocol}//${window.location.host}/ws`)
             console.log('WebSocket连接已建立');
-            resolve(); // 连接成功， resolve Promise
+            // 监听服务端消息
+            this._ws.onmessage = (event) => this._handleMessage(event);
+            resolve();
           };
-          this._ws.onclose = () => {
-            console.log('WebSocket连接已关闭');
-            this._connectionPromise = null; // 重置连接状态
-          };
+
           this._ws.onerror = (error) => {
             console.error('WebSocket连接错误:', error);
-            reject(error); // 连接失败， reject Promise
-            this._connectionPromise = null;
+            reject(error);
+          };
+
+          this._ws.onclose = () => {
+            console.log('WebSocket连接已关闭，尝试重连...');
+            this._ws = null;
+            // 3秒后尝试重连
+            setTimeout(() => this._initWebSocket(), 3000);
           };
         });
-
-        return this._connectionPromise;
       },
 
-      // 发送请求并等待响应（确保连接建立后再发送）
+
+      // 处理从服务端收到的消息
+      _handleMessage(event) {
+        try {
+          const response = JSON.parse(event.data);
+          console.log('收到服务端响应:', response);
+
+          // 查找对应的回调函数
+          const callback = this._callbacks.get(response.id);
+          if (callback) {
+            callback(response);
+            this._callbacks.delete(response.id);
+          }
+        } catch (error) {
+          console.error('处理消息错误:', error);
+        }
+      },
+
+      // 发送请求到服务端
       _sendRequest(action, params = {}) {
-        console.log(`flutterChannel => 发送请求: ${action}`, params);
-        console.log('WebSocket状态:', this._ws.readyState); // 1=OPEN，0=CONNECTING，2=CLOSING，3=CLOSED
         return new Promise(async (resolve, reject) => {
           try {
-            // 等待WebSocket连接完成（如果未连接或连接中）
-            if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-              await this._initWebSocket(); // 等待连接成功
-            }
+            // 确保连接已建立
+            await this._initWebSocket();
 
-            // 生成唯一ID用于匹配响应
+            // 生成唯一请求ID
             const requestId = Date.now().toString();
-            const request = { id: requestId, action, params };
-
-            // 监听响应
-            const listener = (event) => {
-              console.log('收到WebSocket响应:', event.data); // 添加此行
-              const response = JSON.parse(event.data);
-              if (response.id === requestId) {
-                this._ws.removeEventListener('message', listener);
-                resolve(response);
+            
+            // 存储回调函数
+            this._callbacks.set(requestId, (response) => {
+              if (response.success) {
+                resolve(response.data);
+              } else {
+                reject(new Error(response.error || '请求失败'));
               }
-            };
-            this._ws.addEventListener('message', listener);
+            });
 
-            // 发送请求（此时连接已确保是OPEN状态）
-            console.log('flutterChannel => 发送请求:', JSON.stringify(request));
+            // 发送请求
+            const request = {
+              id: requestId,
+              action: action,
+              params: params
+            };
+            console.log('发送请求:', request);
             this._ws.send(JSON.stringify(request));
           } catch (error) {
-            reject(error); // 捕获连接失败或发送失败的错误
+            reject(error);
           }
         });
       },
@@ -209,10 +227,7 @@
       deleteTag: (tagId) => flutterChannel._sendRequest('deleteTag', { id: tagId }),
 
       // 视频相关接口
-      getVideos: () => flutterChannel._sendRequest('getVideos'),
-
-
-      
+      getVideos: () => flutterChannel._sendRequest('getVideos'),      
       uploadVideo: (file) => {
         return new Promise((resolve) => {
           const reader = new FileReader();
@@ -222,10 +237,18 @@
             flutterChannel._sendRequest('uploadVideo', {
               name: file.name,
               base64Data: base64Data
-            }).then(resolve);
+            }).then(resolve).catch(reject);
           };
         });
+        render.error = reject;
       }
+    };
+
+    // 状态管理
+    const state = {
+      videos: [],
+      tags: [],
+      selectedTagIds: []
     };
 
     // DOM元素引用
@@ -244,30 +267,27 @@
       tagList: document.getElementById('tag-list')
     };
 
-    // 状态管理
-    const state = {
-      videos: [],
-      tags: [],
-      selectedTagIds: []
-    };
 
     // 初始化函数
     async function init() {
       console.log('初始化函数 init() 被调用');
-      // 加载视频和标签数据
-      await loadVideos();
-      await loadTags();
+      try {        
+        // 加载视频和标签数据
+        await loadTags();
+        await loadVideos();
 
-      // 绑定事件监听器
-      bindEvents();
+        // 绑定事件监听器
+        bindEvents();
+      } catch (error) {
+        console.log('初始化失败:', error);
+      }
     }
 
     // 加载视频列表
     async function loadVideos() {
-      console.log('加载视频列表 loadVideos() 被调用');
       try {
+        console.log('加载视频列表...');
         const videos = await flutterChannel.getVideos();
-        console.log('getVideos响应:', videos); // 添加此行
         state.videos = videos;
         renderVideoGrid();
       } catch (error) {
@@ -277,8 +297,8 @@
 
     // 加载标签列表
     async function loadTags() {
-      console.log('加载标签列表 loadTags() 被调用');
       try {
+        console.log('加载标签列表...');
         const tags = await flutterChannel.getTags();
         state.tags = tags;
         renderTagFilters();
@@ -303,7 +323,7 @@
       if (searchTerm) {
         filteredVideos = filteredVideos.filter(video =>
           video.title.toLowerCase().includes(searchTerm) ||
-          video.tags.some(tag => tag.name.toLowerCase().includes(searchTerm))
+          video.tagIds.some(tag => tag.name.toLowerCase().includes(searchTerm))
         );
       }
 
@@ -321,7 +341,7 @@
         <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition">
           <div class="relative aspect-video bg-gray-100">
             ${video.thumbnailPath ?
-              `<img src="data:image/jpeg;base64,${video.thumbnailBase64}" alt="${video.title}" class="w-full h-full object-cover">` :
+              `<img src="data:image/jpeg;base64,${video.thumbnailPath}" alt="${video.title}" class="w-full h-full object-cover">` :
               `<i class="fa fa-film text-5xl text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>`
             }
             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
@@ -331,9 +351,10 @@
           <div class="p-4">
             <h3 class="font-semibold text-gray-800 mb-2 truncate">${video.title}</h3>
             <div class="flex flex-wrap gap-1 mb-3">
-              ${video.tags.map(tag => `
-                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>
-              `).join('')}
+              ${video.tagIds.map(tagId => {
+                const tag = state.tags.find(t => t.id === tagId);              
+                return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>` : '';
+            }).join('')}
             </div>
             <div class="text-xs text-gray-500">
               ${formatDate(video.uploadTime)}
@@ -578,16 +599,9 @@
       return date.toLocaleString();
     }
 
-    // 初始化应用
-    window.addEventListener('load', async () => {
-      try {
-        // 先等待WebSocket连接成功，再执行初始化逻辑
-        await flutterChannel._initWebSocket();
-        init(); // 原有初始化逻辑（此时可安全调用getVideos/getTags）
-      } catch (error) {
-        console.error('初始化WebSocket失败，无法加载数据:', error);
-      }
-    });
+    
+    // 页面加载完成后初始化
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>

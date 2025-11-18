@@ -16,48 +16,67 @@ class WebApiHandler {
   });
 
   // 处理Web端的请求
+  // 参数: request包含action和params
+  // 返回: 包含success、data或error的Map
   Future<Map<String, dynamic>> handleRequest(
       Map<String, dynamic> request) async {
-    final tempJson = json.decode(request.toString());
-    final String action = tempJson['type'];
-    final Map<String, dynamic> params = tempJson['data'] ?? {};
+    // 解析请求类型和参数
+    final String action = request['action'];
+    final Map<String, dynamic> params = request['params'] ?? {};
 
-    switch (action) {
-      // 标签相关接口
-      case 'getTags':
-        return {
-          'success': true,
-          'data': tagProvider.tags.map(_tagToJson).toList()
-        };
-      case 'createTag':
-        final Tag? tag = await tagProvider.createTag(params['name']);
-        return tag != null
-            ? {'success': true, 'data': _tagToJson(tag)}
-            : {'success': false, 'error': '标签已存在'};
-      case 'deleteTag':
-        await tagProvider.deleteTag(params['id']);
-        return {'success': true};
+    try {
+      switch (action) {
+        // 标签相关接口
+        case 'getTags':
+          // 获取所有标签并转换为JSON
+          return {
+            'success': true,
+            'data': tagProvider.tags.map(_tagToJson).toList()
+          };
 
-      // 视频相关接口
-      case 'getVideos':
-        print('接收WebSocket请求 WebApiHandler => handleRequest => getVideos');
-        return {
-          'success': true,
-          'data': videoProvider.videos.map(_videoToJson).toList()
-        };
-      case 'uploadVideo':
-        // 实际应处理文件二进制数据，这里简化示例
-        final String name = params['name'];
-        final String base64Data = params['base64Data'];
-        // 调用VideoProvider的保存逻辑（需自行实现文件解析）
-        return {'success': true};
+        case 'createTag':
+          // 创建新标签
+          final Tag? tag = await tagProvider.createTag(params['name']);
+          return tag != null
+              ? {'success': true, 'data': _tagToJson(tag)}
+              : {'success': false, 'error': '标签已存在'};
 
-      default:
-        return {'success': false, 'error': '未知操作'};
+        case 'deleteTag':
+          // 删除标签
+          await tagProvider.deleteTag(params['id']);
+          return {'success': true};
+
+        // 视频相关接口
+        case 'getVideos':
+          // 获取所有视频并转换为JSON
+          return {
+            'success': true,
+            'data': videoProvider.videos.map(_videoToJson).toList()
+          };
+
+        // case 'uploadVideo':
+        //   // 处理视频上传
+        //   final String name = params['name'];
+        //   final String base64Data = params['base64Data'];
+        //   // 实际应用中需要解析base64数据并保存为文件
+        //   final Video? video = await videoProvider.saveVideo(
+        //     name: name,
+        //     base64Data: base64Data
+        //   );
+        //   return video != null
+        //       ? {'success': true, 'data': _videoToJson(video)}
+        //       : {'success': false, 'error': '视频上传失败'};
+
+        default:
+          return {'success': false, 'error': '未知操作: $action'};
+      }
+    } catch (e) {
+      // 捕获所有异常并返回错误信息
+      return {'success': false, 'error': e.toString()};
     }
   }
 
-  // 转换Tag为JSON（供Web端解析）
+  // 转换Tag为JSON格式
   Map<String, dynamic> _tagToJson(Tag tag) {
     return {
       'id': tag.id,
@@ -66,7 +85,7 @@ class WebApiHandler {
     };
   }
 
-  // 转换Video为JSON（供Web端解析）
+  // 转换Video为JSON格式
   Map<String, dynamic> _videoToJson(Video video) {
     return {
       'id': video.id,

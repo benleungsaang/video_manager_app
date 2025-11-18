@@ -109,7 +109,7 @@ flutter:
   assets:
     - build/web/
     - build/web/assets/
-    # - build/web/assets/fonts/
+    - build/web/assets/fonts/
     # - build/web/canvaskit/
     # - build/web/icons/
 

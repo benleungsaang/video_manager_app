@@ -73,13 +73,24 @@ class ServerService with ChangeNotifier {
   Map<String, String> get clientDevices => _clientDevices;
 
   late WebApiHandler _webApiHandler;
+  bool _isInitialized = false; // 新增初始化标记
+  bool get isInitialized => _isInitialized;
 
   void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
     _webApiHandler = WebApiHandler(
       tagProvider: tagProvider,
       videoProvider: videoProvider,
     );
+    _isInitialized = true;
+    print('当前_webApiHandler初始化状态：${_isInitialized}');
   }
+
+  // void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
+  //   _webApiHandler = WebApiHandler(
+  //     tagProvider: tagProvider,
+  //     videoProvider: videoProvider,
+  //   );
+  // }
 
   Future<void> _getLocalIp() async {
     final info = NetworkInfo();
@@ -152,6 +163,11 @@ class ServerService with ChangeNotifier {
 
   Future<void> startServer({int? customPort}) async {
     if (_isRunning) return;
+
+    // 新增检查：确保初始化完成
+    if (!_isInitialized) {
+      throw Exception("startServer => ServerService未初始化，请先调用initApiHandler");
+    }
 
     if (customPort != null) {
       if (customPort < 1024 || customPort > 65535) {
@@ -232,6 +248,7 @@ class ServerService with ChangeNotifier {
 
   Router _createRouter() {
     final router = Router();
+
     // WebSocket连接处理
     router.get('/ws', (Request request) {
       print('检测到 WebSocket 请求 ${request.url} ${request.params}');
@@ -250,52 +267,78 @@ class ServerService with ChangeNotifier {
   }
 
   // 提取WebSocket处理为独立方法
+  // 处理WebSocket连接
   void _handleWebSocketConnection(WebSocketChannel channel, Request request) {
-    print('检测到WebSocket连接请求，开始处理');
-    String? clientId;
-    final deviceType = _getDeviceType(request.headers['user-agent']);
+    print('开始处理WebSocket连接');
 
-    // 生成临时ID，直到客户端发送身份验证
+    // 生成临时ID标识连接
     final tempId = 'temp_${DateTime.now().microsecondsSinceEpoch}';
     _connectedClients[tempId] = channel;
-    _clientDevices[tempId] = deviceType;
-    // 发送连接通知（使用正确的clientId）
-    _broadcastConnectionStatus();
-
-    // 向客户端发送连接成功消息
-    // final welcomeMessage = WebSocketMessage(
-    //     type: MessageType.acknowledge.toString().split('.').last,
-    //     data: {'message': '连接成功，请发送身份信息', 'tempId': tempId});
-    // channel.sink.add(json.encode(welcomeMessage.toJson()));
 
     // 监听客户端消息
-    final subscription = channel.stream.listen(
-      (message) {
-        // try {
-        // 解析消息时添加类型检查
-        _handleClientMessage(message, channel, tempId, (String newId) {
-          clientId = newId;
-        });
-        //   _broadcastMessage(json.encode(
-        //       {'type': 'response', 'clientId': clientId, 'data': '处理成功'}));
-        // } catch (e) {
-        //   channel.sink.add(json.encode({
-        //     'type': 'error',
-        //     'data': {'message': e.toString()}
-        //   }));
-        // }
-      },
-      onDone: () {
-        _connectedClients.remove(channel);
-        _clientDevices.remove(clientId);
-        _broadcastConnectionStatus();
-      },
-    );
+    final subscription = channel.stream
+        .listen((message) => _handleClientMessage(message, channel, tempId),
+            onDone: () {
+      // 连接关闭时清理
+      _connectedClients.remove(tempId);
+      print('WebSocket连接已关闭');
+    }, onError: (error) {
+      print('WebSocket错误: $error');
+    });
 
     // 处理连接关闭
     channel.sink.done.then((_) {
       subscription.cancel();
     });
+  }
+
+  // 处理客户端消息
+  void _handleClientMessage(
+      dynamic message, WebSocketChannel channel, String clientId) {
+    try {
+      // 新增：检查是否初始化
+      if (!_isInitialized) {
+        throw Exception(
+            "handleClientMessage => ServerService未初始化，请先调用initApiHandler");
+      }
+
+      // 解析消息
+      Map<String, dynamic> messageJson;
+      if (message is String) {
+        messageJson = json.decode(message);
+      } else if (message is List<int>) {
+        messageJson = json.decode(utf8.decode(message));
+      } else {
+        throw FormatException('不支持的消息格式');
+      }
+
+      print('收到客户端消息: $messageJson');
+
+      // 检查消息格式是否正确
+      if (!messageJson.containsKey('id') ||
+          !messageJson.containsKey('action')) {
+        throw FormatException('消息格式错误，缺少id或action');
+      }
+
+      // 调用WebApiHandler处理请求
+      _webApiHandler.handleRequest(messageJson).then((response) {
+        // 给响应添加请求ID，以便客户端匹配请求和响应
+        final responseWithId = {'id': messageJson['id'], ...response};
+        // 发送响应给客户端
+        channel.sink.add(json.encode(responseWithId));
+      }).catchError((error) {
+        // 处理异步错误
+        channel.sink.add(json.encode({
+          'id': messageJson['id'],
+          'success': false,
+          'error': error.toString()
+        }));
+      });
+    } catch (e) {
+      print('消息处理错误: $e');
+      // 发送错误响应
+      channel.sink.add(json.encode({'success': false, 'error': e.toString()}));
+    }
   }
 
   // 提取静态资源处理器
@@ -373,91 +416,6 @@ class ServerService with ChangeNotifier {
 
     _isRunning = false;
     notifyListeners();
-  }
-
-  // 处理客户端消息
-  void _handleClientMessage(dynamic message, WebSocketChannel channel,
-      String tempId, Function(String) setClientId) {
-    try {
-      // 解析消息
-      // print('收到原始消息: $message');
-      Map<String, dynamic> messageJson;
-      if (message is String) {
-        messageJson = json.decode(message);
-      } else if (message is List<int>) {
-        messageJson = json.decode(utf8.decode(message));
-      } else {
-        throw FormatException('不支持的消息格式');
-      }
-      print('收到消息: $messageJson');
-      // final wsMessage = WebSocketMessage.fromJson(messageJson);
-      // print(
-      //     '解析后的消息对象: type=${wsMessage.type}, clientId=${wsMessage.clientId}, data=${wsMessage.data}');
-      // 处理身份验证消息（首次消息应该是身份验证）
-      // if (wsMessage.type == 'identify' && wsMessage.data is Map) {
-      //   final clientId = wsMessage.data['clientId'] as String?;
-
-      //   if (clientId == null || clientId.isEmpty) {
-      //     throw Exception('客户端ID不能为空');
-      //   }
-
-      // // 检查客户端ID是否已存在
-      // if (_connectedClients.containsKey(clientId)) {
-      //   // 生成一个新的唯一ID
-      //   final newClientId =
-      //       '${clientId}_${DateTime.now().microsecondsSinceEpoch}';
-      //   final errorMsg = WebSocketMessage(
-      //       type: MessageType.error.toString().split('.').last,
-      //       data: {'message': 'ID已存在，已分配新ID', 'newClientId': newClientId});
-      //   channel.sink.add(json.encode(errorMsg.toJson()));
-      //   print('客户端ID冲突，分配新ID: $newClientId');
-      //   _updateClientId(tempId, newClientId, setClientId);
-      // } else {
-      //   // 使用客户端提供的ID
-      //   print('使用客户端提供的ID 创建用户: $clientId');
-      //   _updateClientId(tempId, clientId, setClientId);
-      // }
-
-      // 发送确认消息
-      // final ackMsg = WebSocketMessage(
-      //     type: MessageType.acknowledge.toString().split('.').last,
-      //     clientId: wsMessage.data['clientId'],
-      //     data: {'message': '身份验证成功'});
-      // channel.sink.add(json.encode(ackMsg.toJson()));
-      // return;
-      // }
-
-      // // 验证客户端是否已认证
-      // if (wsMessage.clientId == null ||
-      //     !_connectedClients.containsKey(wsMessage.clientId)) {
-      //   throw Exception('未认证的客户端，请先发送身份信息');
-      // }
-
-      // 根据消息类型处理
-      // switch (wsMessage.type) {
-      //   // case 'chat':
-      //   //   _handleChatMessage(wsMessage);
-      //   //   break;
-      //   // case 'command':
-      //   //   _handleCommandMessage(wsMessage);
-      //   //   break;
-      //   case 'getVideos':
-      //     final response = _webApiHandler.handleRequest(wsMessage);
-      //     channel.sink.add(json.encode(response.toJson()));
-      //     break;
-      //   default:
-      //     // 未知消息类型，广播出去
-      //     _broadcastMessage(json.encode(wsMessage.toJson()));
-      // }
-      final response = _webApiHandler.handleRequest(message);
-      channel.sink.add(json.encode(response));
-    } catch (e) {
-      print('消息处理错误: $e');
-      final errorMsg = WebSocketMessage(
-          type: MessageType.error.toString().split('.').last,
-          data: {'message': e.toString()});
-      channel.sink.add(json.encode(errorMsg.toJson()));
-    }
   }
 
   // 更新客户端ID（从临时ID到正式ID）
