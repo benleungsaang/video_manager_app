@@ -46,6 +46,18 @@
       .upload-area:hover {
         border-color: #3b82f6;
       }
+      .modal-backdrop {
+        backdrop-filter: blur(4px);
+      }
+      .tag-pill {
+        @apply px-2 py-1 rounded-full text-xs cursor-pointer;
+      }
+      .tag-pill-selected {
+        @apply bg-primary text-white;
+      }
+      .tag-pill-unselected {
+        @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+      }
     }
   </style>
 </head>
@@ -61,37 +73,38 @@
           <input
             type="text"
             id="search-input"
-            placeholder="搜索视频标题或标签..."
+            placeholder="搜索 【 整个数据库 】 视频 - 标题或标签..."
             class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
           <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
       </div>
 
-      <!-- 标签管理按钮 -->
-      <button id="tag-management-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition">
-        <i class="fa fa-tags mr-1"></i> 标签管理
+      <!-- 上传视频按钮 -->
+      <button id="upload-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition">
+        <i class="fa fa-cloud-upload mr-1"></i> 上传视频
       </button>
     </div>
   </header>
 
   <main class="container mx-auto px-4 py-8">
-    <!-- 上传区域 -->
-    <div id="upload-area" class="upload-area rounded-xl p-8 mb-8 text-center cursor-pointer">
-      <input type="file" id="file-input" accept="video/*" class="hidden">
-      <i class="fa fa-cloud-upload text-5xl text-gray-400 mb-4"></i>
-      <h2 class="text-xl font-semibold text-gray-700 mb-2">拖放视频到此处上传</h2>
-      <p class="text-gray-500 mb-4">或点击选择视频文件</p>
-      <button id="upload-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
-        选择视频
-      </button>
-    </div>
 
-    <!-- 标签筛选区域 -->
-    <div id="tag-filter" class="mb-6 flex flex-wrap gap-2">
-      <span class="text-gray-600 font-medium">筛选标签:</span>
-      <!-- 标签会通过JavaScript动态生成 -->
-    </div>
+     <!-- 本地视频筛选 -->
+      <div class="mb-6">
+        <!-- <div class="flex items-center mb-2">
+          <i class="fa fa-filter text-gray-500 mr-2"></i>
+          <span class="text-gray-600 font-medium">当前视频筛选：</span>
+        </div> -->
+        <div class="relative">
+          <input
+            type="text"
+            id="filter-input"
+            placeholder="在 【 当前搜索结果 】 中筛选 - 标题或标签..."
+            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+          <i class="fa fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+      </div>
 
     <!-- 视频列表区域 -->
     <div id="video-grid" class="video-grid">
@@ -103,34 +116,116 @@
     </div>
   </main>
 
-  <!-- 标签管理模态框 -->
-  <div id="tag-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-xl w-full max-w-md p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-bold">标签管理</h3>
-        <button id="close-tag-modal" class="text-gray-500 hover:text-gray-700">
+ <!---------------------- 视频上传浮框 --------------------------->
+  <div id="upload-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- 浮框头部 -->
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="text-xl font-bold">上传视频</h3>
+        <button id="close-upload-modal" class="text-gray-500 hover:text-gray-700 p-2">
           <i class="fa fa-times text-xl"></i>
         </button>
       </div>
 
-      <!-- 添加新标签 -->
-      <div class="flex mb-6">
-        <input
-          type="text"
-          id="new-tag-input"
-          placeholder="输入新标签名称"
-          class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-        <button id="add-tag-btn" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90">
-          添加
-        </button>
+      <!-- 浮框内容 -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <!-- 视频预览区域 -->
+        <div class="mb-6">
+          <div class="bg-gray-100 rounded-lg overflow-hidden">
+            <video id="video-preview" class="w-full aspect-video object-contain" controls crossorigin="anonymous"></video>
+          </div>
+          <div class="mt-2 text-sm text-gray-500 flex justify-between">
+            <span id="video-duration">时长: --:--</span>
+            <span id="video-size">大小: --</span>
+          </div>
+        </div>
+
+        <!-- 视频信息表单 -->
+        <div class="space-y-4">
+          <!-- 标题输入 -->
+          <div>
+            <label for="video-title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span class="text-red-500">*</span></label>
+            <input
+              type="text"
+              id="video-title"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="请输入视频标题"
+            >
+          </div>
+
+          <!-- 标签选择 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">标签</label>
+            <div id="tag-selection" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto p-2 border rounded-lg">
+              <!-- 标签会动态生成 -->
+              <p class="text-gray-500 text-sm w-full text-center">待添加标签...</p>
+            </div>
+            <div class="flex items-center">
+              <input
+                type="text"
+                id="new-tag-input-modal"
+                placeholder="添加新标签"
+                class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+              <button id="add-tag-btn-modal" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90">
+                添加
+              </button>
+            </div>
+          </div>
+
+          <!-- 备注信息 -->
+          <div>
+            <label for="video-remark" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <textarea
+              id="video-remark"
+              rows="3"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="请输入备注信息（可选）"
+            ></textarea>
+          </div>
+        </div>
       </div>
 
-      <!-- 标签列表 -->
-      <div id="tag-list" class="max-h-60 overflow-y-auto mb-4">
-        <!-- 标签项会通过JavaScript动态生成 -->
+      <!-- 浮框底部 -->
+      <div class="p-4 border-t flex justify-end gap-3">
+        <button id="cancel-upload-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+          取消
+        </button>
+        <button id="save-video-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+          保存视频
+        </button>
+      </div>
+      <!-- 浮框底部 - 进度条 -->
+      <div class="px-6 pb-2 hidden" id="upload-progress-container">
+        <div class="text-sm text-gray-600 mb-1">上传进度</div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div id="upload-progress-bar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
       </div>
     </div>
+  </div>
+
+
+  <!-- 确认取消对话框 -->
+  <div id="confirm-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl w-full max-w-md p-6">
+      <h3 class="text-xl font-bold mb-4">确认取消</h3>
+      <p class="text-gray-600 mb-6">确定要取消上传吗？已上传的部分将被丢弃。</p>
+      <div class="flex justify-end gap-3">
+        <button id="confirm-cancel-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+          继续编辑
+        </button>
+        <button id="confirm-ok-btn" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
+          确认取消
+        </button>
+      </div>
+    </div>
+  </div>
+ <!---------------------- 视频上传浮框 --------------------------->
+
+  <!-- 操作成功提示框 toast -->
+  <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+    操作成功
   </div>
 
   <script>
@@ -197,7 +292,7 @@
         // 使用时间戳+随机数确保唯一性
         return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
       },
-      
+
       // 发送请求到服务端
       _sendRequest(action, params = {}) {
         return new Promise(async (resolve, reject) => {
@@ -207,7 +302,7 @@
 
             // 生成唯一请求ID
             const requestId = this._generateRequestId();
-            
+
             // 存储回调函数
             this._callbacks.set(requestId, (response) => {
               if (response.success) {
@@ -232,57 +327,140 @@
       },
 
       // 标签相关接口
+      // 载入标签列表
       getTags: () => flutterChannel._sendRequest('getTags'),
+      // 新增标签
       addTag: (tagName) => flutterChannel._sendRequest('createTag', { name: tagName }),
+      // 删除标签
       deleteTag: (tagId) => flutterChannel._sendRequest('deleteTag', { id: tagId }),
 
       // 视频相关接口
-      getVideos: () => flutterChannel._sendRequest('getVideos'),     
-      getThumbnail: (videoId) => flutterChannel._sendRequest('getThumbnail', { videoId: videoId }), 
-      uploadVideo: (file) => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => {
-            const base64Data = reader.result.split(',')[1];
-            flutterChannel._sendRequest('uploadVideo', {
-              name: file.name,
-              base64Data: base64Data
-            }).then(resolve).catch(reject);
+      // 载入视频列表
+      getVideos: () => flutterChannel._sendRequest('getVideos'),
+      // 获取视频缩略图
+      getThumbnail: (videoId) => flutterChannel._sendRequest('getThumbnail', { videoId: videoId }),
+      //  搜索视频
+      searchVideos: (searchTerm) => flutterChannel._sendRequest('searchVideos', { query: searchTerm }),
+
+      // 分块上传二进制数据
+      sendBinaryChunk :(params) =>{
+        return new Promise((resolve, reject) => {
+          const requestId = this._generateRequestId();
+          let binarySent = false;
+
+          // 发送块元数据
+          const metaRequest = {
+            id: requestId,
+            action: 'uploadBinaryChunk',
+            params: {
+              fileId: params.fileId,
+              chunkIndex: params.chunkIndex,
+              totalChunks: params.totalChunks
+            }
           };
+
+          // 监听元数据响应
+          const metaListener = (event) => {
+            const response = JSON.parse(event.data);
+            if (response.id === requestId && response.status === 'ready') {
+              this._ws.removeEventListener('message', metaListener);
+
+              // 发送二进制数据
+              params.blob.arrayBuffer().then(buffer => {
+                this._ws.send(buffer);
+                binarySent = true;
+
+                // 监听块确认
+                const chunkListener = (event) => {
+                  const chunkResponse = JSON.parse(event.data);
+                  if (chunkResponse.id === requestId) {
+                    this._ws.removeEventListener('message', chunkListener);
+                    if (chunkResponse.success) {
+                      resolve(chunkResponse);
+                    } else {
+                      reject(new Error(chunkResponse.error));
+                    }
+                  }
+                };
+                this._ws.addEventListener('message', chunkListener);
+              });
+            }
+          };
+
+          this._ws.addEventListener('message', metaListener);
+          this._ws.send(JSON.stringify(metaRequest));
+
+          // 超时处理
+          setTimeout(() => {
+            if (!binarySent) {
+              this._ws.removeEventListener('message', metaListener);
+              reject(new Error('发送超时'));
+            }
+          }, 10000);
         });
-        render.error = reject;
-      }
+      },
+      completeBinaryUpload :(fileId, fileName, duration, tagIds, remark) =>{
+        return this._sendRequest('completeBinaryUpload', {
+          fileId,
+          name: fileName,
+          duration,
+          tagIds,
+          remark,
+          fileSize: state.currentUploadFile.size
+        });
+      },
     };
 
     // 状态管理
     const state = {
       videos: [],
+      originalVideos: null, // 用于存储原始视频列表，搜索时使用
       tags: [],
-      selectedTagIds: []
+      selectedTagIds: [],
+      currentUploadFile: null, // 当前正在上传的文件
+      currentEditingVideo: null, // 当前正在编辑的视频
+      selectedTagIdsForUpload: [] // 上传视频时选择的标签ID
     };
 
     // DOM元素引用
     const elements = {
-      uploadArea: document.getElementById('upload-area'),
-      fileInput: document.getElementById('file-input'),
-      uploadBtn: document.getElementById('upload-btn'),
-      videoGrid: document.getElementById('video-grid'),
-      searchInput: document.getElementById('search-input'),
-      tagFilter: document.getElementById('tag-filter'),
-      tagManagementBtn: document.getElementById('tag-management-btn'),
-      tagModal: document.getElementById('tag-modal'),
-      closeTagModal: document.getElementById('close-tag-modal'),
-      newTagInput: document.getElementById('new-tag-input'),
-      addTagBtn: document.getElementById('add-tag-btn'),
-      tagList: document.getElementById('tag-list')
+      searchInput: document.getElementById('search-input'), // 数据库搜索输入框
+      filterInput: document.getElementById('filter-input'), // 本地视频筛选输入框
+      uploadBtn: document.getElementById('upload-btn'), // 上传按钮
+      videoGrid: document.getElementById('video-grid'), // 视频网格容器
+
+      // 上传浮框相关元素
+      uploadModal: document.getElementById('upload-modal'),
+      closeUploadModal: document.getElementById('close-upload-modal'),
+      videoPreview: document.getElementById('video-preview'),
+      videoTitle: document.getElementById('video-title'),
+      videoDuration: document.getElementById('video-duration'),
+      videoSize: document.getElementById('video-size'),
+      videoRemark: document.getElementById('video-remark'),
+      tagSelection: document.getElementById('tag-selection'),
+      newTagInputModal: document.getElementById('new-tag-input-modal'),
+      addTagBtnModal: document.getElementById('add-tag-btn-modal'),
+      saveVideoBtn: document.getElementById('save-video-btn'),
+      cancelUploadBtn: document.getElementById('cancel-upload-btn'),
+      // 确认对话框
+      confirmModal: document.getElementById('confirm-modal'),
+      confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+      confirmOkBtn: document.getElementById('confirm-ok-btn'),
+      // 隐藏的文件输入
+      fileInput: document.createElement('input')
     };
+
+    // 初始化文件输入元素(上传视频模块 相关设置)
+    elements.fileInput.type = 'file';
+    elements.fileInput.accept = 'video/*';
+    elements.fileInput.classList.add('hidden');
+    document.body.appendChild(elements.fileInput);
 
 
     // 初始化函数
     async function init() {
       console.log('初始化函数 init() 被调用');
-      try {        
+      try {
         // 加载视频和标签数据
         await loadTags();
         await loadVideos();
@@ -312,26 +490,26 @@
         console.log('加载标签列表...');
         const tags = await flutterChannel.getTags();
         state.tags = tags;
-        renderTagFilters();
-        renderTagList();
+        // renderTagFilters();
+        // renderTagList();
       } catch (error) {
         console.error('加载标签失败:', error);
       }
     }
+
     // 优化：避免重复请求，对相同路径的缩略图进行缓存，减少重复请求
     const thumbnailCache = new Map();
-
     // 渲染视频缩略图
     async function renderVideoThumbnail(video) {
       if (!video.id) {
         return '<i class="fa fa-film text-4xl text-gray-400"></i>';
       }
-      
+
       // 检查缓存
       if (thumbnailCache.has(video.id)) {
         return thumbnailCache.get(video.id);
       }
-      
+
       try {
         // 获取Base64格式的缩略图
         const thumbnailData = await flutterChannel.getThumbnail(video.id);
@@ -340,8 +518,8 @@
           throw new Error('缩略图数据格式错误，缺少base64字段');
         }
 
-        const imgHtml =  `<img src="data:image/jpeg;base64,${thumbnailData.base64}" 
-                    alt="${video.title}" 
+        const imgHtml =  `<img src="data:image/jpeg;base64,${thumbnailData.base64}"
+                    alt="${video.title}"
                     class="w-full h-full object-cover">`;
         thumbnailCache.set(video.id, imgHtml);
         return imgHtml;
@@ -353,7 +531,7 @@
 
     // 渲染视频网格
     async function renderVideoGrid() {
-      // 应用标签筛选
+      // 1. 应用标签筛选
       let filteredVideos = state.videos;
       if (state.selectedTagIds.length > 0) {
         filteredVideos = state.videos.filter(video =>
@@ -361,15 +539,20 @@
         );
       }
 
-      // 应用搜索筛选
-      const searchTerm = elements.searchInput.value.toLowerCase();
-      if (searchTerm) {
+      // 2. 应用本地筛选（使用localeCompare避免中文问题）
+      const filterTerm = elements.filterInput.value.trim();
+      if (filterTerm) {
+        const filterLower = filterTerm.toLowerCase();
         filteredVideos = filteredVideos.filter(video =>
-          video.title.toLowerCase().includes(searchTerm) ||
-          video.tagIds.some(tag => tag.name.toLowerCase().includes(searchTerm))
+          video.title.toLowerCase().includes(filterLower) ||
+          video.tagIds.some(tagId => {
+            const tag = state.tags.find(t => t.id === tagId);
+            return tag && tag.name.toLowerCase().includes(filterLower);
+          })
         );
       }
 
+      // 3. 无匹配结果时的显示
       if (filteredVideos.length === 0) {
         elements.videoGrid.innerHTML = `
           <div class="text-center text-gray-500 py-12">
@@ -380,16 +563,17 @@
         return;
       }
 
-      
+
   const videoCards = await Promise.all(filteredVideos.map(async (video) => {
     const thumbnailHtml = await renderVideoThumbnail(video);
     return `
+      <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition cursor-pointer" data-video-id="${video.id}">
         <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition">
-          <div class="relative aspect-video bg-gray-100">        
+          <div class="relative aspect-video bg-gray-100">
             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
               ${formatFileSize(video.fileSize)}
             </div>
-              ${thumbnailHtml}            
+              ${thumbnailHtml}
             <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
               ${formatDuration(video.duration)}
             </div>
@@ -398,9 +582,9 @@
             <h3 class="font-semibold text-gray-800 mb-2 truncate">${video.title}</h3>
             <div class="flex flex-wrap gap-1 mb-3">
               ${video.tagIds.map(tagId => {
-                const tag = state.tags.find(t => t.id === tagId);              
-                return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>` 
-                : 
+                const tag = state.tags.find(t => t.id === tagId);
+                return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>`
+                :
                 `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">当前未有标签</span>`;
             }).join('')}
             </div>
@@ -409,119 +593,231 @@
             </div>
           </div>
         </div>
+      </div>
       `}));
       elements.videoGrid.innerHTML = videoCards.join('');
     }
 
-    // 渲染标签筛选器
-    function renderTagFilters() {
+    // 渲染标签选择区域
+    function renderTagSelection() {
       if (state.tags.length === 0) {
-        elements.tagFilter.innerHTML = '<span class="text-gray-600 font-medium">暂无标签</span>';
+        elements.tagSelection.innerHTML = '<p class="text-gray-500 text-sm w-full text-center">暂无标签，请添加标签</p>';
         return;
       }
 
-      elements.tagFilter.innerHTML = `
-        <span class="text-gray-600 font-medium">筛选标签:</span>
-        ${state.selectedTagIds.length > 0 ? `
-          <button id="clear-tags" class="text-gray-500 hover:text-gray-700">
-            <i class="fa fa-times-circle"></i> 清除筛选
-          </button>
-        ` : ''}
-        ${state.tags.map(tag => `
-          <button
-            class="tag-filter-btn px-3 py-1 rounded-full text-sm ${
-              state.selectedTagIds.includes(tag.id)
-                ? 'bg-primary text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }"
-            data-tag-id="${tag.id}"
-          >
-            ${tag.name}
-          </button>
-        `).join('')}
-      `;
-
-      // 绑定标签筛选事件
-      document.querySelectorAll('.tag-filter-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const tagId = e.currentTarget.dataset.tagId;
-          toggleTagFilter(tagId);
-        });
-      });
-
-      // 绑定清除筛选事件
-      const clearBtn = document.getElementById('clear-tags');
-      if (clearBtn) {
-        clearBtn.addEventListener('click', clearTagFilters);
-      }
-    }
-
-    // 渲染标签列表（管理模态框中）
-    function renderTagList() {
-      if (state.tags.length === 0) {
-        elements.tagList.innerHTML = '<p class="text-gray-500 text-center py-4">暂无标签</p>';
-        return;
-      }
-
-      elements.tagList.innerHTML = state.tags.map(tag => `
-        <div class="flex justify-between items-center p-2 border-b last:border-0">
-          <span>${tag.name}</span>
-          <div class="flex items-center">
-            <span class="text-xs text-gray-500 mr-3">${tag.videoCount}个视频</span>
-            <button class="delete-tag-btn text-red-500 hover:text-red-700" data-tag-id="${tag.id}">
-              <i class="fa fa-trash"></i>
-            </button>
-          </div>
-        </div>
+      elements.tagSelection.innerHTML = state.tags.map(tag => `
+        <span
+          class="tag-pill ${state.selectedTagIdsForUpload.includes(tag.id) ? 'tag-pill-selected' : 'tag-pill-unselected'}"
+          data-tag-id="${tag.id}"
+        >
+          ${tag.name}
+        </span>
       `).join('');
 
-      // 绑定删除标签事件
-      document.querySelectorAll('.delete-tag-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+      // 绑定标签选择事件
+      document.querySelectorAll('#tag-selection .tag-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
           const tagId = e.currentTarget.dataset.tagId;
-          await flutterChannel.deleteTag(tagId);
-          await loadTags(); // 重新加载标签
-          await loadVideos(); // 重新加载视频
+          toggleTagSelection(tagId);
         });
       });
     }
 
-    // 切换标签筛选状态
-    function toggleTagFilter(tagId) {
-      setState(prev => {
-        if (prev.selectedTagIds.includes(tagId)) {
-          return {
-            selectedTagIds: prev.selectedTagIds.filter(id => id !== tagId)
-          };
-        } else {
-          return {
-            selectedTagIds: [...prev.selectedTagIds, tagId]
-          };
-        }
-      });
-    }
-
-    // 清除所有标签筛选
-    function clearTagFilters() {
-      setState({ selectedTagIds: [] });
-    }
-
-    // 更新状态并重新渲染
-    function setState(updater) {
-      if (typeof updater === 'function') {
-        state = { ...state, ...updater(state) };
+    // 切换标签选择状态
+    function toggleTagSelection(tagId) {
+      if (state.selectedTagIdsForUpload.includes(tagId)) {
+        state.selectedTagIdsForUpload = state.selectedTagIdsForUpload.filter(id => id !== tagId);
       } else {
-        state = { ...state, ...updater };
+        state.selectedTagIdsForUpload.push(tagId);
       }
-      renderVideoGrid();
-      renderTagFilters();
+      renderTagSelection();
+    }
+
+    // 处理视频文件选择
+    function handleFileSelection(file) {
+      if (!file || !file.type.startsWith('video/')) {
+        alert('请选择有效的视频文件');
+        return;
+      }
+
+      // 保存当前上传的文件
+      state.currentUploadFile = file;
+
+      // 重置表单
+      elements.videoTitle.value = file.name.replace(/\.[^/.]+$/, ""); // 去除扩展名作为默认标题
+      elements.videoRemark.value = '';
+      state.selectedTagIdsForUpload = [];
+
+      // 显示视频预览
+      const videoURL = URL.createObjectURL(file);
+      elements.videoPreview.src = videoURL;
+
+      // 获取视频信息
+      elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
+
+      // 加载视频元数据以获取时长
+      elements.videoPreview.onloadedmetadata = () => {
+        const duration = Math.floor(elements.videoPreview.duration);
+        elements.videoDuration.textContent = `时长: ${formatDuration(duration)}`;
+      };
+
+      // 显示上传浮框
+      elements.uploadModal.classList.remove('hidden');
+
+      // 加载标签
+      loadTags();
+      renderTagSelection();
+    }
+
+    // 保存视频信息并上传
+    async function saveVideo() {
+      const title = elements.videoTitle.value.trim();
+      if (!title) {
+        alert('请输入视频标题');
+        return;
+      }
+
+      if (!state.currentUploadFile) {
+        alert('未找到视频文件，请重新选择');
+        return;
+      }
+
+      // 准备上传数据
+      const videoFile = state.currentUploadFile;
+      const duration = Math.floor(elements.videoPreview.duration);
+      const fileId = 'video_' + Date.now(); // 唯一标识
+
+      // 显示进度条容器
+      document.getElementById('upload-progress-container').classList.remove('hidden');
+      const progressBar = document.getElementById('upload-progress-bar');
+      progressBar.style.width = '0%';
+
+      // 禁用按钮并显示上传中状态
+      elements.saveVideoBtn.disabled = true;
+      elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
+      elements.cancelUploadBtn.disabled = true;
+
+      try {
+        // 初始化上传
+        await flutterChannel._sendRequest('initBinaryUpload', {
+          fileId,
+          fileName: videoFile.name,
+          totalSize: videoFile.size,
+          mimeType: videoFile.type
+        });
+
+        // 分块上传
+        await uploadBinaryInChunks(fileId, videoFile, (progress) => {
+          progressBar.style.width = `${progress}%`;
+        });
+
+        // 完成上传
+        const result = await flutterChannel.completeBinaryUpload(
+          fileId,
+          videoFile.name,
+          duration,
+          state.selectedTagIdsForUpload,
+          elements.videoRemark.value.trim()
+        );
+        console.log('视频上传完成:', result);
+
+        // 刷新列表并重置状态
+        await loadVideos();
+        state.selectedTagIdsForUpload = [];
+        elements.uploadModal.classList.add('hidden');
+        showToast('视频上传成功');
+        elements.videoPreview.src = '';
+        URL.revokeObjectURL(elements.videoPreview.src);
+      } catch (error) {
+        console.error('上传失败:', error);
+        alert(`上传失败: ${error.message || '未知错误'}`);
+      } finally {
+        elements.saveVideoBtn.disabled = false;
+        elements.saveVideoBtn.textContent = '保存视频';
+        elements.cancelUploadBtn.disabled = false;
+        state.currentUploadFile = null;
+      }
+    }
+
+    // 分块上传二进制视频文件
+    async function uploadBinaryInChunks(fileId, videoFile, onProgress) {
+      const chunkSize = 256 * 1024; // 256KB/块
+      const totalSize = videoFile.size;
+      const totalChunks = Math.ceil(totalSize / chunkSize);
+
+      for (let start = 0; start < totalSize; start += chunkSize) {
+        const end = Math.min(start + chunkSize, totalSize);
+        const chunkBlob = videoFile.slice(start, end);
+        const chunkIndex = Math.floor(start / chunkSize);
+
+        try {
+          // 发送二进制块
+          await flutterChannel.sendBinaryChunk({
+            fileId,
+            chunkIndex,
+            totalChunks,
+            blob: chunkBlob
+          });
+
+          // 更新进度
+          const progress = Math.floor((end / totalSize) * 100);
+          onProgress(progress);
+
+          // Safari兼容性延迟
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (error) {
+          console.error(`块 ${chunkIndex} 上传失败:`, error);
+          throw new Error(`上传失败，块索引: ${chunkIndex}`);
+        }
+      }
+    }
+
+    // 添加打开视频详情的函数
+    async function openVideoDetail(video) {
+      // 保存当前编辑的视频
+      state.currentEditingVideo = video;
+
+      // 填充表单数据
+      elements.videoTitle.value = video.title;
+      elements.videoRemark.value = video.remark || '';
+      state.selectedTagIdsForUpload = [...video.tagIds];
+
+      // 显示视频预览
+      const thumbnailData = await flutterChannel.getThumbnail(video.id);
+      if (thumbnailData && thumbnailData.videoUrl) {
+        elements.videoPreview.src = thumbnailData.videoUrl;
+      }
+
+      // 更新浮框标题
+      document.querySelector('#upload-modal h3').textContent = '视频详情';
+
+      // 更新按钮文本
+      elements.saveVideoBtn.textContent = '保存修改';
+
+      // 更新视频信息显示
+      elements.videoSize.textContent = `大小: ${formatFileSize(video.fileSize)}`;
+      elements.videoDuration.textContent = `时长: ${formatDuration(video.duration)}`;
+
+      // 显示浮框
+      elements.uploadModal.classList.remove('hidden');
+
+      // 加载并渲染标签
+      await loadTags();
+      renderTagSelection();
     }
 
     // 绑定所有事件处理程序
     function bindEvents() {
-      // 上传区域点击事件
-      elements.uploadArea.addEventListener('click', () => {
-        elements.fileInput.click();
+      // 视频卡片点击事件
+      elements.videoGrid.addEventListener('click', async (e) => {
+        const videoCard = e.target.closest('[data-video-id]');
+        if (videoCard) {
+          const videoId = videoCard.dataset.videoId;
+          const video = state.videos.find(v => v.id === videoId);
+          if (video) {
+            await openVideoDetail(video);
+          }
+        }
       });
 
       // 上传按钮点击事件
@@ -530,106 +826,137 @@
       });
 
       // 文件选择事件
-      elements.fileInput.addEventListener('change', async (e) => {
+      elements.fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          // 显示上传中状态
-          elements.uploadArea.innerHTML = `
-            <i class="fa fa-spinner fa-spin text-5xl text-gray-400 mb-4"></i>
-            <p class="text-gray-500">正在上传: ${file.name}</p>
-          `;
-
-          try {
-            // 调用Flutter上传视频
-            await flutterChannel.uploadVideo(file);
-            // 上传完成后重新加载视频列表
-            await loadVideos();
-            // 重置上传区域
-            elements.uploadArea.innerHTML = `
-              <i class="fa fa-cloud-upload text-5xl text-gray-400 mb-4"></i>
-              <h2 class="text-xl font-semibold text-gray-700 mb-2">拖放视频到此处上传</h2>
-              <p class="text-gray-500 mb-4">或点击选择视频文件</p>
-              <button id="upload-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
-                选择视频
-              </button>
-            `;
-            // 重新绑定上传按钮事件
-            elements.uploadBtn = document.getElementById('upload-btn');
-            elements.uploadBtn.addEventListener('click', () => {
-              elements.fileInput.click();
-            });
-          } catch (error) {
-            console.error('上传失败:', error);
-            elements.uploadArea.innerHTML = `
-              <i class="fa fa-exclamation-triangle text-5xl text-red-400 mb-4"></i>
-              <h2 class="text-xl font-semibold text-red-700 mb-2">上传失败</h2>
-              <p class="text-gray-500 mb-4">请重试或选择其他文件</p>
-              <button id="upload-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
-                重新上传
-              </button>
-            `;
-            elements.uploadBtn = document.getElementById('upload-btn');
-            elements.uploadBtn.addEventListener('click', () => {
-              elements.fileInput.click();
-            });
-          }
+          handleFileSelection(e.target.files[0]);
+          // 重置输入值，允许重复选择同一文件
+          e.target.value = '';
         }
       });
 
-      // 拖放上传事件
-      elements.uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        elements.uploadArea.classList.add('border-primary');
-      });
+      // 本地筛选框输入事件（实时筛选）
+      elements.filterInput.addEventListener('input', renderVideoGrid);
 
-      elements.uploadArea.addEventListener('dragleave', () => {
-        elements.uploadArea.classList.remove('border-primary');
-      });
-
-      elements.uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        elements.uploadArea.classList.remove('border-primary');
-
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          const file = e.dataTransfer.files[0];
-          if (file.type.startsWith('video/')) {
-            // 处理视频文件
-            elements.fileInput.files = e.dataTransfer.files;
-            const event = new Event('change');
-            elements.fileInput.dispatchEvent(event);
-          } else {
-            alert('请上传视频文件');
-          }
-        }
-      });
-
-      // 搜索输入事件
-      elements.searchInput.addEventListener('input', renderVideoGrid);
-
-      // 标签管理按钮事件
-      elements.tagManagementBtn.addEventListener('click', () => {
-        elements.tagModal.classList.remove('hidden');
-      });
-
-      // 关闭标签模态框事件
-      elements.closeTagModal.addEventListener('click', () => {
-        elements.tagModal.classList.add('hidden');
-      });
-
-      // 添加标签按钮事件
-      elements.addTagBtn.addEventListener('click', async () => {
-        const tagName = elements.newTagInput.value.trim();
-        if (tagName) {
-          await flutterChannel.addTag(tagName);
-          elements.newTagInput.value = '';
-          await loadTags(); // 重新加载标签
-        }
-      });
-
-      // 按Enter键添加标签
-      elements.newTagInput.addEventListener('keypress', (e) => {
+      // 顶部搜索框回车事件（调用后端搜索）
+      elements.searchInput.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter') {
-          elements.addTagBtn.click();
+          const searchTerm = elements.searchInput.value.trim();
+          if (searchTerm) {
+            // 显示加载状态
+            elements.videoGrid.innerHTML = `
+              <div class="text-center text-gray-500 py-12">
+                <i class="fa fa-spinner fa-spin text-4xl mb-4"></i>
+                <p>正在搜索视频...</p>
+              </div>
+            `;
+
+            try {
+              // 调用后端搜索接口
+              const searchResults = await flutterChannel.searchVideos(searchTerm);
+              // 保存原始视频列表，方便后续筛选恢复
+              state.originalVideos = state.videos;
+              // 使用搜索结果更新视频列表
+              state.videos = searchResults;
+              // 清空标签筛选
+              state.selectedTagIds = [];
+              // 重新渲染
+              renderVideoGrid();
+              // renderTagFilters();
+            } catch (error) {
+              console.error('搜索失败:', error);
+              elements.videoGrid.innerHTML = `
+                <div class="text-center text-gray-500 py-12">
+                  <i class="fa fa-exclamation-triangle text-4xl mb-4 text-red-500"></i>
+                  <p>搜索失败，请重试</p>
+                </div>
+              `;
+            }
+          } else {
+            // 搜索框为空时恢复原始视频列表
+            if (state.originalVideos) {
+              state.videos = state.originalVideos;
+              state.originalVideos = null;
+              renderVideoGrid();
+            }
+          }
+        }
+      });
+
+
+      // 关闭上传浮框
+      elements.closeUploadModal.addEventListener('click', () => {
+        if (state.currentUploadFile) {
+          elements.confirmModal.classList.remove('hidden');
+        } else {
+          elements.uploadModal.classList.add('hidden');
+        }
+      });
+
+      // 取消上传按钮
+      elements.cancelUploadBtn.addEventListener('click', () => {
+        elements.confirmModal.classList.remove('hidden');
+      });
+
+      // 确认取消对话框 - 继续编辑
+      elements.confirmCancelBtn.addEventListener('click', () => {
+        elements.confirmModal.classList.add('hidden');
+      });
+
+      // 确认取消对话框 - 确认取消
+      elements.confirmOkBtn.addEventListener('click', () => {
+        // 清除视频预览
+        elements.videoPreview.src = '';
+        if (elements.videoPreview.src) {
+          URL.revokeObjectURL(elements.videoPreview.src);
+        }
+        // 重置状态
+        state.currentUploadFile = null;
+        // 关闭对话框
+        elements.confirmModal.classList.add('hidden');
+        elements.uploadModal.classList.add('hidden');
+      });
+
+      // 保存视频按钮
+      elements.saveVideoBtn.addEventListener('click', saveVideo);
+
+      // 模态框外部点击关闭
+      elements.uploadModal.addEventListener('click', (e) => {
+        if (e.target === elements.uploadModal && state.currentUploadFile) {
+          elements.confirmModal.classList.remove('hidden');
+        }
+      });
+
+      elements.confirmModal.addEventListener('click', (e) => {
+        if (e.target === elements.confirmModal) {
+          elements.confirmModal.classList.add('hidden');
+        }
+      });
+
+      // 浮框中添加标签按钮
+      elements.addTagBtnModal.addEventListener('click', async () => {
+        const tagName = elements.newTagInputModal.value.trim();
+        if (tagName) {
+          try {
+            // 调用添加标签接口并获得返回对象
+            const newTag = await flutterChannel.addTag(tagName);
+            // 更新本地标签列表
+            state.tags.push(newTag);
+            state.selectedTagIdsForUpload.push(newTag.id);
+            // 清空输入框
+            elements.newTagInputModal.value = '';
+            // 重新渲染标签选择区域
+            renderTagSelection();
+          } catch (error) {
+            console.error('添加标签失败:', error);
+            alert(`添加标签失败: ${error.message || '未知错误'}`);
+          }
+        }
+      });
+
+      // 浮框中按Enter键添加标签
+      elements.newTagInputModal.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          elements.addTagBtnModal.click();
         }
       });
     }
@@ -656,7 +983,20 @@
       return date.toLocaleString();
     }
 
-    
+    // 工具函数：显示操作成功提示框
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+
+
     // 页面加载完成后初始化
     window.addEventListener('DOMContentLoaded', init);
   </script>

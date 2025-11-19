@@ -120,6 +120,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         await videoProvider.saveVideo(_existingVideo!);
         Fluttertoast.showToast(msg: '信息已更新');
       } else {
+        // 复制视频处不会计算视频时长，提前计算并提供
         final durationTime = _playerUtils.getdDuration();
         // 新视频：复制到APP目录并保存信息
         await VideoUploader.copyToAppDirectory(

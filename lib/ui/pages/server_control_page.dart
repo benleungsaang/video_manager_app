@@ -47,14 +47,14 @@ class _ServerControlPageState extends State<ServerControlPage> {
                     } else {
                       try {
                         // 检查是否已初始化
-                        print('Server_control: ${serverService.isInitialized}');
-                        if (!serverService.isInitialized) {
-                          // 需要在ServerService中添加isInitialized getter
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('服务器正在初始化，请稍后再试')),
-                          );
-                          return;
-                        }
+                        // print('Server_control: ${serverService.isInitialized}');
+                        // if (!serverService.isInitialized) {
+                        //   // 需要在ServerService中添加isInitialized getter
+                        //   ScaffoldMessenger.of(context).showSnackBar(
+                        //     const SnackBar(content: Text('服务器正在初始化，请稍后再试')),
+                        //   );
+                        //   return;
+                        // }
 
                         final port = int.parse(_portController.text);
                         // await serverService.startServer(customPort: port);

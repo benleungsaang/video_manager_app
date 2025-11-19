@@ -73,16 +73,16 @@ class ServerService with ChangeNotifier {
   Map<String, String> get clientDevices => _clientDevices;
 
   late WebApiHandler _webApiHandler;
-  bool _isInitialized = false; // 新增初始化标记
-  bool get isInitialized => _isInitialized;
+  // bool _isInitialized = false; // 新增初始化标记
+  // bool get isInitialized => _isInitialized;
 
-  void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
-    _webApiHandler = WebApiHandler(
-      tagProvider: tagProvider,
-      videoProvider: videoProvider,
-    );
-    _isInitialized = true;
-  }
+  // void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
+  //   _webApiHandler = WebApiHandler(
+  //     tagProvider: tagProvider,
+  //     videoProvider: videoProvider,
+  //   );
+  //   _isInitialized = true;
+  // }
 
   // void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
   //   _webApiHandler = WebApiHandler(
@@ -163,10 +163,17 @@ class ServerService with ChangeNotifier {
   Future<void> startServer({int? customPort}) async {
     if (_isRunning) return;
 
-    // 新增检查：确保初始化完成
-    if (!_isInitialized) {
-      throw Exception("startServer => ServerService未初始化，请先调用initApiHandler");
-    }
+    // // 新增检查：确保初始化完成
+    // if (!_isInitialized) {
+    //   throw Exception("startServer => ServerService未初始化，请先调用initApiHandler");
+    // }
+    // _webApiHandler = WebApiHandler(
+    //   tagProvider:
+    //       navigatorKey.currentState!.context.read<TagProvider>(),
+    //   videoProvider:
+    //       navigatorKey.currentState!.context.read<VideoProvider>(),
+    // );
+    _webApiHandler = WebApiHandler();
 
     if (customPort != null) {
       if (customPort < 1024 || customPort > 65535) {
@@ -295,10 +302,10 @@ class ServerService with ChangeNotifier {
   void _handleClientMessage(
       dynamic message, WebSocketChannel channel, String clientId) {
     try {
-      // 新增：检查是否初始化
-      if (!_isInitialized) {
-        throw Exception(
-            "handleClientMessage => ServerService未初始化，请先调用initApiHandler");
+      // 处理二进制数据
+      if (message is Uint8List) {
+        _handleBinaryData(channel, clientId, message);
+        return;
       }
 
       // 解析消息
@@ -311,16 +318,21 @@ class ServerService with ChangeNotifier {
         throw FormatException('不支持的消息格式');
       }
 
+      // 记录二进制请求上下文
+      if (messageJson['action'] == 'uploadBinaryChunk') {
+        _pendingBinaryRequests[clientId] = messageJson;
+      }
+
       print('收到客户端消息: $messageJson');
 
       // 检查消息格式是否正确
-      if (!messageJson.containsKey('id') ||
-          !messageJson.containsKey('action')) {
-        throw FormatException('消息格式错误，缺少id或action');
-      }
+      // if (!messageJson.containsKey('id') ||
+      //     !messageJson.containsKey('action')) {
+      //   throw FormatException('消息格式错误，缺少id或action');
+      // }
 
       // 调用WebApiHandler处理请求
-      _webApiHandler.handleRequest(messageJson).then((response) {
+      _webApiHandler.handleRequest(channel, messageJson).then((response) {
         // 给响应添加请求ID，以便客户端匹配请求和响应
         final responseWithId = {'id': messageJson['id'], ...response};
         // 发送响应给客户端
@@ -338,6 +350,31 @@ class ServerService with ChangeNotifier {
       // 发送错误响应
       channel.sink.add(json.encode({'success': false, 'error': e.toString()}));
     }
+  }
+
+  final Map<String, Map<String, dynamic>> _pendingBinaryRequests = {};
+  void _handleBinaryData(WebSocketChannel channel, String clientId, Uint8List data) {
+    if (!_pendingBinaryRequests.containsKey(clientId)) {
+      channel.sink.add(json.encode({
+        'success': false,
+        'error': '未找到对应的二进制请求'
+      }));
+      return;
+    }
+
+    // 获取对应的请求信息
+    final request = _pendingBinaryRequests.remove(clientId);
+    final requestId = request!['id'];
+    final params = request['params'];
+
+    // 交给API处理器处理二进制块
+    _webApiHandler.handleBinaryData(
+      channel: channel,
+      fileId: params['fileId'],
+      chunkIndex: params['chunkIndex'],
+      data: data,
+      requestId: requestId
+    );
   }
 
   // 提取静态资源处理器

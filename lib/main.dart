@@ -18,7 +18,7 @@ void main() async {
   final videoProvider = VideoProvider()..loadVideos();
   final serverService = ServerService();
 
-  serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
+  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
 
   final videoPaths = videoProvider.videos
       .where((v) => v.thumbnailPath == null)
@@ -43,6 +43,9 @@ void main() async {
   );
 }
 
+// 全局导航键，用于在非组件上下文中访问Provider
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -61,6 +64,7 @@ class MyApp extends StatelessWidget {
         // ChangeNotifierProvider(create: (_) => ServerService()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey, // 配置全局key
         title: '视频管理APP',
         theme: ThemeData(
           primarySwatch: Colors.indigo,

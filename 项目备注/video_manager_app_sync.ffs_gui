@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FreeFileSync XmlType="GUI" XmlFormat="19">
+<FreeFileSync XmlType="GUI" XmlFormat="23">
     <Notes/>
     <Compare>
         <Variant>TimeAndSize</Variant>
@@ -7,8 +7,7 @@
         <IgnoreTimeShift/>
     </Compare>
     <Synchronize>
-        <Variant>Mirror</Variant>
-        <DetectMovedFiles>false</DetectMovedFiles>
+        <Differences LeftOnly="right" LeftNewer="right" RightNewer="right" RightOnly="right"/>
         <DeletionPolicy>RecycleBin</DeletionPolicy>
         <VersioningFolder Style="Replace"/>
     </Synchronize>
@@ -24,6 +23,7 @@
             <Item>*\thumbs.db</Item>
             <Item>\node_modules\</Item>
             <Item>\public\image\</Item>
+            <Item>\build\</Item>
             <Item>\android\build\</Item>
             <Item>\lib\generated\</Item>
             <Item>*.g.dart</Item>
@@ -63,27 +63,10 @@
             <Item>\test\</Item>
             <Item>\web\icons\</Item>
             <Item>\windows\</Item>
-            <Item>\备注文件\</Item>
+            <Item>\*备注*\</Item>
             <Item>\.git\</Item>
-            <Item>\项目备注\</Item>
-            <Item>*.log</Item>
-            <Item>*\native_assets\</Item>
-            <Item>*\main.dart.js</Item>
-            <Item>*\flutter_service_worker.js</Item>
-            <Item>*\flutter_bootstrap.js</Item>
-            <Item>*\flutter.js</Item>
-            <Item>*\manifest.json</Item>
-            <Item>\build\web\assets\</Item>
-            <Item>\build\web\canvaskit\</Item>
-            <Item>\build\web\icons\Icon-192.png</Item>
-            <Item>*\favicon.png</Item>
-            <Item>\build\web\version.json</Item>
-            <Item>\build\web\.last_build_id</Item>
-            <Item>*.png</Item>
-            <Item>\lib\ui\pages\123</Item>
-            <Item>\build\</Item>
-            <Item>\web\assets\fonts\</Item>
-            <Item>\web\assets\</Item>
+            <Item>video_manager_app.iml</Item>
+            <Item>\icons\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>
@@ -91,8 +74,12 @@
     </Filter>
     <FolderPairs>
         <Pair>
-            <Left>G:\Flutter_project\video_manager_app</Left>
-            <Right>G:\Flutter_project\code_video_manager_app</Right>
+            <Left>E:\Flutter_Projects\video_manager_app\web</Left>
+            <Right>E:\Flutter_Projects\video_manager_app_code\web</Right>
+        </Pair>
+        <Pair>
+            <Left>E:\Flutter_Projects\video_manager_app</Left>
+            <Right>E:\Flutter_Projects\video_manager_app_code</Right>
         </Pair>
     </FolderPairs>
     <Errors Ignore="false" Retry="0" Delay="5"/>
