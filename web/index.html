@@ -593,7 +593,7 @@
               <!-- 删除菜单 -->
               <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10">
                 <button class="delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
-                  <i class="fa fa-trash mr-1"></i>删除
+                  <i class="fa fa-trash mr-1"></i>
                 </button>
               </div>
             </div>
@@ -721,7 +721,6 @@
           state.currentFileId = fileId;
 
           // 显示进度条容器
-          document.getElementById('upload-progress-container').classList.remove('hidden');
           const progressBar = document.getElementById('upload-progress-bar');
           progressBar.style.width = '0%';
 
@@ -730,6 +729,7 @@
           elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
           elements.cancelUploadBtn.disabled = true;
 
+          document.getElementById('upload-progress-container').classList.remove('hidden');
           // 初始化上传
           await flutterChannel._sendRequest('initBinaryUpload', {
             fileId,
@@ -739,7 +739,7 @@
           });
 
           // 分块上传
-          await uploadChunks(videoFile, fileId, (progress) => {
+          await uploadBinaryInChunks(videoFile, fileId, (progress) => {
             progressBar.style.width = `${progress}%`;
           });
         }
@@ -752,6 +752,7 @@
           state.selectedTagIdsForUpload,
           elements.videoRemark.value.trim()
         );
+
 
         // 从待处理列表移除
         state.pendingUploads.delete(fileId);
@@ -769,11 +770,12 @@
         console.error('上传失败:', error);
         alert(`上传失败: ${error.message || '未知错误'}`);
       } finally {
+        document.getElementById('upload-progress-container').classList.add('hidden');
         elements.saveVideoBtn.disabled = false;
         elements.saveVideoBtn.textContent = '保存视频';
         elements.cancelUploadBtn.disabled = false;
         state.currentUploadFile = null;
-        document.getElementById('upload-progress-container').classList.add('hidden');
+        state.currentFileId = null
       }
 
     }
@@ -861,6 +863,44 @@
     function bindEvents() {
       // 视频卡片点击事件
       elements.videoGrid.addEventListener('click', async (e) => {
+        const deleteMenuBtn = e.target.closest('.delete-menu-btn');
+        if (deleteMenuBtn) {
+          e.stopPropagation(); // 阻止事件冒泡到视频卡片
+          const videoId = deleteMenuBtn.dataset.videoId;
+          const deleteMenu = deleteMenuBtn.nextElementSibling;
+
+          // 隐藏其他所有删除菜单
+          document.querySelectorAll('.delete-menu').forEach(menu => {
+            if (menu !== deleteMenu) {
+              menu.classList.add('hidden');
+            }
+          });
+
+          // 切换当前删除菜单显示状态
+          deleteMenu.classList.toggle('hidden');
+          return;
+        }
+
+        // 处理删除视频按钮点击
+        const deleteVideoBtn = e.target.closest('.delete-video-btn');
+        if (deleteVideoBtn) {
+          e.stopPropagation(); // 阻止事件冒泡到视频卡片
+          const videoId = deleteVideoBtn.dataset.videoId;
+          if (confirm('确定要删除这个视频吗？此操作不可恢复。')) {
+            try {
+              await flutterChannel.deleteVideo(videoId);
+              showToast('视频已删除');
+              await loadVideos(); // 重新加载视频列表
+            } catch (error) {
+              console.error('删除视频失败:', error);
+              alert('删除失败: ' + (error.message || '未知错误'));
+            }
+          }
+          // 隐藏删除菜单
+          deleteVideoBtn.closest('.delete-menu').classList.add('hidden');
+          return;
+        }
+
         const videoCard = e.target.closest('[data-video-id]');
         if (videoCard) {
           const videoId = videoCard.dataset.videoId;
@@ -968,10 +1008,10 @@
         state.currentFileId = fileId;
 
         // 显示进度条
-        document.getElementById('upload-progress-container').classList.remove('hidden');
         const progressBar = document.getElementById('upload-progress-bar');
         progressBar.style.width = '0%';
 
+        document.getElementById('upload-progress-container').classList.remove('hidden');
         try {
           // 初始化上传
           await flutterChannel._sendRequest('initBinaryUpload', {
@@ -982,7 +1022,7 @@
           });
 
           // 分块上传
-          await uploadChunks(videoFile, fileId, (progress) => {
+          await uploadBinaryInChunks(videoFile, fileId, (progress) => {
             progressBar.style.width = `${progress}%`;
           });
 
@@ -1109,24 +1149,12 @@
         });
       });
 
-      // 点击删除按钮
-      document.addEventListener('click', (e) => {
-        if (e.target.closest('.delete-video-btn')) {
-          const btn = e.target.closest('.delete-video-btn');
-          const videoId = btn.dataset.videoId;
-          if (confirm('确定要删除这个视频吗？')) {
-            flutterChannel.deleteVideo(videoId).then(() => {
-              showToast('删除成功');
-              loadVideos();
-            });
-          }
-          btn.closest('.delete-menu').classList.add('hidden');
-        } else if (!e.target.closest('.delete-menu-btn') && !e.target.closest('.delete-menu')) {
-          document.querySelectorAll('.delete-menu').forEach(menu => {
-            menu.classList.add('hidden');
-          });
-        }
-      });
+      // 点击页面其他区域隐藏所有删除菜单
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.delete-menu').forEach(menu => {
+          menu.classList.add('hidden');
+        });
+      })
     }
 
     // 工具函数：格式化时长
