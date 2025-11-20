@@ -160,7 +160,9 @@ class VideoGrid extends StatelessWidget {
                 itemBuilder: (context) => [
                   const PopupMenuItem(
                     value: 'delete',
-                    child: Text('删除'),
+                    child: Center(
+                        child: Icon(Icons.delete_forever,
+                            size: 48, color: Colors.redAccent)),
                   ),
                 ],
                 onSelected: (value) {

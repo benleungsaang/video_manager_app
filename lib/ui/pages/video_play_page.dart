@@ -148,6 +148,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isSaved ? '编辑视频' : '添加视频'),
+        backgroundColor: Colors.blue[800],
         actions: [
           TextButton(
             onPressed: _isProcessing ? null : _saveVideo,
