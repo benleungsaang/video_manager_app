@@ -7,6 +7,7 @@ import '../../models/video.dart';
 // import '../../utils/file_utils.dart';
 import '../pages/video_play_page.dart';
 import '../../providers/tag_provider.dart';
+import '../../providers/video_provider.dart';
 
 class VideoGrid extends StatelessWidget {
   final List<Video> videos;
@@ -25,7 +26,7 @@ class VideoGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.8, // 宽高比
+        childAspectRatio: 1.2, // 宽高比
       ),
       itemCount: videos.length,
       itemBuilder: (context, index) {
@@ -46,88 +47,156 @@ class VideoGrid extends StatelessWidget {
           ),
         );
       },
+
+      // 重要：让 GestureDetector 只响应非删除按钮区域的点击
+      behavior: HitTestBehavior.translucent,
       child: Card(
-        elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        elevation: 4,
+        margin: EdgeInsets.zero, // 移除卡片默认边距，定位更精准
+        child: Stack(
+          fit: StackFit.expand, // Stack 占满整个卡片
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(8)),
-                  image: video.thumbnailPath != null
-                      ? DecorationImage(
-                          image: FileImage(File(video.thumbnailPath!)),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8)),
+                      image: video.thumbnailPath != null
+                          ? DecorationImage(
+                              image: FileImage(File(video.thumbnailPath!)),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: video.thumbnailPath == null
+                        ? const Center(
+                            child: Icon(Icons.video_library,
+                                size: 48, color: Colors.grey))
+                        : null,
+                  ),
                 ),
-                child: video.thumbnailPath == null
-                    ? const Center(
-                        child: Icon(Icons.video_library,
-                            size: 48, color: Colors.grey))
-                    : null,
-              ),
-            ),
 
-            // 视频信息
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 标题
-                  Text(
-                    video.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  // 标签
-                  _buildTagsDisplay(video.tagIds),
-
-                  const SizedBox(height: 4),
-
-                  // 上传时间
-                  Text(
-                    _formatDateTime(video.uploadTime),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-
-                  // 备注预览
-                  if (video.remark.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        video.remark.length > 20
-                            ? '${video.remark.substring(0, 20)}...'
-                            : video.remark,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
+                // 视频信息
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 标题
+                      Text(
+                        video.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
-                    ),
+
+                      const SizedBox(height: 4),
+
+                      // 标签
+                      if (video.tagIds.isNotEmpty)
+                        _buildTagsDisplay(video.tagIds)
+                      else
+                        Chip(
+                          label: Text(
+                            '未有标签',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              height: 1.2,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
+                          backgroundColor: Colors.grey[300],
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+
+                      const SizedBox(height: 4),
+
+                      // 上传时间
+                      Text(
+                        _formatDateTime(video.uploadTime),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      // 备注预览
+                      if (video.remark.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            video.remark.length > 20
+                                ? '${video.remark.substring(0, 20)}...'
+                                : video.remark,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // 右上角删除菜单按钮
+            Positioned(
+              top: 4,
+              right: 4,
+              child: PopupMenuButton(
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('删除'),
+                  ),
                 ],
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    _confirmDelete(context, video.id);
+                  }
+                },
+                icon: const Icon(Icons.more_vert, color: Colors.white),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, String videoId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除这个视频吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await Provider.of<VideoProvider>(context, listen: false)
+                  .deleteVideo(videoId);
+              Navigator.pop(context);
+            },
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

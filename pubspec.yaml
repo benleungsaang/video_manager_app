@@ -108,7 +108,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - build/web/
-    - build/web/assets/
+    # - build/web/assets/
     - build/web/css/
     - build/web/fonts/
     # - build/web/canvaskit/

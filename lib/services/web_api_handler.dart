@@ -18,7 +18,7 @@ import 'dart:convert';
 class UploadingFile {
   final String fileId;
   final int totalSize;
-  final int totalChunks;
+  int totalChunks;
   Map<int, Uint8List> chunks = {};
   int receivedSize = 0;
 
@@ -60,7 +60,7 @@ class WebApiHandler {
     // 解析请求类型和参数
     final String action = request['action'];
     final Map<String, dynamic> params = request['params'] ?? {};
-    // final String requestId = request['id'];
+    final String requestId = request['id'];
 
     try {
       switch (action) {
@@ -92,6 +92,24 @@ class WebApiHandler {
             'success': true,
             'data': _videoProvider.videos.map(_videoToJson).toList()
           };
+        // 添加获取视频播放URL的处理
+        case 'getVideoUrl':
+          final String videoId = params['videoId'];
+          final Video? video = _videoProvider.getVideoById(videoId);
+          if (video != null && video.filePath != null) {
+            // 对于Web端，返回文件的相对路径或URL
+            return {
+              'success': true,
+              'data': {'videoUrl': video.filePath}
+            };
+          } else {
+            return {'success': false, 'error': '视频文件不存在'};
+          }
+        // 删除视频
+        case 'deleteVideo':
+          final String videoId = params['id'];
+          await _videoProvider.deleteVideo(videoId);
+          return {'success': true};
         // 获取缩略图
         case 'getThumbnail':
           // 获取视频缩略图
@@ -171,10 +189,27 @@ class WebApiHandler {
         // 处理二进制块元数据
         case 'initBinaryUpload':
           return await _handleInitBinaryUpload(params);
+        // 【 逐份接收 】分块上传的二进制数据
         case 'uploadBinaryChunk':
           return await _handleUploadBinaryChunk(channel, params, requestId);
+        // 【 合并 】 分块上传的进制数据
         case 'completeBinaryUpload':
           return await _handleCompleteBinaryUpload(params);
+        // 添加取消二进制上传处理
+        case 'cancelBinaryUpload':
+          final String fileId = params['fileId'];
+          if (_uploadingFiles.containsKey(fileId)) {
+            _uploadingFiles.remove(fileId);
+          } else {
+            // 检查是否有未合并的临时文件
+            final appDir = await getApplicationDocumentsDirectory();
+            final tempDir = p.join(appDir.path, 'temp_uploads');
+            final tempFile = File(p.join(tempDir, fileId));
+            if (await tempFile.exists()) {
+              await tempFile.delete();
+            }
+          }
+          return {'success': true};
         default:
           return {'success': false, 'error': '未知操作: $action'};
       }

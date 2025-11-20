@@ -138,6 +138,10 @@
             <span id="video-duration">时长: --:--</span>
             <span id="video-size">大小: --</span>
           </div>
+          <!-- 视频边编辑边上传，先上传的按钮 -->
+          <button id="upload-first-btn" class="hidden bg-secondary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+            先上传视频
+          </button>
         </div>
 
         <!-- 视频信息表单 -->
@@ -337,6 +341,10 @@
       // 视频相关接口
       // 载入视频列表
       getVideos: () => flutterChannel._sendRequest('getVideos'),
+      // 获取视频播放链接
+      getVideoUrl:(videoId)=> flutterChannel._sendRequest('getVideoUrl', { videoId: videoId }),
+      // 删除视频
+      deleteVideo: (videoId) => flutterChannel._sendRequest('deleteVideo', { id: videoId }),
       // 获取视频缩略图
       getThumbnail: (videoId) => flutterChannel._sendRequest('getThumbnail', { videoId: videoId }),
       //  搜索视频
@@ -345,7 +353,7 @@
       // 分块上传二进制数据
       sendBinaryChunk :(params) =>{
         return new Promise((resolve, reject) => {
-          const requestId = this._generateRequestId();
+          const requestId = flutterChannel._generateRequestId();
           let binarySent = false;
 
           // 发送块元数据
@@ -363,18 +371,18 @@
           const metaListener = (event) => {
             const response = JSON.parse(event.data);
             if (response.id === requestId && response.status === 'ready') {
-              this._ws.removeEventListener('message', metaListener);
+              flutterChannel._ws.removeEventListener('message', metaListener);
 
               // 发送二进制数据
               params.blob.arrayBuffer().then(buffer => {
-                this._ws.send(buffer);
+                flutterChannel._ws.send(buffer);
                 binarySent = true;
 
                 // 监听块确认
                 const chunkListener = (event) => {
                   const chunkResponse = JSON.parse(event.data);
                   if (chunkResponse.id === requestId) {
-                    this._ws.removeEventListener('message', chunkListener);
+                    flutterChannel._ws.removeEventListener('message', chunkListener);
                     if (chunkResponse.success) {
                       resolve(chunkResponse);
                     } else {
@@ -382,25 +390,25 @@
                     }
                   }
                 };
-                this._ws.addEventListener('message', chunkListener);
+                flutterChannel._ws.addEventListener('message', chunkListener);
               });
             }
           };
 
-          this._ws.addEventListener('message', metaListener);
-          this._ws.send(JSON.stringify(metaRequest));
+          flutterChannel._ws.addEventListener('message', metaListener);
+          flutterChannel._ws.send(JSON.stringify(metaRequest));
 
           // 超时处理
           setTimeout(() => {
             if (!binarySent) {
-              this._ws.removeEventListener('message', metaListener);
+              flutterChannel._ws.removeEventListener('message', metaListener);
               reject(new Error('发送超时'));
             }
           }, 10000);
         });
       },
       completeBinaryUpload :(fileId, fileName, duration, tagIds, remark) =>{
-        return this._sendRequest('completeBinaryUpload', {
+        return flutterChannel._sendRequest('completeBinaryUpload', {
           fileId,
           name: fileName,
           duration,
@@ -419,7 +427,9 @@
       selectedTagIds: [],
       currentUploadFile: null, // 当前正在上传的文件
       currentEditingVideo: null, // 当前正在编辑的视频
-      selectedTagIdsForUpload: [] // 上传视频时选择的标签ID
+      selectedTagIdsForUpload: [], // 上传视频时选择的标签ID
+      pendingUploads: new Map(), // 存储已上传但未合并的文件ID
+      currentFileId: null, // 当前上传的文件ID
     };
 
     // DOM元素引用
@@ -431,6 +441,7 @@
 
       // 上传浮框相关元素
       uploadModal: document.getElementById('upload-modal'),
+      uploadFirstBtn: document.getElementById('upload-first-btn'),
       closeUploadModal: document.getElementById('close-upload-modal'),
       videoPreview: document.getElementById('video-preview'),
       videoTitle: document.getElementById('video-title'),
@@ -574,6 +585,19 @@
               ${formatFileSize(video.fileSize)}
             </div>
               ${thumbnailHtml}
+            <!-- ↓ ↓ ↓ 视频卡片右上角 - 功能菜单 ↓ ↓ ↓ -->
+            <div class="absolute top-2 right-2">
+              <button class="delete-menu-btn bg-black/50 text-white p-1 rounded-full" data-video-id="${video.id}">
+                <i class="fa fa-ellipsis-v"></i>
+              </button>
+              <!-- 删除菜单 -->
+              <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10">
+                <button class="delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
+                  <i class="fa fa-trash mr-1"></i>删除
+                </button>
+              </div>
+            </div>
+            <!-- ↑ ↑ ↑ 视频卡片右上角 - 功能菜单 ↑ ↑ ↑ -->
             <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
               ${formatDuration(video.duration)}
             </div>
@@ -651,6 +675,8 @@
       // 显示视频预览
       const videoURL = URL.createObjectURL(file);
       elements.videoPreview.src = videoURL;
+      elements.videoPreview.crossOrigin = 'anonymous';
+      elements.videoPreview.preload = 'metadata';
 
       // 获取视频信息
       elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
@@ -663,6 +689,7 @@
 
       // 显示上传浮框
       elements.uploadModal.classList.remove('hidden');
+      elements.uploadFirstBtn.classList.remove('hidden');
 
       // 加载标签
       loadTags();
@@ -682,43 +709,53 @@
         return;
       }
 
-      // 准备上传数据
-      const videoFile = state.currentUploadFile;
-      const duration = Math.floor(elements.videoPreview.duration);
-      const fileId = 'video_' + Date.now(); // 唯一标识
-
-      // 显示进度条容器
-      document.getElementById('upload-progress-container').classList.remove('hidden');
-      const progressBar = document.getElementById('upload-progress-bar');
-      progressBar.style.width = '0%';
-
-      // 禁用按钮并显示上传中状态
-      elements.saveVideoBtn.disabled = true;
-      elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
-      elements.cancelUploadBtn.disabled = true;
-
       try {
-        // 初始化上传
-        await flutterChannel._sendRequest('initBinaryUpload', {
-          fileId,
-          fileName: videoFile.name,
-          totalSize: videoFile.size,
-          mimeType: videoFile.type
-        });
+        let fileId = state.currentFileId;
+            // 如果还没上传，先上传
+        if (!fileId || !state.pendingUploads.has(fileId)) {
 
-        // 分块上传
-        await uploadBinaryInChunks(fileId, videoFile, (progress) => {
-          progressBar.style.width = `${progress}%`;
-        });
+          // 准备上传数据
+          const videoFile = state.currentUploadFile;
+          const duration = Math.floor(elements.videoPreview.duration);
+          fileId = 'video_' + Date.now(); // 唯一标识
+          state.currentFileId = fileId;
 
-        // 完成上传
+          // 显示进度条容器
+          document.getElementById('upload-progress-container').classList.remove('hidden');
+          const progressBar = document.getElementById('upload-progress-bar');
+          progressBar.style.width = '0%';
+
+          // 禁用按钮并显示上传中状态
+          elements.saveVideoBtn.disabled = true;
+          elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
+          elements.cancelUploadBtn.disabled = true;
+
+          // 初始化上传
+          await flutterChannel._sendRequest('initBinaryUpload', {
+            fileId,
+            fileName: videoFile.name,
+            totalSize: videoFile.size,
+            mimeType: videoFile.type
+          });
+
+          // 分块上传
+          await uploadChunks(videoFile, fileId, (progress) => {
+            progressBar.style.width = `${progress}%`;
+          });
+        }
+
+        // 完成上传（合并文件）
         const result = await flutterChannel.completeBinaryUpload(
           fileId,
-          videoFile.name,
+          title,
           duration,
           state.selectedTagIdsForUpload,
           elements.videoRemark.value.trim()
         );
+
+        // 从待处理列表移除
+        state.pendingUploads.delete(fileId);
+
         console.log('视频上传完成:', result);
 
         // 刷新列表并重置状态
@@ -728,7 +765,7 @@
         showToast('视频上传成功');
         elements.videoPreview.src = '';
         URL.revokeObjectURL(elements.videoPreview.src);
-      } catch (error) {
+      } catch (errer){
         console.error('上传失败:', error);
         alert(`上传失败: ${error.message || '未知错误'}`);
       } finally {
@@ -736,7 +773,9 @@
         elements.saveVideoBtn.textContent = '保存视频';
         elements.cancelUploadBtn.disabled = false;
         state.currentUploadFile = null;
+        document.getElementById('upload-progress-container').classList.add('hidden');
       }
+
     }
 
     // 分块上传二进制视频文件
@@ -798,7 +837,19 @@
       elements.videoSize.textContent = `大小: ${formatFileSize(video.fileSize)}`;
       elements.videoDuration.textContent = `时长: ${formatDuration(video.duration)}`;
 
+      // 注入视频播放地址
+      try {
+        // 对于已保存的视频，使用视频文件路径获取可播放的URL
+        const videoData = await flutterChannel.getVideoUrl(video.id);
+        if (videoData && videoData.videoUrl) {
+          elements.videoPreview.src = videoData.videoUrl;
+        }
+      } catch (error) {
+        console.error('获取视频播放地址失败:', error);
+      }
+
       // 显示浮框
+      elements.uploadFirstBtn.classList.add('hidden');
       elements.uploadModal.classList.remove('hidden');
 
       // 加载并渲染标签
@@ -882,13 +933,69 @@
         }
       });
 
-
       // 关闭上传浮框
       elements.closeUploadModal.addEventListener('click', () => {
         if (state.currentUploadFile) {
           elements.confirmModal.classList.remove('hidden');
+        } else if (state.currentEditingVideo) {
+          // 检查是否有修改
+          const hasChanges =
+            state.currentEditingVideo.title !== elements.videoTitle.value.trim() ||
+            (state.currentEditingVideo.remark || '') !== elements.videoRemark.value.trim() ||
+            JSON.stringify(state.currentEditingVideo.tagIds) !== JSON.stringify(state.selectedTagIdsForUpload);
+
+          if (hasChanges) {
+            elements.confirmModal.classList.remove('hidden');
+          } else {
+            elements.uploadModal.classList.add('hidden');
+            state.currentEditingVideo = null;
+          }
         } else {
           elements.uploadModal.classList.add('hidden');
+        }
+      });
+
+      // 绑定先上传按钮事件
+      elements.uploadFirstBtn.addEventListener('click', async () => {
+        if (!state.currentUploadFile) {
+          alert('未找到视频文件，请重新选择');
+          return;
+        }
+
+        // 准备上传数据
+        const videoFile = state.currentUploadFile;
+        const fileId = 'video_' + Date.now();
+        state.currentFileId = fileId;
+
+        // 显示进度条
+        document.getElementById('upload-progress-container').classList.remove('hidden');
+        const progressBar = document.getElementById('upload-progress-bar');
+        progressBar.style.width = '0%';
+
+        try {
+          // 初始化上传
+          await flutterChannel._sendRequest('initBinaryUpload', {
+            fileId,
+            fileName: videoFile.name,
+            totalSize: videoFile.size,
+            mimeType: videoFile.type
+          });
+
+          // 分块上传
+          await uploadChunks(videoFile, fileId, (progress) => {
+            progressBar.style.width = `${progress}%`;
+          });
+
+          // 保存到待处理上传列表
+          state.pendingUploads.set(fileId, {
+            file: videoFile,
+            uploaded: true
+          });
+
+          showToast('视频预上传已完成，可继续填写信息并保存');
+        } catch (error) {
+          console.error('预上传失败:', error);
+          showToast('预上传失败: ' + error.message);
         }
       });
 
@@ -909,8 +1016,24 @@
         if (elements.videoPreview.src) {
           URL.revokeObjectURL(elements.videoPreview.src);
         }
+
+        // 如果有已上传但未合并的文件，通知后端删除
+        if (state.currentFileId && state.pendingUploads.has(state.currentFileId)) {
+          try {
+            flutterChannel._sendRequest('cancelBinaryUpload', {
+              fileId: state.currentFileId
+            });
+            state.pendingUploads.delete(state.currentFileId);
+          } catch (error) {
+            console.error('取消上传失败:', error);
+          }
+        }
+
         // 重置状态
         state.currentUploadFile = null;
+        state.currentFileId = null;
+        state.selectedTagIdsForUpload = [];
+
         // 关闭对话框
         elements.confirmModal.classList.add('hidden');
         elements.uploadModal.classList.add('hidden');
@@ -937,7 +1060,21 @@
         const tagName = elements.newTagInputModal.value.trim();
         if (tagName) {
           try {
-            // 调用添加标签接口并获得返回对象
+            // 检查标签是否已存在
+            const existingTag = state.tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+            if (existingTag) {
+              // 已存在则直接选中
+              if (!state.selectedTagIdsForUpload.includes(existingTag.id)) {
+                state.selectedTagIdsForUpload.push(existingTag.id);
+              }
+              elements.newTagInputModal.value = '';
+              renderTagSelection();
+              return;
+            }
+
+
+
+            // 对不存在的标签进行添加
             const newTag = await flutterChannel.addTag(tagName);
             // 更新本地标签列表
             state.tags.push(newTag);
@@ -957,6 +1094,37 @@
       elements.newTagInputModal.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
           elements.addTagBtnModal.click();
+        }
+      });
+
+      // 为每个视频卡片的删除按钮事件做绑定
+      document.querySelectorAll('.delete-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const videoId = btn.dataset.videoId;
+          document.querySelectorAll('.delete-menu').forEach(menu => {
+            menu.classList.add('hidden');
+          });
+          btn.nextElementSibling.classList.toggle('hidden');
+        });
+      });
+
+      // 点击删除按钮
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.delete-video-btn')) {
+          const btn = e.target.closest('.delete-video-btn');
+          const videoId = btn.dataset.videoId;
+          if (confirm('确定要删除这个视频吗？')) {
+            flutterChannel.deleteVideo(videoId).then(() => {
+              showToast('删除成功');
+              loadVideos();
+            });
+          }
+          btn.closest('.delete-menu').classList.add('hidden');
+        } else if (!e.target.closest('.delete-menu-btn') && !e.target.closest('.delete-menu')) {
+          document.querySelectorAll('.delete-menu').forEach(menu => {
+            menu.classList.add('hidden');
+          });
         }
       });
     }
