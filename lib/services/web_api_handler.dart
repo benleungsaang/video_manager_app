@@ -79,10 +79,38 @@ class WebApiHandler {
               ? {'success': true, 'data': _tagToJson(tag)}
               : {'success': false, 'error': '标签已存在'};
 
+        // 删除标签
         case 'deleteTag':
-          // 删除标签
           await _tagProvider.deleteTag(params['id']);
           return {'success': true};
+
+        // 以 ID 获取视频
+        case 'getVideoById':
+          final String videoId = params['videoId'];
+          final Video? video = _videoProvider.getVideoById(videoId);
+          if (video != null && video.filePath != null) {
+            // 对于Web端，返回文件的相对路径或URL
+            return {
+              'success': true,
+              'data': {'video': video}
+            };
+          } else {
+            return {'success': false, 'error': '视频文件不存在'};
+          }
+
+        // 以 ID 获取视频大小
+        case 'getVideoSize':
+          final String videoId = params['videoId'];
+          final Video? video = _videoProvider.getVideoById(videoId);
+          if (video != null && video.filePath != null) {
+            // 对于Web端，返回文件的相对路径或URL
+            return {
+              'success': true,
+              'data': {'videoSize': video.fileSize}
+            };
+          } else {
+            return {'success': false, 'error': '视频文件不存在'};
+          }
 
         // 视频相关接口
         // 获取视频列表
@@ -136,41 +164,31 @@ class WebApiHandler {
             'success': true,
             'data': _videoProvider.videos.map(_videoToJson).toList()
           };
-        case 'uploadVideo':
+        case 'updateVideo':
           // 处理视频上传
-          final String name = params['name'];
-          final String base64Data = params['base64Data'];
+          final Map<String, dynamic> params = request['params']['video'] ?? {};
           final int duration = params['duration']; // 假设前端传入视频时长
+          final String filePath = params['filePath'];
           final int fileSize = params['fileSize']; // 假设前端传入文件大小
-          final String remark = params['remark'] ?? ''; // 备注信息
+          final String id = params['id'];
           final List<String> tagIds =
               List<String>.from(params['tagIds'] ?? []); // 标签ID列表
-          // 视频保存目录
-          final appDir = await getApplicationDocumentsDirectory();
-          final videosDir = p.join(appDir.path, 'videos');
-          await Directory(videosDir).create(recursive: true);
-          final videoFilePath = p.join(
-              videosDir, '${DateTime.now().millisecondsSinceEpoch}_$name');
-
-          // 1. 将base64数据转换为文件（实际项目中需处理存储路径）
-          final bytes = base64Decode(base64Data);
-          await File(videoFilePath).writeAsBytes(bytes);
-
-          // 为刚上传的视频生成缩略图并更新视频信息
-          final thumbNailPath = await FileUtils.generateVideoThumbnail(
-              videoFilePath); // 生成缩略图的临时路径
+          final String thumbnailPath = params['thumbnailPath'];
+          final String title = params['title'];
+          final String uploadTime = params['uploadTime'];
+          final String remark = params['remark'] ?? ''; // 备注信息
 
           // 2. 创建Video对象（根据实际Video类的构造函数调整参数）
           final newVideo = Video(
-            id: 'video_${DateTime.now().millisecondsSinceEpoch}', // 生成唯一ID
-            title: name,
+            id: id, // 生成唯一ID
+            title: title,
             remark: remark,
-            filePath: videoFilePath,
+            filePath: filePath,
             duration: duration,
             fileSize: fileSize,
-            uploadTime: DateTime.now(),
+            uploadTime: DateTime.tryParse(uploadTime),
             tagIds: tagIds,
-            thumbnailPath: thumbNailPath,
+            thumbnailPath: thumbnailPath,
           );
 
           // 3. 调用VideoProvider保存视频（原方法是void，无返回值）
@@ -219,6 +237,11 @@ class WebApiHandler {
     }
   }
 
+  // 添加获取视频的方法
+  Video? getVideoById(String videoId) {
+    return _videoProvider.getVideoById(videoId);
+  }
+
   // 初始化二进制上传
   Future<Map<String, dynamic>> _handleInitBinaryUpload(
       Map<String, dynamic> params) async {
@@ -259,7 +282,7 @@ class WebApiHandler {
     return {'status': 'ready'};
   }
 
-// 处理二进制数据
+  // 处理二进制数据
   void handleBinaryData({
     required WebSocketChannel channel,
     required String fileId,
@@ -286,7 +309,7 @@ class WebApiHandler {
         json.encode({'id': requestId, 'success': true, 'progress': progress}));
   }
 
-// 完成二进制上传
+  // 完成二进制上传
   Future<Map<String, dynamic>> _handleCompleteBinaryUpload(
       Map<String, dynamic> params) async {
     final String fileId = params['fileId'];
@@ -367,6 +390,7 @@ class WebApiHandler {
       'uploadTime': video.uploadTime.toIso8601String(),
       'fileSize': video.fileSize,
       'duration': video.duration,
+      'remark': video.remark
     };
   }
 }

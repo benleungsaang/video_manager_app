@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_manager_app/models/tag.dart';
+import 'package:video_manager_app/utils/file_utils.dart';
 import '../../models/video.dart';
 // import '../../utils/file_utils.dart';
 import '../pages/video_play_page.dart';
@@ -26,7 +27,7 @@ class VideoGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1.2, // 宽高比
+        childAspectRatio: 1.09, // 宽高比
       ),
       itemCount: videos.length,
       itemBuilder: (context, index) {
@@ -86,67 +87,122 @@ class VideoGrid extends StatelessWidget {
 
                 // 视频信息
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 标题
-                      Text(
-                        video.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      // 标签
-                      if (video.tagIds.isNotEmpty)
-                        _buildTagsDisplay(video.tagIds)
-                      else
-                        Chip(
-                          label: Text(
-                            '未有标签',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              height: 1.2,
+                      Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
+                          crossAxisAlignment:
+                              CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                          children: [
+                            // 标题
+                            Text(
+                              video.title.length > 20
+                                  ? '${video.title.substring(0, 20)} . . .'
+                                  : video.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 2),
-                          backgroundColor: Colors.grey[300],
-                          visualDensity: VisualDensity.compact,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                        ),
 
-                      const SizedBox(height: 4),
-
-                      // 上传时间
-                      Text(
-                        _formatDateTime(video.uploadTime),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      // 备注预览
-                      if (video.remark.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            video.remark.length > 20
-                                ? '${video.remark.substring(0, 20)}...'
-                                : video.remark,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
+                            // 上传时间
+                            Text(
+                              _formatDateTime(video.uploadTime),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
-                        ),
+                          ]),
+                      const SizedBox(height: 4),
+                      Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
+                          crossAxisAlignment:
+                              CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                          children: [
+                            // 文件大小
+                            Text(''),
+                            Text(
+                              // video.fileSize as String,
+                              '文件大小: ${FileUtils.formatFileSize(video.fileSize)}',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ]),
+                      // const SizedBox(height: 2),
+                      Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
+                          crossAxisAlignment:
+                              CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                          children: [
+                            Text(''),
+
+                            // 备注预览
+                            if (video.remark.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  video.remark.length > 15
+                                      ? '备注：${video.remark.substring(0, 15)}...'
+                                      : '备注：${video.remark}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '备注：暂无',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                          ]),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
+                        crossAxisAlignment:
+                            CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                        children: [
+                          Text(''),
+                          // 标签
+                          if (video.tagIds.isNotEmpty)
+                            _buildTagsDisplay(video.tagIds)
+                          else
+                            Chip(
+                              label: Text(
+                                '未有标签',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  height: 1.2,
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 2),
+                              backgroundColor: Colors.grey[300],
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                        ],
+                      )
                     ],
                   ),
                 ),

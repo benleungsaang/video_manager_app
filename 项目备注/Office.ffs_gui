@@ -67,6 +67,16 @@
             <Item>\.git\</Item>
             <Item>video_manager_app.iml</Item>
             <Item>\icons\</Item>
+            <Item>\css\</Item>
+            <Item>\fonts\</Item>
+            <Item>\web\favicon.png</Item>
+            <Item>\favicon.png</Item>
+            <Item>\web\css\</Item>
+            <Item>\web\fonts\</Item>
+            <Item>\canvaskit\</Item>
+            <Item>\.last_build_id</Item>
+            <Item>\flutter.js</Item>
+            <Item>\flutter_bootstrap.js</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>
@@ -74,8 +84,8 @@
     </Filter>
     <FolderPairs>
         <Pair>
-            <Left>E:\Flutter_Projects\video_manager_app\web</Left>
-            <Right>E:\Flutter_Projects\video_manager_app_code\web</Right>
+            <Left>E:\Flutter_Projects\video_manager_app\build\web</Left>
+            <Right>E:\Flutter_Projects\video_manager_app\web</Right>
         </Pair>
         <Pair>
             <Left>E:\Flutter_Projects\video_manager_app</Left>

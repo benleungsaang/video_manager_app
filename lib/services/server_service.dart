@@ -15,8 +15,11 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
 import 'web_api_handler.dart';
-import '../providers/tag_provider.dart';
-import '../providers/video_provider.dart';
+// import '../providers/tag_provider.dart';
+// import '../providers/video_provider.dart';
+// import 'package:provider/provider.dart';
+// import 'package:video_manager_app/main.dart';
+// import 'package:video_manager_app/models/video.dart';
 
 // 消息类型枚举
 enum MessageType {
@@ -84,12 +87,8 @@ class ServerService with ChangeNotifier {
   //   _isInitialized = true;
   // }
 
-  // void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
-  //   _webApiHandler = WebApiHandler(
-  //     tagProvider: tagProvider,
-  //     videoProvider: videoProvider,
-  //   );
-  // }
+  // VideoProvider get _videoProvider =>
+  //     Provider.of<VideoProvider>(navigatorKey.currentContext!, listen: false);
 
   Future<void> _getLocalIp() async {
     final info = NetworkInfo();
@@ -186,25 +185,46 @@ class ServerService with ChangeNotifier {
     final router = _createRouter();
 
     // 1. 基础日志中间件
-    final logMiddleware = logRequests(
-      logger: (message, isError) {
-        if (isError) {
-          print('[错误 ERROR] $message');
-        } else {
-          print('[正常 INFO] $message');
-        }
-      },
-    );
+    // final logMiddleware = logRequests(
+    //   logger: (message, isError) {
+    //     if (isError) {
+    //       print('[错误 ERROR] $message');
+    //     } else {
+    //       print('[正常 INFO] $message');
+    //     }
+    //   },
+    // );
 
     // 2. CORS跨域中间件
     final corsMiddleware = corsHeaders(
       headers: {
         ACCESS_CONTROL_ALLOW_ORIGIN: '*',
         ACCESS_CONTROL_ALLOW_METHODS: 'GET, POST, PUT, DELETE, OPTIONS',
-        ACCESS_CONTROL_ALLOW_HEADERS: 'Content-Type, Authorization',
+        ACCESS_CONTROL_ALLOW_HEADERS: 'Range, Content-Type, Origin',
+        ACCESS_CONTROL_EXPOSE_HEADERS:
+            'Content-Length, Accept-Ranges, Content-Type', // 显式声明暴露的头
         ACCESS_CONTROL_MAX_AGE: '86400', // 24小时缓存预检请求
       },
     );
+
+    // final corsMiddleware = (Handler handler) {
+    //   return (Request request) async {
+    //     // Skip CORS for non-HTTP requests (e.g., WebSocket)
+    //     if (request.method == 'OPTIONS' ||
+    //         request.method == 'GET' ||
+    //         request.method == 'HEAD') {
+    //       final response = await handler(request);
+    //       return response.change(headers: {
+    //         'Access-Control-Allow-Origin': '*',
+    //         'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    //         'Access-Control-Allow-Headers': 'Range, Content-Type, Origin',
+    //         'Access-Control-Expose-Headers':
+    //             'Content-Length, Accept-Ranges, Content-Type',
+    //       });
+    //     }
+    //     return handler(request);
+    //   };
+    // };
 
     // 3. 错误处理中间件
     final errorHandlerMiddleware = createMiddleware(
@@ -236,7 +256,7 @@ class ServerService with ChangeNotifier {
 
     // 组合中间件
     final middlewarePipeline = Pipeline()
-        .addMiddleware(logMiddleware)
+        // .addMiddleware(logMiddleware)
         .addMiddleware(corsMiddleware)
         .addMiddleware(errorHandlerMiddleware);
     // .addMiddleware(timeoutMiddleware);
@@ -266,10 +286,141 @@ class ServerService with ChangeNotifier {
     // // 文件上传接口
     router.post('/upload', _handleFileUpload);
 
+    // 视频流处理路由 - 支持Range和HEAD请求
+    router.get('/videoStream/<videoId>', _handleVideoStream);
+
+    router.options('/<path|.*>', (Request request) {
+      return Response.ok('', headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Range, Content-Type, Origin',
+        'Access-Control-Expose-Headers': 'Content-Length, Accept-Ranges',
+        'Access-Control-Max-Age': '86400', // 预检结果缓存24小时
+        'Content-Length': '0', // OPTIONS请求无响应体
+      });
+    });
+
     // 配置静态资源服务
     router.all('/<path|.*>', _createStaticHandler());
-
     return router;
+  }
+
+  // 处理视频流式传输（支持断点续传和Range请求）
+  Future<Response> _handleVideoStream(Request request, String videoId) async {
+    try {
+      // print('=' * 50);
+      print('播放视频 ID=> ${videoId}');
+      // print('=' * 50);
+      // print('收到请求的完整 Header：');
+      // print('=' * 50);
+      // print(request.headers); // 直接打印 Headers 对象（会自动展开所有键值）
+
+      final video = _webApiHandler.getVideoById(videoId);
+      if (video == null || video.filePath == null) {
+        return Response.notFound(json.encode({'error': '视频不存在'}));
+      }
+      final file = File(video.filePath!);
+      if (!await file.exists()) {
+        return Response.notFound(json.encode({'error': '视频文件不存在'}));
+      }
+
+      // 2. 处理HEAD请求（仅返回头信息）
+      if (request.method == 'HEAD') {
+        final _fileSize = video.fileSize.toString();
+        print('fileSize inside: ${_fileSize}');
+        final headers = {
+          'Content-Length': _fileSize,
+          'Content-Type': 'application/octet-stream',
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=3600',
+          // 跨域配置
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+          // 补充暴露更多必要的头信息
+          'Access-Control-Expose-Headers':
+              'Content-Length, Accept-Ranges, Content-Type',
+          // 允许前端读取的请求头
+          'Access-Control-Allow-Headers': 'Range, Content-Type',
+        };
+        print('headers: ${headers}');
+        return Response(200, headers: headers);
+      }
+
+      // 3. 处理GET请求和Range
+      final fileLength = await file.length();
+      // 从请求头中获取 Range（格式如：bytes=1024-2047 或 bytes=512-）
+      final rangeHeader = request.headers['Range'];
+      int start = 0; // 默认从文件开头开始
+      int end = fileLength - 1; // 默认到文件末尾结束
+
+      // 解析 Range 头（正则匹配字节范围）
+      if (rangeHeader != null) {
+        final match = RegExp(r'bytes=(\d+)-(\d*)').firstMatch(rangeHeader);
+        if (match != null) {
+          start = int.parse(match.group(1)!); // 提取起始字节
+          // 提取结束字节（若未指定，保持默认到文件末尾）
+          if (match.group(2) != null && match.group(2)!.isNotEmpty) {
+            end = int.parse(match.group(2)!);
+          }
+        }
+      }
+
+// 校验 Range 合法性（避免无效范围请求）
+      if (start > end || start >= fileLength) {
+        return Response(416, // 416 状态码：Range Not Satisfiable（范围不合法）
+            headers: {
+              'Content-Range': 'bytes */$fileLength',
+              'Content-Length': '0',
+            });
+      }
+
+// 调整 end 不超过文件长度（防止客户端请求超出文件大小）
+      end = end > fileLength - 1 ? fileLength - 1 : end;
+      final contentLength = end - start + 1;
+
+      // 打开文件为随机访问流（支持跳转到指定位置读取，避免加载整个文件）
+      final raf = await file.open(mode: FileMode.read);
+      await raf.setPosition(start); // 跳转到 Range 指定的起始位置
+
+      // 创建 StreamController 手动控制流的生命周期（修复 Stream 无 whenComplete 的问题）
+      final streamController = StreamController<List<int>>();
+
+      // 读取指定长度的文件数据（contentLength 为当前分块的字节数）
+      raf.read(contentLength).then((data) {
+        streamController.add(data); // 向流中添加数据（发送给客户端）
+        streamController.close(); // 数据发送完成，关闭控制器
+      }).catchError((error) {
+        print('文件读取错误: $error');
+        raf.close(); // 出错时关闭文件，避免资源泄漏
+        streamController.addError(error); // 向客户端返回错误
+        streamController.close();
+      }).whenComplete(() {
+        raf.close(); // 无论成功失败，最终都关闭文件句柄
+      });
+
+// 监听流的错误事件，兜底关闭文件句柄
+      final stream = streamController.stream.handleError((error) {
+        print('流处理错误: $error');
+        raf.close();
+      });
+
+      // 5. 返回响应
+      return Response(
+        rangeHeader != null ? 206 : 200, // 206：Partial Content（分块响应）；200：完整响应
+        body: stream, // 响应体为流式数据（避免内存溢出）
+        headers: {
+          'Content-Type': 'application/octet-stream', // 兼容下载和播放
+          'Content-Length': contentLength.toString(), // 当前分块的字节数
+          'Content-Range': 'bytes $start-$end/$fileLength', // 告知客户端当前分块的范围和总长度
+          'Accept-Ranges': 'bytes', // 再次声明支持 Range 请求
+          'Cache-Control': 'public, max-age=3600', // 分块数据缓存 1 小时
+        },
+      );
+    } catch (e) {
+      print('视频流处理错误: $e');
+      return Response.internalServerError(
+          body: json.encode({'error': '视频流处理失败'}));
+    }
   }
 
   // 提取WebSocket处理为独立方法
@@ -353,12 +504,12 @@ class ServerService with ChangeNotifier {
   }
 
   final Map<String, Map<String, dynamic>> _pendingBinaryRequests = {};
-  void _handleBinaryData(WebSocketChannel channel, String clientId, Uint8List data) {
+
+  // 处理二进制数据
+  void _handleBinaryData(
+      WebSocketChannel channel, String clientId, Uint8List data) {
     if (!_pendingBinaryRequests.containsKey(clientId)) {
-      channel.sink.add(json.encode({
-        'success': false,
-        'error': '未找到对应的二进制请求'
-      }));
+      channel.sink.add(json.encode({'success': false, 'error': '未找到对应的二进制请求'}));
       return;
     }
 
@@ -369,12 +520,11 @@ class ServerService with ChangeNotifier {
 
     // 交给API处理器处理二进制块
     _webApiHandler.handleBinaryData(
-      channel: channel,
-      fileId: params['fileId'],
-      chunkIndex: params['chunkIndex'],
-      data: data,
-      requestId: requestId
-    );
+        channel: channel,
+        fileId: params['fileId'],
+        chunkIndex: params['chunkIndex'],
+        data: data,
+        requestId: requestId);
   }
 
   // 提取静态资源处理器
