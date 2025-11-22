@@ -20,14 +20,14 @@ class TagRepository {
         .any((tag) => tag.name == name && tag.id != excludeId);
   }
 
-  // 创建标签
-  Future<Tag?> createTag(String name) async {
-    // 检查名称是否已存在
-    if (isTagNameExists(name)) return null;
-
-    final tag = Tag(name: name);
-    await HiveService.tagBox.put(tag.id, tag);
-    return tag;
+  // 创建标签
+  Future<Tag?> createTag(String name, {int initialVideoCount = 0}) async {
+    // 检查名称是否已存在
+    if (isTagNameExists(name)) return null;
+
+    final tag = Tag(name: name, videoCount: initialVideoCount);
+    await HiveService.tagBox.put(tag.id, tag);
+    return tag;
   }
 
   // 更新标签
@@ -58,31 +58,20 @@ class TagRepository {
     }
   }
 
-  // 重新计算标签关联的视频数量
-  Future<void> recalculateVideoCounts() async {
-    final tags = getAllTags();
-    final tagsToDelete = <String>[]; // 存储需要删除的标签ID
-
-    for (final tag in tags) {
-      final count = HiveService.videoBox.values
-          .where((video) => video.tagIds.contains(tag.id))
-          .length;
-
-      if (count == 0) {
-        // 没有关联视频，标记为待删除
-        tagsToDelete.add(tag.id);
-      } else if (tag.videoCount != count) {
-        // 数量有变化，更新数量
-        tag.videoCount = count;
-        await tag.save();
-      }
-    }
-
-    // 批量删除无引用的标签
-    if (tagsToDelete.isNotEmpty) {
-      for (final tagId in tagsToDelete) {
-        await HiveService.tagBox.delete(tagId);
-      }
-    }
+  // 重新计算标签关联的视频数量
+  Future<void> recalculateVideoCounts() async {
+    final tags = getAllTags();
+
+    for (final tag in tags) {
+      final count = HiveService.videoBox.values
+          .where((video) => video.tagIds.contains(tag.id))
+          .length;
+
+      if (tag.videoCount != count) {
+        // 数量有变化，更新数量
+        tag.videoCount = count;
+        await tag.save();
+      }
+    }
   }
 }

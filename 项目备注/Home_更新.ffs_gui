@@ -52,7 +52,6 @@
             <Item>\android\app\src\main\res\values-night\</Item>
             <Item>\android\app\src\main\res\values\</Item>
             <Item>\android\app\src\main\java\</Item>
-            <Item>\android\app\src\main\kotlin\</Item>
             <Item>\android\app\src\main\res\</Item>
             <Item>\android\gradle\</Item>
             <Item>\android\.gitignore</Item>
@@ -483,6 +482,9 @@
             <Item>\build\wakelock_plus\tmp\kotlin-classes\debug\META-INF\wakelock_plus_debug.kotlin_module</Item>
             <Item>\build\web\css\</Item>
             <Item>\build\web\fonts\</Item>
+            <Item>\build\web\icons\</Item>
+            <Item>\web\fonts\</Item>
+            <Item>\web\css\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

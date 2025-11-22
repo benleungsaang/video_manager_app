@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:video_manager_app/services/server_service.dart';
 // import 'package:hive_flutter/hive_flutter.dart';
@@ -77,9 +78,43 @@ class MyApp extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-        home: const HomePage(),
+        ),
+        home: HomePage(),
       ),
     );
+  }
+}
+
+// 保活服务管理类
+class KeepAliveManager {
+  static const MethodChannel _channel = MethodChannel('keep_alive_channel');
+
+  // 启动前台服务
+  static Future<void> startForegroundService() async {
+    try {
+      await _channel.invokeMethod('startForegroundService');
+    } on PlatformException catch (e) {
+      print('启动前台服务失败: ${e.message}');
+    }
+  }
+
+  // 停止前台服务
+  static Future<void> stopForegroundService() async {
+    try {
+      await _channel.invokeMethod('stopForegroundService');
+    } on PlatformException catch (e) {
+      print('停止前台服务失败: ${e.message}');
+    }
+  }
+
+  // 请求忽略电池优化
+  static Future<bool> requestIgnoreBatteryOptimizations() async {
+    try {
+      return await _channel.invokeMethod('requestIgnoreBatteryOptimizations') ??
+          false;
+    } on PlatformException catch (e) {
+      print('请求忽略电池优化失败: ${e.message}');
+      return false;
+    }
   }
 }

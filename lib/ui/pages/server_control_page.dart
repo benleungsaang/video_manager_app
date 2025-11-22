@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:video_manager_app/main.dart';
 import '../../services/server_service.dart';
 
 class ServerControlPage extends StatefulWidget {
@@ -20,6 +21,21 @@ class _ServerControlPageState extends State<ServerControlPage> {
   void initState() {
     super.initState();
     _portController = TextEditingController();
+
+    // 检查并请求电池优化豁免
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) async {
+        final isIgnoring =
+            await KeepAliveManager.requestIgnoreBatteryOptimizations();
+        if (!isIgnoring) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('请允许应用忽略电池优化以保持后台运行')),
+            );
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -98,10 +114,12 @@ class _ServerControlPageState extends State<ServerControlPage> {
                         onPressed: () async {
                           if (serverService.isRunning) {
                             await serverService.stopServer();
+                            await KeepAliveManager.stopForegroundService();
                           } else {
                             try {
                               final port = int.parse(_portController.text);
                               await serverService.startServer(customPort: port);
+                              await KeepAliveManager.startForegroundService();
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

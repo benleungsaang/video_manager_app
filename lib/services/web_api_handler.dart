@@ -72,11 +72,10 @@ class WebApiHandler {
             'data': _tagProvider.tags.map(_tagToJson).toList()
           };
 
-        case 'createTag':
-          // 创建新标签
-          final Tag? tag = await _tagProvider.createTag(params['name']);
-          return tag != null
-              ? {'success': true, 'data': _tagToJson(tag)}
+        case 'createTag':
+          final Tag? tag = await _tagProvider.createTag(params['name'], initialVideoCount: 0);
+          return tag != null
+              ? {'success': true, 'data': _tagToJson(tag)}
               : {'success': false, 'error': '标签已存在'};
 
         // 删除标签
@@ -164,45 +163,45 @@ class WebApiHandler {
             'success': true,
             'data': _videoProvider.videos.map(_videoToJson).toList()
           };
-        case 'updateVideo':
-          // 处理视频上传
-          final Map<String, dynamic> params = request['params']['video'] ?? {};
-          final int duration = params['duration']; // 假设前端传入视频时长
-          final String filePath = params['filePath'];
-          final int fileSize = params['fileSize']; // 假设前端传入文件大小
-          final String id = params['id'];
-          final List<String> tagIds =
-              List<String>.from(params['tagIds'] ?? []); // 标签ID列表
-          final String thumbnailPath = params['thumbnailPath'];
-          final String title = params['title'];
-          final String uploadTime = params['uploadTime'];
-          final String remark = params['remark'] ?? ''; // 备注信息
-
-          // 2. 创建Video对象（根据实际Video类的构造函数调整参数）
-          final newVideo = Video(
-            id: id, // 生成唯一ID
-            title: title,
-            remark: remark,
-            filePath: filePath,
-            duration: duration,
-            fileSize: fileSize,
-            uploadTime: DateTime.tryParse(uploadTime),
-            tagIds: tagIds,
-            thumbnailPath: thumbnailPath,
-          );
-
-          // 3. 调用VideoProvider保存视频（原方法是void，无返回值）
-          await _videoProvider.saveVideo(newVideo);
-
-          // 4. 由于saveVideo已调用loadVideos()，直接从Provider获取最新视频列表
-          // 查找刚上传的视频（通过ID匹配，确保返回最新数据）
-          final uploadedVideo = _videoProvider.videos.firstWhere(
-            (v) => v.id == newVideo.id,
-            orElse: () => throw Exception('视频保存后未找到'),
-          );
-          return {
-            'success': true,
-            'data': _videoToJson(uploadedVideo), // 返回完整的视频信息
+        case 'updateVideo':
+          // 处理视频更新
+          final Map<String, dynamic> params = request['params']['video'] ?? {};
+          final int duration = params['duration']; // 假设前端传入视频时长
+          final String? filePath = params['filePath'];
+          final int? fileSize = params['fileSize']; // 假设前端传入文件大小
+          final String id = params['id'];
+          final List<String> tagIds =
+              List<String>.from(params['tagIds'] ?? []); // 标签ID列表
+          final String? thumbnailPath = params['thumbnailPath'];
+          final String title = params['title'];
+          final String uploadTime = params['uploadTime'];
+          final String remark = params['remark'] ?? ''; // 备注信息
+
+          // 获取现有视频以获取未更新的字段
+          final existingVideo = _videoProvider.getVideoById(id);
+          if (existingVideo == null) {
+            return {'success': false, 'error': '视频不存在'};
+          }
+
+          // 创建更新后的Video对象
+          final updatedVideo = Video(
+            id: id,
+            title: title,
+            remark: remark,
+            filePath: filePath ?? existingVideo.filePath,
+            duration: duration,
+            fileSize: fileSize ?? existingVideo.fileSize,
+            uploadTime: DateTime.tryParse(uploadTime) ?? existingVideo.uploadTime,
+            tagIds: tagIds,
+            thumbnailPath: thumbnailPath ?? existingVideo.thumbnailPath,
+          );
+
+          // 保存视频（这会自动处理标签计数的更新）
+          await _videoProvider.saveVideo(updatedVideo);
+
+          return {
+            'success': true,
+            'data': _videoToJson(updatedVideo), // 返回完整的视频信息
           };
         // 处理二进制块元数据
         case 'initBinaryUpload':
@@ -211,7 +210,7 @@ class WebApiHandler {
         case 'uploadBinaryChunk':
           return await _handleUploadBinaryChunk(channel, params, requestId);
         // 【 合并 】 分块上传的进制数据
-        case 'completeBinaryUpload':
+        case 'completeBinaryUpload':
           return await _handleCompleteBinaryUpload(params);
         // 添加取消二进制上传处理
         case 'cancelBinaryUpload':
@@ -309,65 +308,65 @@ class WebApiHandler {
         json.encode({'id': requestId, 'success': true, 'progress': progress}));
   }
 
-  // 完成二进制上传
-  Future<Map<String, dynamic>> _handleCompleteBinaryUpload(
-      Map<String, dynamic> params) async {
-    final String fileId = params['fileId'];
-    final String name = params['name'];
-    final int duration = params['duration'];
-    final int fileSize = params['fileSize'];
-    final String remark = params['remark'] ?? '';
-    final List<String> tagIds = List<String>.from(params['tagIds'] ?? []);
-
-    if (!_uploadingFiles.containsKey(fileId)) {
-      return {'success': false, 'error': '未找到上传中的文件'};
-    }
-
-    final UploadingFile uploadingFile = _uploadingFiles[fileId]!;
-
-    // 验证完整性
-    if (uploadingFile.receivedSize != fileSize ||
-        uploadingFile.chunks.length != uploadingFile.totalChunks) {
-      return {'success': false, 'error': '文件分片不完整'};
-    }
-
-    // 合并文件
-    final appDir = await getApplicationDocumentsDirectory();
-    final videosDir = p.join(appDir.path, 'videos');
-    await Directory(videosDir).create(recursive: true);
-    final videoFilePath =
-        p.join(videosDir, '${DateTime.now().millisecondsSinceEpoch}_$name');
-
-    final File videoFile = File(videoFilePath);
-    final IOSink sink = videoFile.openWrite();
-
-    // 按顺序写入所有分片
-    for (int i = 0; i < uploadingFile.totalChunks; i++) {
-      sink.add(uploadingFile.chunks[i]!);
-    }
-    await sink.close();
-
-    // 生成缩略图
-    final thumbNailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
-
-    // 创建视频对象
-    final newVideo = Video(
-      id: 'video_${DateTime.now().millisecondsSinceEpoch}',
-      title: name,
-      remark: remark,
-      filePath: videoFilePath,
-      duration: duration,
-      fileSize: fileSize,
-      uploadTime: DateTime.now(),
-      tagIds: tagIds,
-      thumbnailPath: thumbNailPath,
-    );
-
-    // 保存视频
-    await _videoProvider.saveVideo(newVideo);
-    _uploadingFiles.remove(fileId);
-
-    return {'success': true, 'data': _videoToJson(newVideo)};
+  // 完成二进制上传
+  Future<Map<String, dynamic>> _handleCompleteBinaryUpload(
+      Map<String, dynamic> params) async {
+    final String fileId = params['fileId'];
+    final String name = params['name'];
+    final int duration = params['duration'];
+    final int fileSize = params['fileSize'];
+    final String remark = params['remark'] ?? '';
+    final List<String> tagIds = List<String>.from(params['tagIds'] ?? []);
+
+    if (!_uploadingFiles.containsKey(fileId)) {
+      return {'success': false, 'error': '未找到上传中的文件'};
+    }
+
+    final UploadingFile uploadingFile = _uploadingFiles[fileId]!;
+
+    // 验证完整性
+    if (uploadingFile.receivedSize != fileSize ||
+        uploadingFile.chunks.length != uploadingFile.totalChunks) {
+      return {'success': false, 'error': '文件分片不完整'};
+    }
+
+    // 合并文件
+    final appDir = await getApplicationDocumentsDirectory();
+    final videosDir = p.join(appDir.path, 'videos');
+    await Directory(videosDir).create(recursive: true);
+    final videoFilePath =
+        p.join(videosDir, '${DateTime.now().millisecondsSinceEpoch}_$name');
+
+    final File videoFile = File(videoFilePath);
+    final IOSink sink = videoFile.openWrite();
+
+    // 按顺序写入所有分片
+    for (int i = 0; i < uploadingFile.totalChunks; i++) {
+      sink.add(uploadingFile.chunks[i]!);
+    }
+    await sink.close();
+
+    // 生成缩略图
+    final thumbNailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
+
+    // 创建视频对象
+    final newVideo = Video(
+      id: 'video_${DateTime.now().millisecondsSinceEpoch}',
+      title: name,
+      remark: remark,
+      filePath: videoFilePath,
+      duration: duration,
+      fileSize: fileSize,
+      uploadTime: DateTime.now(),
+      tagIds: tagIds,
+      thumbnailPath: thumbNailPath,
+    );
+
+    // 保存视频
+    await _videoProvider.saveVideo(newVideo);
+    _uploadingFiles.remove(fileId);
+
+    return {'success': true, 'data': _videoToJson(newVideo)};
   }
 
   // 转换Tag为JSON格式

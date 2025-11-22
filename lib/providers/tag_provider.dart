@@ -10,9 +10,19 @@ class TagProvider with ChangeNotifier {
   List<Tag> get tags => _tags;
 
   // 加载所有标签
+
   void loadTags() {
     _tags = _repository.getAllTags();
+
     notifyListeners();
+  }
+
+  // 重新计算所有标签的视频计数
+
+  Future<void> recalculateVideoCounts() async {
+    await _repository.recalculateVideoCounts();
+
+    loadTags(); // 重新加载列表
   }
 
   // 获取标签详情
@@ -21,11 +31,15 @@ class TagProvider with ChangeNotifier {
   }
 
   // 创建标签
-  Future<Tag?> createTag(String name) async {
-    final newTag = await _repository.createTag(name);
+
+  Future<Tag?> createTag(String name, {int initialVideoCount = 0}) async {
+    final newTag =
+        await _repository.createTag(name, initialVideoCount: initialVideoCount);
+
     if (newTag != null) {
       loadTags(); // 重新加载列表
     }
+
     return newTag;
   }
 
@@ -41,12 +55,6 @@ class TagProvider with ChangeNotifier {
   // 删除标签
   Future<void> deleteTag(String id) async {
     await _repository.deleteTag(id);
-    loadTags(); // 重新加载列表
-  }
-
-  // 重新计算标签视频数量
-  Future<void> recalculateVideoCounts() async {
-    await _repository.recalculateVideoCounts();
     loadTags(); // 重新加载列表
   }
 }

@@ -75,50 +75,17 @@ class _TagSelectorState extends State<TagSelector> {
       builder: (context, provider, child) {
         return Column(
           children: [
-            // 已选标签
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _selectedTagIds
-                  .map((id) {
-                    final tag = provider.getTagById(id);
-                    return tag != null
-                        ? Chip(
-                            label: Text(tag.name),
-                            deleteIcon: const Icon(Icons.close, size: 16),
-                            onDeleted:
-                                widget.enabled ? () => _toggleTag(id) : null,
-                            backgroundColor:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
-                          )
-                        : null;
-                  })
-                  .whereType<Widget>()
-                  .toList(),
-            ),
-
-            const SizedBox(height: 16),
-
             // 标签选择区
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
-              child: Text('可选标签：'),
-            ),
-            const SizedBox(height: 8),
-
-            // 标签列表
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: provider.tags
-                  .where((tag) => !_selectedTagIds.contains(tag.id))
-                  .map((tag) => ChoiceChip(
-                        label: Text(tag.name),
-                        selected: _selectedTagIds.contains(tag.id),
-                        onSelected:
-                            widget.enabled ? (_) => _toggleTag(tag.id) : null,
-                      ))
-                  .toList(),
+              child: Text(
+                '标签区',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
+                ),
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -134,6 +101,7 @@ class _TagSelectorState extends State<TagSelector> {
                       border: OutlineInputBorder(),
                     ),
                     enabled: widget.enabled,
+                    onEditingComplete: _addNewTag, // 回车触发添加标签
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -142,6 +110,109 @@ class _TagSelectorState extends State<TagSelector> {
                   child: const Text('添加'),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // 可选标签区
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '已选标签',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 已选标签 - 两行高的可滑动框，居中摆放，无边框
+
+            Container(
+              height: 60, // 大约两行标签的高度
+
+              width: double.infinity, // 占满宽度
+
+              child: Scrollbar(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Wrap(
+                    spacing: 8,
+
+                    runSpacing: 8,
+
+                    children: _selectedTagIds
+                        .map((id) {
+                          final tag = provider.getTagById(id);
+
+                          return tag != null
+                              ? Chip(
+                                  label: Text(tag.name),
+                                  deleteIcon: const Icon(Icons.close, size: 16),
+                                  onDeleted: widget.enabled
+                                      ? () => _toggleTag(id)
+                                      : null,
+                                  backgroundColor: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.1),
+                                )
+                              : null;
+                        })
+                        .whereType<Widget>()
+                        .toList(),
+
+                    alignment: WrapAlignment.center, // 居中摆放
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '可选标签',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[800],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 标签列表 - 三行高的可滑动框，占满宽度
+            Container(
+              height: 120, // 大约三行标签的高度
+              width: double.infinity, // 占满宽度
+              decoration: BoxDecoration(
+                  // border: Border.all(color: Colors.grey),
+                  // borderRadius: BorderRadius.circular(8),
+                  ),
+              child: Scrollbar(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: provider.tags
+                        .where((tag) => !_selectedTagIds.contains(tag.id))
+                        .map((tag) => ChoiceChip(
+                              label: Text(tag.name),
+                              selected: _selectedTagIds.contains(tag.id),
+                              onSelected: widget.enabled
+                                  ? (_) => _toggleTag(tag.id)
+                                  : null,
+                            ))
+                        .toList(),
+                    alignment: WrapAlignment.center, // 使标签从左侧开始排列
+                  ),
+                ),
+              ),
             ),
           ],
         );

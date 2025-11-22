@@ -27,6 +27,7 @@ class VideoPlayPage extends StatefulWidget {
 
 class _VideoPlayPageState extends State<VideoPlayPage> {
   late TextEditingController _titleController;
+  late TextEditingController _remarkController;
   List<String> _selectedTagIds = [];
   File? _sourceFile;
   Video? _existingVideo;
@@ -34,11 +35,13 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
   bool _isProcessing = false;
   bool _isSaved = false;
   bool _isInitializing = true;
+  final TextEditingController _newTagController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController();
+    _remarkController = TextEditingController();
     _initVideo();
   }
 
@@ -46,6 +49,8 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
   void dispose() {
     _playerUtils.dispose();
     _titleController.dispose();
+    _remarkController.dispose();
+    _newTagController.dispose();
     super.dispose();
   }
 
@@ -60,6 +65,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
 
         if (_existingVideo != null) {
           _titleController.text = _existingVideo!.title;
+          _remarkController.text = _existingVideo!.remark; // 设置备注
           _selectedTagIds = List.from(_existingVideo!.tagIds);
           _sourceFile = File(_existingVideo!.filePath);
           _isSaved = true;
@@ -72,6 +78,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         _sourceFile = File(widget.filePath!);
         final fileName = widget.filePath!.split('/').last;
         _titleController.text = fileName.split('.').first;
+        _remarkController.text = ''; // 新视频备注为空
         await _playerUtils.initialize(_sourceFile!);
       }
     } catch (e) {
@@ -84,6 +91,16 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
   // 处理标签选择变化
   void _onTagsSelected(List<String> tagIds) {
     setState(() => _selectedTagIds = tagIds);
+  }
+
+  // 添加新标签
+  void _addNewTag() {
+    if (_newTagController.text.trim().isNotEmpty) {
+      // 这里需要一个标签服务来添加新标签，暂时只是模拟
+      // 在实际实现中，需要调用标签服务添加新标签
+      Fluttertoast.showToast(msg: '暂不支持直接添加新标签，功能待实现');
+      _newTagController.clear();
+    }
   }
 
   // 保存视频（本地复制并保存信息）
@@ -106,6 +123,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
       if (_existingVideo != null) {
         // 更新已有视频信息
         _existingVideo!.title = _titleController.text.trim();
+        _existingVideo!.remark = _remarkController.text.trim(); // 更新备注
         _existingVideo!.tagIds = _selectedTagIds;
         _existingVideo!.duration = _playerUtils.getdDuration();
 
@@ -122,11 +140,12 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
       } else {
         // 复制视频处不会计算视频时长，提前计算并提供
         final durationTime = _playerUtils.getdDuration();
-        // 新视频：复制到APP目录并保存信息
-        await VideoUploader.copyToAppDirectory(
+        // 新视频：复制到APP目录并保存信息（包含备注）
+        await VideoUploader.copyToAppDirectoryWithRemark(
           _sourceFile!,
           _titleController.text.trim(),
           _selectedTagIds,
+          _remarkController.text.trim(), // 添加备注
           videoProvider,
           durationTime,
         );
@@ -148,14 +167,17 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isSaved ? '编辑视频' : '添加视频'),
-        backgroundColor: Colors.blue[800],
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         actions: [
-          TextButton(
-            onPressed: _isProcessing ? null : _saveVideo,
-            child: Text(
-              _isSaved ? '保存' : '添加到库',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+          IconButton(
+            icon: const Icon(
+              Icons.save,
+              color: Colors.white,
+              size: 32,
             ),
+            onPressed: _isProcessing ? null : _saveVideo,
+            tooltip: '保存视频',
           ),
         ],
       ),
@@ -169,68 +191,274 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: _playerUtils.getPlayerWidget(),
-          ),
-          // 视频播放器
-
-          // 文件信息
-          if (_sourceFile != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '文件大小: ${FileUtils.formatFileSize(_sourceFile!.lengthSync())}',
-                    style: TextStyle(color: Colors.grey[600]),
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        if (orientation == Orientation.landscape) {
+          // 横屏：左右排布
+          return Row(
+            children: [
+              // 左边：视频播放框和文件信息
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[800],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: _playerUtils.getPlayerWidget(),
+                        ),
+                      ),
+                      // 文件信息
+                      if (_sourceFile != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '文件大小: ${FileUtils.formatFileSize(_sourceFile!.lengthSync())}',
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 18),
+                              ),
+                              Text(
+                                '时长: ${_playerUtils.getFormattedDuration()}',
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 18),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
-                  Text(
-                    '时长: ${_playerUtils.getFormattedDuration()}',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-
-          // 标题输入
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: '视频标题',
-                border: OutlineInputBorder(),
-                hintText: '请输入视频标题',
-              ),
-              maxLength: 50,
-              enabled: !_isProcessing,
-            ),
-          ),
-
-          // 标签选择
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('选择标签：'),
-                TagSelector(
-                  selectedTagIds: _selectedTagIds,
-                  onTagsSelected: _onTagsSelected,
-                  enabled: !_isProcessing,
                 ),
+              ),
+              // 右边：标题、标签等
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  color: Colors.grey[50],
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 视频标题
+                        Text(
+                          '视频标题',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: InputDecoration(
+                            hintText: '请输入视频标题',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          maxLength: 50,
+                          enabled: !_isProcessing,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 视频备注
+                        Text(
+                          '视频备注',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _remarkController,
+                          decoration: InputDecoration(
+                            hintText: '请输入视频备注',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          maxLines: 3,
+                          maxLength: 200,
+                          enabled: !_isProcessing,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 新标签输入框
+                        TagSelector(
+                          selectedTagIds: _selectedTagIds,
+                          onTagsSelected: _onTagsSelected,
+                          enabled: !_isProcessing,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        } else {
+          // 竖屏：上下排布
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // 视频播放器
+                Container(
+                  height: 250, // 增加播放器高度
+                  width: double.infinity,
+                  margin: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: _playerUtils.getPlayerWidget(),
+                ),
+                // 文件信息
+                if (_sourceFile != null)
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '文件大小: ${FileUtils.formatFileSize(_sourceFile!.lengthSync())}',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        Text(
+                          '时长: ${_playerUtils.getFormattedDuration()}',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 16),
+
+                // 标题输入
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '视频标题',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[800],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: InputDecoration(
+                          hintText: '请输入视频标题',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        maxLength: 50,
+                        enabled: !_isProcessing,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 备注输入
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '视频备注',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[800],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _remarkController,
+                        decoration: InputDecoration(
+                          hintText: '请输入视频备注',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        maxLines: 3,
+                        maxLength: 200,
+                        enabled: !_isProcessing,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 可选标签
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TagSelector(
+                        selectedTagIds: _selectedTagIds,
+                        onTagsSelected: _onTagsSelected,
+                        enabled: !_isProcessing,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
-          ),
-
-          const SizedBox(height: 32),
-        ],
-      ),
+          );
+        }
+      },
     );
   }
 }
