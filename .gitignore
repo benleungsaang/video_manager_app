@@ -40,12 +40,12 @@ analysis_benchmark.json
 .packages
 .pub-preload-cache/
 .pub/
-build/
-!build/web/  # 反向规则：不忽略 build/web 目录
-!build/web/index.html  # 保留 build/web/index.html
-!build/web/sw.js  # 保留 build/web/sw.js（注意：原需求是 ws.js，若实际文件名是 sw.js 需对应）
-!build/web/download-worker.js  # 保留 build/web/download-worker.js
-build/web/**/*  # 忽略 build/web 下除上述3个文件外的其他所有文件
+build/  # 第一步：忽略整个 build 目录（必须放在最前面）
+!build/web/  # 第二步：解除对 build/web 目录的忽略（关键！目录必须先放行）
+!build/web/index.html  # 第三步：明确保留需要的文件
+!build/web/ws.js  # 注意：如果你的文件是 ws.js，这里要改成 !build/web/ws.js
+!build/web/download-worker.js
+build/web/**/*  # 第四步：忽略 build/web 下其他所有文件（避免冗余）
 flutter_*.png
 linked_*.ds
 unlinked.ds
