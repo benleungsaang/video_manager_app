@@ -6,9 +6,9 @@ import '../../utils/file_utils.dart';
 import '../../utils/video_uploader.dart';
 import '../../utils/video_player_utils.dart';
 import '../../providers/video_provider.dart';
-// import '../../providers/tag_provider.dart';
 import '../../models/video.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import '../../utils/toast_utils.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class VideoPlayPage extends StatefulWidget {
   // 两种打开方式：1.通过文件路径（新视频） 2.通过视频ID（已有视频）
@@ -82,7 +82,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         await _playerUtils.initialize(_sourceFile!);
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: '初始化失败: ${e.toString()}');
+      ToastUtils.showError(context, '初始化失败: ${e.toString()}');
     } finally {
       setState(() => _isInitializing = false);
     }
@@ -98,7 +98,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
     if (_newTagController.text.trim().isNotEmpty) {
       // 这里需要一个标签服务来添加新标签，暂时只是模拟
       // 在实际实现中，需要调用标签服务添加新标签
-      Fluttertoast.showToast(msg: '暂不支持直接添加新标签，功能待实现');
+      ToastUtils.showInfo('暂不支持直接添加新标签，功能待实现');
       _newTagController.clear();
     }
   }
@@ -106,18 +106,27 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
   // 保存视频（本地复制并保存信息）
   Future<void> _saveVideo() async {
     if (_titleController.text.trim().isEmpty) {
-      Fluttertoast.showToast(msg: '请输入视频标题');
+      ToastUtils.showWarning('请输入视频标题');
       return;
     }
 
     if (_sourceFile == null) {
-      Fluttertoast.showToast(msg: '视频文件不存在');
+      ToastUtils.showError(context, '视频文件不存在');
       return;
     }
 
     setState(() => _isProcessing = true);
 
     try {
+      // 在Android上请求存储权限
+      if (Theme.of(context).platform == TargetPlatform.android) {
+        final status = await Permission.manageExternalStorage.request();
+        if (!status.isGranted) {
+          // 如果权限被拒绝，尝试使用应用专属存储
+          ToastUtils.showInfo('存储权限被拒绝，将使用应用内部存储');
+        }
+      }
+
       final videoProvider = Provider.of<VideoProvider>(context, listen: false);
 
       if (_existingVideo != null) {
@@ -136,10 +145,17 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         }
 
         await videoProvider.saveVideo(_existingVideo!);
-        Fluttertoast.showToast(msg: '信息已更新');
+        ToastUtils.showSuccess('信息已更新');
       } else {
-        // 复制视频处不会计算视频时长，提前计算并提供
-        final durationTime = _playerUtils.getdDuration();
+        // 确保视频播放器已初始化后再获取时长
+        int durationTime = 0;
+        if (_playerUtils.getdDuration() > 0) {
+          durationTime = _playerUtils.getdDuration();
+        } else {
+          // 如果无法获取视频时长，使用0作为默认值
+          // 播放器可能还未完全加载时长信息
+          print('警告：无法获取视频时长，默认设置为0');
+        }
         // 新视频：复制到APP目录并保存信息（包含备注）
         await VideoUploader.copyToAppDirectoryWithRemark(
           _sourceFile!,
@@ -149,14 +165,15 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
           videoProvider,
           durationTime,
         );
-        Fluttertoast.showToast(msg: '视频已添加到库中');
+        ToastUtils.showSuccess('视频已添加到库中');
         _isSaved = true;
       }
 
       // 返回上一页
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      Fluttertoast.showToast(msg: '操作失败: ${e.toString()}');
+      ToastUtils.showError(context, '操作失败: ${e.toString()}');
+      print('保存视频失败: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }

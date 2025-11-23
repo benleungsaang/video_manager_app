@@ -15,11 +15,15 @@ import 'package:path/path.dart' as p;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
-import 'web_api_handler.dart';
-// import '../providers/tag_provider.dart';
-// import '../providers/video_provider.dart';
-// import 'package:provider/provider.dart';
-// import 'package:video_manager_app/main.dart';
+import 'web_api_handler.dart';
+import '../utils/storage_utils.dart'; // 新增导入
+import 'database_export_service.dart'; // 新增导入
+import '../repositories/video_repository.dart'; // 新增导入
+import '../repositories/tag_repository.dart'; // 新增导入
+// import '../providers/tag_provider.dart';
+// import '../providers/video_provider.dart';
+// import 'package:provider/provider.dart';
+// import 'package:video_manager_app/main.dart';
 // import 'package:video_manager_app/models/video.dart';
 
 // 消息类型枚举
@@ -33,13 +37,13 @@ enum MessageType {
 
 // 消息日志类
 class MessageLog {
-  final String clientId;
+  final String? clientId;
   final String type;
   final dynamic data;
   final String timestamp;
 
   MessageLog({
-    required this.clientId,
+    this.clientId,
     required this.type,
     required this.data,
     String? timestamp,
@@ -129,7 +133,9 @@ class ServerService with ChangeNotifier {
   //     Provider.of<VideoProvider>(navigatorKey.currentContext!, listen: false);
 
   // 新增方法：记录消息日志
-  void _logMessage(String clientId, String type, dynamic data) {
+  void _logMessage(String? clientId, String type, dynamic data) {
+    if (clientId == null) return; // 如果clientId为空，则不记录日志
+    
     _messageLogs.add(MessageLog(
       clientId: clientId,
       type: type,
@@ -157,11 +163,11 @@ class ServerService with ChangeNotifier {
       client.sink.close(1000, '服务器主动断开连接');
       _connectedClients.remove(clientId);
       _clientDetails.remove(clientId);
-      print('已断开客户端 ${_clientDetails[clientId]!.remark} 连接');
+      print('已断开客户端连接');
       _broadcastConnectionStatus();
       notifyListeners();
     } else {
-      print('已断开客户端 ${_clientDetails[clientId]!.remark} 连接');
+      print('客户端 $clientId 不存在');
       _clientDetails.remove(clientId);
       _broadcastConnectionStatus();
       notifyListeners();
@@ -175,8 +181,8 @@ class ServerService with ChangeNotifier {
   }
 
   Future<void> clearWebCache() async {
-    final tempDir = await getTemporaryDirectory();
-    final webAssetsDir = Directory(p.join(tempDir.path, 'web'));
+    final tempDir = StorageUtils.getTempDirectory();
+    final webAssetsDir = Directory(p.join(tempDir, 'web'));
 
     if (await webAssetsDir.exists()) {
       await webAssetsDir.delete(recursive: true);
@@ -188,8 +194,8 @@ class ServerService with ChangeNotifier {
   }
 
   Future<void> _copyWebAssets() async {
-    final tempDir = await getTemporaryDirectory();
-    final webAssetsDir = Directory(p.join(tempDir.path, 'web'));
+    final tempDir = StorageUtils.getTempDirectory();
+    final webAssetsDir = Directory(p.join(tempDir, 'web'));
     await webAssetsDir.create(recursive: true);
 
     try {
@@ -506,56 +512,75 @@ class ServerService with ChangeNotifier {
   void _handleWebSocketConnection(WebSocketChannel channel, Request request) {
     print('开始处理WebSocket连接');
 
-    // 改进临时ID生成，确保唯一性
-    String tempId;
-
-    // while 当前ID已有，就继续重复换
-    do {
-      tempId =
-          'temp_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1000)}';
-    } while (_connectedClients.containsKey(tempId)); // 检查是否已有该ID
+    // 从请求参数获取客户端ID（如果有的话）
+    String? clientId = request.url.queryParameters['clientId'];
+    
+    // 如果没有提供客户端ID，则生成一个临时ID
+    if (clientId == null || clientId.isEmpty) {
+      // 改进临时ID生成，确保唯一性
+      do {
+        clientId =
+            'temp_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1000)}';
+      } while (_connectedClients.containsKey(clientId)); // 检查是否已有该ID
+    } else {
+      // 如果客户端提供了ID，检查是否已有连接，如果有则断开旧连接
+      if (_connectedClients.containsKey(clientId)) {
+        final oldChannel = _connectedClients[clientId]!;
+        print('客户端 $clientId 已有连接，断开旧连接');
+        try {
+          oldChannel.sink.close(1000, '新的相同ID连接已建立');
+        } catch (e) {
+          print('关闭旧连接时出错: $e');
+        }
+      }
+    }
 
     // 记录客户端详情
     final userAgent = request.headers['user-agent'] ?? '';
     final deviceType = _getDeviceType(userAgent);
-    _clientDetails[tempId] = ClientDetails(deviceType: deviceType);
+    if (clientId != null) {
+      _clientDetails[clientId] = ClientDetails(deviceType: deviceType);
 
-    // 确认没问题的临时ID，装入对应通信通道 channel
-    _connectedClients[tempId] = channel;
+      // 确认没问题的临时ID，装入对应通信通道 channel
+      _connectedClients[clientId] = channel;
 
-    // 记录连接日志
-    _logMessage(tempId, 'connection', '客户端已连接');
+      // 记录连接日志
+      _logMessage(clientId, 'connection', '客户端已连接');
+    }
 
     // 监听客户端消息
-    final subscription = channel.stream
-        .listen((message) => _handleClientMessage(message, channel, tempId),
-            onDone: () {
-      // 连接关闭时清理（旧方式）
-      // _connectedClients.remove(tempId);
-      // print('WebSocket连接已关闭');
+    if (clientId != null) {
+      final subscription = channel.stream
+          .listen((message) => _handleClientMessage(message, channel, clientId),
+              onDone: () {
+        // 连接关闭时清理（新方式）
+        final removedClient = _connectedClients.remove(clientId);
+        if (removedClient != null) {
+          _clientDevices.remove(clientId);
+          _logMessage(clientId, 'connection', '客户端已断开');
+          print('WebSocket连接已关闭: $clientId，剩余连接: ${_connectedClients.length}');
+          _broadcastConnectionStatus(); // 通知所有客户端连接状态变化
+        }
+      }, onError: (error) {
+        print('WebSocket错误: $error');
+        _logMessage(clientId, 'error', error.toString());
+      });
 
-      // 连接关闭时清理（新方式
-      final removedClient = _connectedClients.remove(tempId);
-      if (removedClient != null) {
-        _clientDevices.remove(tempId);
-        _logMessage(tempId, 'connection', '客户端已断开');
-        print('WebSocket连接已关闭: $tempId，剩余连接: ${_connectedClients.length}');
-        _broadcastConnectionStatus(); // 通知所有客户端连接状态变化
-      }
-    }, onError: (error) {
-      print('WebSocket错误: $error');
-      _logMessage(tempId, 'error', error.toString());
-    });
-
-    // 处理连接关闭
-    channel.sink.done.then((_) {
-      subscription.cancel();
-    });
+      // 处理连接关闭
+      channel.sink.done.then((_) {
+        subscription.cancel();
+      });
+    }
   }
 
   // 处理客户端消息
   void _handleClientMessage(
-      dynamic message, WebSocketChannel channel, String clientId) {
+      dynamic message, WebSocketChannel channel, String? clientId) {
+    if (clientId == null) {
+      print('错误：客户端ID为空');
+      return;
+    }
+
     try {
       // 处理二进制数据
       if (message is Uint8List) {
@@ -631,8 +656,8 @@ class ServerService with ChangeNotifier {
   // 提取静态资源处理器
   Handler _createStaticHandler() {
     return (Request request) async {
-      final tempDir = await getTemporaryDirectory();
-      final webAssetsDir = Directory('${tempDir.path}/web');
+      final tempDir = StorageUtils.getTempDirectory();
+      final webAssetsDir = Directory('${tempDir}/web');
       // print('处理静态资源请求: ${request.url.path}');
       // print('静态资源目录: ${webAssetsDir.path}');
 
@@ -768,14 +793,16 @@ class ServerService with ChangeNotifier {
       switch (command) {
         case 'ping':
           // 回复pong
-          final response = WebSocketMessage(
-              type: MessageType.acknowledge.toString().split('.').last,
-              clientId: message.clientId,
-              data: {
-                'command': 'pong',
-                'timestamp': DateTime.now().toIso8601String()
-              });
-          _sendToClient(message.clientId!, json.encode(response.toJson()));
+          if (message.clientId != null) {
+            final response = WebSocketMessage(
+                type: MessageType.acknowledge.toString().split('.').last,
+                clientId: message.clientId,
+                data: {
+                  'command': 'pong',
+                  'timestamp': DateTime.now().toIso8601String()
+                });
+            _sendToClient(message.clientId!, json.encode(response.toJson()));
+          }
           break;
         case 'broadcast':
           // 客户端请求广播消息
@@ -787,11 +814,13 @@ class ServerService with ChangeNotifier {
       }
     } else {
       // 格式不正确的命令消息
-      final errorMsg = WebSocketMessage(
-          type: MessageType.error.toString().split('.').last,
-          clientId: message.clientId,
-          data: {'message': '无效的命令格式'});
-      _sendToClient(message.clientId!, json.encode(errorMsg.toJson()));
+      if (message.clientId != null) {
+        final errorMsg = WebSocketMessage(
+            type: MessageType.error.toString().split('.').last,
+            clientId: message.clientId,
+            data: {'message': '无效的命令格式'});
+        _sendToClient(message.clientId!, json.encode(errorMsg.toJson()));
+      }
     }
   }
 
@@ -855,11 +884,42 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  void setPort(int newPort) {
-    if (newPort < 1024 || newPort > 65535) {
-      throw Exception("端口必须在1024-65535范围内");
-    }
-    _port = newPort;
-    notifyListeners();
+  void setPort(int newPort) {
+    if (newPort < 1024 || newPort > 65535) {
+      throw Exception("端口必须在1024-65535范围内");
+    }
+    _port = newPort;
+    notifyListeners();
+  }
+
+  // 导出数据库
+  Future<String> exportDatabase() async {
+    // 导入需要的类
+    final videoRepo = VideoRepository();
+    final tagRepo = TagRepository();
+    final exportService = DatabaseExportService(videoRepo, tagRepo);
+
+    try {
+      return await exportService.exportDatabaseToFile();
+    } catch (e) {
+      print('导出数据库失败: $e');
+      rethrow;
+    }
+  }
+
+  // 导入数据库
+  Future<void> importDatabase(String filePath) async {
+    // 导入需要的类
+    final videoRepo = VideoRepository();
+    final tagRepo = TagRepository();
+    final exportService = DatabaseExportService(videoRepo, tagRepo);
+
+    try {
+      await exportService.importDatabaseFromFile(filePath);
+      notifyListeners(); // 通知UI更新
+    } catch (e) {
+      print('导入数据库失败: $e');
+      rethrow;
+    }
   }
 }

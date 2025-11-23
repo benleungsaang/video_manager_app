@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -76,6 +77,7 @@
     }
   </script>
 </head>
+
 <body class="bg-gray-50 min-h-screen">
   <!-- 顶部导航栏 -->
   <header class="bg-white shadow-md">
@@ -85,12 +87,8 @@
       <!-- 搜索框 -->
       <div class="flex-1 max-w-md mx-8">
         <div class="relative">
-          <input
-            type="text"
-            id="search-input"
-            placeholder="搜索 【 整个数据库 】 视频 - 标题或标签..."
-            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
+          <input type="text" id="search-input" placeholder="搜索 【 整个数据库 】 视频 - 标题或标签..."
+            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
           <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         </div>
       </div>
@@ -104,22 +102,18 @@
 
   <main class="container mx-auto px-4 py-8">
 
-     <!-- 本地视频筛选 -->
-      <div class="mb-6">
-        <!-- <div class="flex items-center mb-2">
+    <!-- 本地视频筛选 -->
+    <div class="mb-6">
+      <!-- <div class="flex items-center mb-2">
           <i class="fa fa-filter text-gray-500 mr-2"></i>
           <span class="text-gray-600 font-medium">当前视频筛选：</span>
         </div> -->
-        <div class="relative">
-          <input
-            type="text"
-            id="filter-input"
-            placeholder="在 【 当前搜索结果 】 中筛选 - 标题或标签..."
-            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-          <i class="fa fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        </div>
+      <div class="relative">
+        <input type="text" id="filter-input" placeholder="在 【 当前搜索结果 】 中筛选 - 标题或标签..."
+          class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+        <i class="fa fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
       </div>
+    </div>
 
     <!-- 视频列表区域 -->
     <div id="video-grid" class="video-grid">
@@ -131,7 +125,7 @@
     </div>
   </main>
 
- <!---------------------- 视频上传浮框 --------------------------->
+  <!---------------------- 视频上传浮框 --------------------------->
   <div id="upload-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50">
     <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
       <!-- 浮框头部 -->
@@ -147,18 +141,58 @@
         <!-- 视频预览区域 -->
         <div class="mb-6">
           <div class="bg-gray-100 rounded-lg overflow-hidden">
-            <video id="video-preview" class="w-full aspect-video object-contain" controls crossorigin="anonymous"></video>
+            <video id="video-preview" class="w-full aspect-video object-contain" controls
+              crossorigin="anonymous" playsinline webkit-playsinline preload="metadata"></video>
           </div>
           <div class="mt-2 text-sm text-gray-500 flex justify-between">
+
             <span id="video-duration">时长: --:--</span>
+
             <span id="video-size">大小: --</span>
+
           </div>
+
+          <!-- 压缩选项 -->
+
+
+
+                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+
+
+            <div class="text-sm font-medium text-gray-700 mb-2">压缩选项（默认：微信普通压缩）</div>
+
+
+            <div class="mt-2 text-xs text-gray-500">
+
+
+              <input type="radio" id="compress-mode-wechat-normal" name="compress-mode" value="full" class="mr-1" checked>
+
+
+              <label for="compress-mode-wechat-normal" class="inline">微信普通压缩</label>
+
+
+              <input type="radio" id="compress-mode-wechat-original" name="compress-mode" value="original" class="ml-4 mr-1">
+
+
+              <label for="compress-mode-wechat-original" class="inline">微信原画压缩</label>
+
+
+            </div>
+
+
+          </div>
+
           <!-- 视频边编辑边上传，先上传的按钮 -->
-          <button id="upload-first-btn" class="hidden bg-secondary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+
+          <button id="upload-first-btn"
+            class="hidden bg-secondary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+
             先上传视频
+
           </button>
           <!-- 视频边编辑边上传，先上传的按钮 -->
-          <button id="download-btn" class="hidden bg-primary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+          <button id="download-btn"
+            class="hidden bg-primary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
             下载视频
           </button>
           <!-- 预上传 - 进度条 -->
@@ -174,13 +208,11 @@
         <div class="space-y-4">
           <!-- 标题输入 -->
           <div>
-            <label for="video-title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span class="text-red-500">*</span></label>
-            <input
-              type="text"
-              id="video-title"
+            <label for="video-title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span
+                class="text-red-500">*</span></label>
+            <input type="text" id="video-title"
               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="请输入视频标题"
-            >
+              placeholder="请输入视频标题">
           </div>
 
           <!-- 标签选择 -->
@@ -191,12 +223,8 @@
               <p class="text-gray-500 text-sm w-full text-center">待添加标签...</p>
             </div>
             <div class="flex items-center">
-              <input
-                type="text"
-                id="new-tag-input-modal"
-                placeholder="添加新标签"
-                class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary"
-              >
+              <input type="text" id="new-tag-input-modal" placeholder="添加新标签"
+                class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary">
               <button id="add-tag-btn-modal" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90">
                 添加
               </button>
@@ -206,12 +234,9 @@
           <!-- 备注信息 -->
           <div>
             <label for="video-remark" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-            <textarea
-              id="video-remark"
-              rows="3"
+            <textarea id="video-remark" rows="3"
               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="请输入备注信息（可选）"
-            ></textarea>
+              placeholder="请输入备注信息（可选）"></textarea>
           </div>
         </div>
       </div>
@@ -242,7 +267,8 @@
       <h3 class="text-xl font-bold mb-4">确认取消</h3>
       <p class="text-gray-600 mb-6">确定要取消上传吗？已上传的部分将被丢弃。</p>
       <div class="flex justify-end gap-3">
-        <button id="confirm-cancel-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+        <button id="confirm-cancel-btn"
+          class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
           继续编辑
         </button>
         <button id="confirm-ok-btn" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
@@ -251,70 +277,128 @@
       </div>
     </div>
   </div>
- <!---------------------- 视频上传浮框 --------------------------->
+  <!---------------------- 视频上传浮框 --------------------------->
 
   <!-- 操作成功提示框 toast -->
-  <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+  <div id="toast"
+    class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
     操作成功
   </div>
 
   <script>
 
     // 与Flutter原生通信的通道
+
     const flutterChannel = {
       // 存储WebSocket实例
       _ws: null,
+
       // 存储请求的回调函数，用requestId映射
       _callbacks: new Map(),
 
+
+
+      // 获取或生成客户端唯一ID
+      _getClientId() {
+
+        let clientId = localStorage.getItem('clientId');
+
+        if (!clientId) {
+
+          // 生成一个UUID作为客户端ID
+
+          clientId = 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+          localStorage.setItem('clientId', clientId);
+
+        }
+
+        return clientId;
+
+      },
+
+
+
       // 初始化WebSocket连接
       _initWebSocket() {
+
         if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+
           return Promise.resolve();
+
         }
+
+
 
         return new Promise((resolve, reject) => {
           const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+          const clientId = this._getClientId();
+          const wsUrl = `${wsProtocol}//${window.location.host}/ws?clientId=${clientId}`;
           this._ws = new WebSocket(wsUrl);
-
           this._ws.onopen = () => {
-            console.log('WebSocket连接已建立');
+
+            console.log('WebSocket连接已建立，客户端ID:', clientId);
+
             // 监听服务端消息
+
             this._ws.onmessage = (event) => this._handleMessage(event);
+
             resolve();
-          };
 
+          };
           this._ws.onerror = (error) => {
+
             console.error('WebSocket连接错误:', error);
+
             reject(error);
+
+          };
+          this._ws.onclose = () => {
+
+            console.log('WebSocket连接已关闭，尝试重连...');
+
+            this._ws = null;
+
+            // 3秒后尝试重连
+
+            setTimeout(() => this._initWebSocket(), 3000);
+
           };
 
-          this._ws.onclose = () => {
-            console.log('WebSocket连接已关闭，尝试重连...');
-            this._ws = null;
-            // 3秒后尝试重连
-            setTimeout(() => this._initWebSocket(), 3000);
-          };
         });
+
       },
 
 
       // 处理从服务端收到的消息
       _handleMessage(event) {
+
         try {
+
           const response = JSON.parse(event.data);
+
           console.log('收到服务端响应:', response);
 
+
+
           // 查找对应的回调函数
+
           const callback = this._callbacks.get(response.id);
+
           if (callback) {
+
             callback(response);
+
             this._callbacks.delete(response.id);
+
           }
+
         } catch (error) {
+
           console.error('处理消息错误:', error);
+
         }
+
       },
 
       // 生成唯一请求ID（修改这部分）
@@ -357,97 +441,184 @@
       },
 
       // 标签相关接口
+
       // 载入标签列表
-      getTags: () => flutterChannel._sendRequest('getTags'),
+
+      getTags: function () { return flutterChannel._sendRequest('getTags'); },
+
       // 新增标签
-      addTag: (tagName) => flutterChannel._sendRequest('createTag', { name: tagName }),
+
+      addTag: function (tagName) { return flutterChannel._sendRequest('createTag', { name: tagName }); },
+
       // 删除标签
-      deleteTag: (tagId) => flutterChannel._sendRequest('deleteTag', { id: tagId }),
+
+      deleteTag: function (tagId) { return flutterChannel._sendRequest('deleteTag', { id: tagId }); },
+
+
 
       // 视频相关接口
+
       // 载入视频列表
-      getVideos: () => flutterChannel._sendRequest('getVideos'),
+
+      getVideos: function () { return flutterChannel._sendRequest('getVideos'); },
       // 获取视频播放链接
-      getVideoUrl:(videoId)=> flutterChannel._sendRequest('getVideoUrl', { videoId: videoId }),
+
+      getVideoUrl: function (videoId) { return flutterChannel._sendRequest('getVideoUrl', { videoId: videoId }); },
+
       // 获取视频大小
-      getVideoSize:(videoId)=> flutterChannel._sendRequest('getVideoSize', { videoId: videoId }),
+
+      getVideoSize: function (videoId) { return flutterChannel._sendRequest('getVideoSize', { videoId: videoId }); },
       // 删除视频
-      deleteVideo: (videoId) => flutterChannel._sendRequest('deleteVideo', { id: videoId }),
+
+      deleteVideo: function (videoId) { return flutterChannel._sendRequest('deleteVideo', { id: videoId }); },
+
       // 获取视频缩略图
-      getThumbnail: (videoId) => flutterChannel._sendRequest('getThumbnail', { videoId: videoId }),
+
+      getThumbnail: function (videoId) { return flutterChannel._sendRequest('getThumbnail', { videoId: videoId }); },
+
       //  搜索视频
-      searchVideos: (searchTerm) => flutterChannel._sendRequest('searchVideos', { query: searchTerm }),
+
+      searchVideos: function (searchTerm) { return flutterChannel._sendRequest('searchVideos', { query: searchTerm }); },
+
       // 更新视频信息
-      updateVideo: (video) => flutterChannel._sendRequest('updateVideo', { video: video }),
+
+      updateVideo: function (video) { return flutterChannel._sendRequest('updateVideo', { video: video }); },
       // 分块上传二进制数据
-      sendBinaryChunk :(params) =>{
+      sendBinaryChunk: function (params) {
+
         return new Promise((resolve, reject) => {
+
           const requestId = flutterChannel._generateRequestId();
+
           let binarySent = false;
 
+
+
           // 发送块元数据
+
           const metaRequest = {
+
             id: requestId,
+
             action: 'uploadBinaryChunk',
+
             params: {
+
               fileId: params.fileId,
+
               chunkIndex: params.chunkIndex,
+
               totalChunks: params.totalChunks
+
             }
+
           };
+
+
 
           // 监听元数据响应
+
           const metaListener = (event) => {
+
             const response = JSON.parse(event.data);
+
             if (response.id === requestId && response.status === 'ready') {
+
               flutterChannel._ws.removeEventListener('message', metaListener);
+
+
 
               // 发送二进制数据
+
               params.blob.arrayBuffer().then(buffer => {
+
                 flutterChannel._ws.send(buffer);
+
                 binarySent = true;
 
+
+
                 // 监听块确认
+
                 const chunkListener = (event) => {
+
                   const chunkResponse = JSON.parse(event.data);
+
                   if (chunkResponse.id === requestId) {
+
                     flutterChannel._ws.removeEventListener('message', chunkListener);
+
                     if (chunkResponse.success) {
+
                       resolve(chunkResponse);
+
                     } else {
+
                       reject(new Error(chunkResponse.error));
+
                     }
+
                   }
+
                 };
+
                 flutterChannel._ws.addEventListener('message', chunkListener);
+
               });
+
             }
+
           };
 
+
+
           flutterChannel._ws.addEventListener('message', metaListener);
+
           flutterChannel._ws.send(JSON.stringify(metaRequest));
 
+
+
           // 超时处理
+
           setTimeout(() => {
+
             if (!binarySent) {
+
               flutterChannel._ws.removeEventListener('message', metaListener);
+
               reject(new Error('发送超时'));
+
             }
+
           }, 10000);
+
         });
+
       },
-      completeBinaryUpload :(fileId, fileName, duration, tagIds, remark) =>{
+
+      // 完成二进制文件上传
+
+      completeBinaryUpload: function (fileId, fileName, duration, tagIds, remark, title) {
+
+        const compressMode = document.querySelector('input[name="compress-mode"]:checked').value;
+
         return flutterChannel._sendRequest('completeBinaryUpload', {
+
           fileId,
+
+
           name: fileName,
           duration,
           tagIds,
           remark,
-          fileSize: state.currentUploadFile.size
-        });
-      },
-    };
+          fileSize: state.currentUploadFile.size,
+          compressMode: compressMode,
+          title: title  // 新增title参数
 
+
+        })
+      },
+    }
     // 状态管理
     const state = {
       videos: [],
@@ -460,7 +631,7 @@
       currentUploadFile: null, // 当前要上传的 文件
       currentFileId: null, // 当前要上传 文件的ID
       cancelUpload: false, // 是否正在执行缓存
-    };
+    }
 
     // DOM元素引用
     const elements = {
@@ -494,7 +665,7 @@
       confirmOkBtn: document.getElementById('confirm-ok-btn'),
       // 隐藏的文件输入
       fileInput: document.createElement('input')
-    };
+    }
 
     // 初始化文件输入元素(上传视频模块 相关设置)
     elements.fileInput.type = 'file';
@@ -565,7 +736,7 @@
           throw new Error('缩略图数据格式错误，缺少base64字段');
         }
 
-        const imgHtml =  `<img src="data:image/jpeg;base64,${thumbnailData.base64}"
+        const imgHtml = `<img src="data:image/jpeg;base64,${thumbnailData.base64}"
                     alt="${video.title}"
                     class="w-full h-full object-cover">`;
         thumbnailCache.set(video.id, imgHtml);
@@ -577,97 +748,189 @@
     }
 
     // 渲染视频网格
+
     async function renderVideoGrid() {
+
       // 1. 应用标签筛选
+
       let filteredVideos = state.videos;
+
       if (state.selectedTagIds.length > 0) {
+
         filteredVideos = state.videos.filter(video =>
+
           state.selectedTagIds.every(tagId => video.tagIds.includes(tagId))
+
         );
+
       }
 
+
+
       // 2. 应用本地筛选（使用localeCompare避免中文问题）
+
       const filterTerm = elements.filterInput.value.trim();
+
       if (filterTerm) {
+
+
 
         const keywords = filterTerm.split(/\s+/).filter(k => k).map(k => k.toLowerCase());
 
+
+
         filteredVideos = filteredVideos.filter(video => {
+
           return keywords.every(keyword => {
+
             // 标题
+
             const matchTitle = video.title.toLocaleString().includes(keyword);
+
             // 标签
+
             const matchTag = video.tagIds.some(tagId => {
+
               const tag = state.tags.find(t => t.id === tagId);
+
               return tag && tag.name.toLowerCase().includes(keyword);
+
             });
+
             // 备注
+
             const matchRemark = video?.remark // 判断是否有remark
-              ?video.remark.toLowerCase().includes(keyword) // 有的话常规筛选
+
+              ? video.remark.toLowerCase().includes(keyword) // 有的话常规筛选
+
               : false;
 
+
+
             return matchTitle || matchTag || matchRemark;
+
           })
+
         }) // filteredVideos
+
       } // if
 
+
+
       // 3. 无匹配结果时的显示
+
       if (filteredVideos.length === 0) {
+
         elements.videoGrid.innerHTML = `
+
           <div class="text-center text-gray-500 py-12">
+
             <i class="fa fa-search text-4xl mb-4"></i>
+
             <p>未找到匹配的视频</p>
+
           </div>
+
         `;
+
         return;
+
       }
 
 
-  const videoCards = await Promise.all(filteredVideos.map(async (video) => {
-    const thumbnailHtml = await renderVideoThumbnail(video);
-    return `
+
+
+
+      const videoCards = await Promise.all(filteredVideos.map(async (video) => {
+
+        const thumbnailHtml = await renderVideoThumbnail(video);
+
+        return `
+
       <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition cursor-pointer" data-video-id="${video.id}">
+
         <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition">
+
           <div class="relative aspect-video bg-gray-100">
+
             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+
               ${formatFileSize(video.fileSize)}
+
             </div>
+
               ${thumbnailHtml}
+
             <!-- ↓ ↓ ↓ 视频卡片右上角 - 功能菜单 ↓ ↓ ↓ -->
+
             <div class="absolute top-2 right-2">
+
               <button class="delete-menu-btn bg-black/50 text-white p-1 rounded-full" data-video-id="${video.id}">
+
                 <i class="fa fa-ellipsis-v"></i>
+
               </button>
+
               <!-- 删除菜单 -->
+
               <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10">
+
                 <button class="delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
+
                   <i class="fa fa-trash mr-1"></i>
+
                 </button>
+
               </div>
+
             </div>
+
             <!-- ↑ ↑ ↑ 视频卡片右上角 - 功能菜单 ↑ ↑ ↑ -->
+
             <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-              ${formatDuration(video.duration)}
+
+              ${video.filePath ? video.filePath.split('/').pop().split('').pop() : '无文件名'}
+
             </div>
+
           </div>
+
           <div class="p-4">
+
             <h3 class="font-semibold text-gray-800 mb-1 truncate">${video.title}</h3>
+
             <div class="text-xs text-gray-500 mb-1">
+
               ${formatDate(video.uploadTime)}
+
             </div>
+
             <div class="flex flex-wrap gap-1 mb-2">
+
               ${video.tagIds.map(tagId => {
-                const tag = state.tags.find(t => t.id === tagId);
-                return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>`
-                :
-                `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">当前未有标签</span>`;
-            }).join('')}
+
+          const tag = state.tags.find(t => t.id === tagId);
+
+          return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>`
+
+            :
+
+            `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">当前未有标签</span>`;
+
+        }).join('')}
+
             </div>
+
           </div>
+
         </div>
+
       </div>
+
       `}));
+
       elements.videoGrid.innerHTML = videoCards.join('');
+
     }
 
     // 渲染标签选择区域
@@ -721,22 +984,45 @@
       elements.videoRemark.value = '';
       state.selectedTagIdsForUpload = [];
 
-      // 显示视频预览
-      const videoURL = URL.createObjectURL(file);
-      elements.videoPreview.src = videoURL;
-      elements.videoPreview.crossOrigin = 'anonymous';
-      elements.videoPreview.preload = 'metadata';
-
-      // 获取视频信息
-      elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
-
-      // 加载视频元数据以获取时长
-      elements.videoPreview.onloadedmetadata = () => {
-        const duration = !isNaN(elements.videoPreview.duration)
-          ? Math.floor(elements.videoPreview.duration)
-          : 0; // 获取不到时长时赋值为 0
-        elements.videoDuration.textContent = `时长: ${formatDuration(duration)}`;
-      };
+      // 显示视频预览
+
+      const videoURL = URL.createObjectURL(file);
+
+      elements.videoPreview.src = videoURL;
+
+      elements.videoPreview.crossOrigin = 'anonymous';
+
+      elements.videoPreview.preload = 'metadata';
+
+      // 设置兼容性属性
+      elements.videoPreview.setAttribute('playsinline', 'true');
+      elements.videoPreview.setAttribute('webkit-playsinline', 'true');
+
+
+      // 获取视频信息
+
+      elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
+
+
+      // 加载视频元数据以获取时长
+      const handleMetadataLoaded = () => {
+        const duration = !isNaN(elements.videoPreview.duration)
+          ? Math.floor(elements.videoPreview.duration)
+          : 0; // 获取不到时长时赋值为 0
+
+        elements.videoDuration.textContent = `时长: ${formatDuration(duration)}`;
+      };
+
+      // 添加事件监听器以处理不同浏览器的兼容性
+      elements.videoPreview.addEventListener('loadedmetadata', handleMetadataLoaded);
+
+      // 添加错误处理
+      elements.videoPreview.addEventListener('error', (e) => {
+        console.error('视频预览错误:', e.target.error);
+      });
+
+      // 触发视频加载
+      elements.videoPreview.load();
 
       // 显示上传浮框
       elements.uploadFirstBtn.classList.remove('hidden');
@@ -755,9 +1041,9 @@
         alert('请输入视频标题');
         return;
       }
-      if (state.currentEditingVideo){
+      if (state.currentEditingVideo) {
         state.currentEditingVideo.tagIds = state.selectedTagIdsForUpload,
-        state.currentEditingVideo.remark =  elements.videoRemark.value.trim()
+          state.currentEditingVideo.remark = elements.videoRemark.value.trim()
         await flutterChannel.updateVideo(state.currentEditingVideo)
         await loadVideos();
         initUploadModal()
@@ -772,35 +1058,38 @@
       }
 
       if (state.currentFileId && !state.pendingUploads.has(state.currentFileId)) {
-          // 准备上传数据
-          const fileId = state.currentFileId;
-          const videoFile = state.currentUploadFile;
+        // 准备上传数据
+        const fileId = state.currentFileId;
+        const videoFile = state.currentUploadFile;
 
-          // 显示进度条容器
-          elements.progressContainerTop.classList.remove('hidden');
-          elements.progressBarTop.style.width = '0%';
-          elements.progressContainerBottom.classList.remove('hidden');
-          elements.progressBarBottom.style.width = '0%';
+        // 显示进度条容器
+        elements.progressContainerTop.classList.remove('hidden');
+        elements.progressBarTop.style.width = '0%';
+        elements.progressContainerBottom.classList.remove('hidden');
+        elements.progressBarBottom.style.width = '0%';
 
-          // 禁用按钮并显示上传中状态
-          elements.saveVideoBtn.disabled = true;
-          elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
-          elements.cancelUploadBtn.disabled = true;
+        // 禁用按钮并显示上传中状态
+        elements.saveVideoBtn.disabled = true;
+        elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
+        elements.cancelUploadBtn.disabled = true;
 
-          // 分块上传
-          await uploadBinary(fileId, videoFile)
+        // 分块上传
+        await uploadBinary(fileId, videoFile)
       }
 
       const duration = Math.floor(elements.videoPreview.duration);
+      // 使用不带扩展名的文件名作为标题
+      const titleWithoutExt = elements.videoTitle.value.trim(); // 使用用户输入的标题（已去除扩展名）
 
       try {
         // 完成上传
         const result = await flutterChannel.completeBinaryUpload(
           state.currentFileId,
-          state.currentUploadFile.name,
+          state.currentUploadFile.name, // 保留原始文件名用于存储
           duration,
           state.selectedTagIdsForUpload,
-          elements.videoRemark.value.trim()
+          elements.videoRemark.value.trim(),
+          titleWithoutExt  // 使用不带后缀的标题
         );
         console.log('视频上传完成:', result);
 
@@ -849,10 +1138,10 @@
       state.currentEditingVideo = null;
       state.selectedTagIdsForUpload = [];
       state.pendingUploads = new Map(), // 存储已上传但未合并的文件ID
-      state.currentUploadFile = null;
+        state.currentUploadFile = null;
       state.currentFileId = null;
       state.cancelUpload = false, // 是否正在执行缓存
-      elements.uploadModal.classList.add('hidden')
+        elements.uploadModal.classList.add('hidden')
     }
 
     // 缓存视频，预上传
@@ -882,7 +1171,7 @@
 
     // 获取当前设备，以便优化上传分块大小
     function calcChunkSize(totalSize) {
-     // { isMobile: 是否移动设备, isIPhoneSafari: 是否苹果手机Safari }
+      // { isMobile: 是否移动设备, isIPhoneSafari: 是否苹果手机Safari }
       const userAgent = navigator.userAgent.toLowerCase();
       const isMobile = /iphone|ipod|ipad|android|windows phone/.test(userAgent);
       const isIPhone = /iphone|ipod/.test(userAgent); // 仅匹配苹果手机（排除 iPad）
@@ -923,7 +1212,7 @@
       const totalChunks = Math.ceil(totalSize / chunkSize);
 
       for (let start = 0; start < totalSize; start += chunkSize) {
-        if (state.cancelUpload){
+        if (state.cancelUpload) {
           sendCancelToBackend(fileId);
           return;
         }
@@ -953,17 +1242,17 @@
       }
     }
 
-    function sendCancelToBackend(fileId){
+    function sendCancelToBackend(fileId) {
       // 如果有已上传但未合并的文件，通知后端删除
-        try {
-            flutterChannel._sendRequest('cancelBinaryUpload', {
-            fileId: fileId
-          });
-          state.pendingUploads.delete(state.currentFileId);
-          console.log('分块上传任务已被取消，发送清空服务器缓存命令...')
-        } catch (error) {
-          console.error('取消上传失败:', error);
-        }
+      try {
+        flutterChannel._sendRequest('cancelBinaryUpload', {
+          fileId: fileId
+        });
+        state.pendingUploads.delete(state.currentFileId);
+        console.log('分块上传任务已被取消，发送清空服务器缓存命令...')
+      } catch (error) {
+        console.error('取消上传失败:', error);
+      }
     }
 
     // 添加打开视频详情的函数
@@ -989,24 +1278,53 @@
       elements.saveVideoBtn.textContent = '保存修改';
       elements.downloadBtn.classList.remove('hidden')
 
-      // 更新视频信息显示
+      // 从filePath中提取文件名
+      const fileName = video.filePath ? video.filePath.split('/').pop().split('').pop() : '';
+      // 更新视频信息显示 - 显示文件名而不是时长
       elements.videoSize.textContent = `大小: ${formatFileSize(video.fileSize)}`;
-      elements.videoDuration.textContent = `时长: ${formatDuration(video.duration)}`;
+      elements.videoDuration.textContent = `文件名: ${fileName}`;
 
-      // 注入视频播放地址
-      try {
-        const baseUrl = window.location.origin; // 获取当前域名作为基础URL
-        // 构建完整的视频流URL
-        elements.videoPreview.src = `${baseUrl}/videoStream/${video.id}`;
-        // 对于Safari，强制使用Range请求
-        if (/safari/.test(navigator.userAgent.toLowerCase()) && !/chrome/.test(navigator.userAgent.toLowerCase())) {
-          elements.videoPreview.addEventListener('loadedmetadata', () => {
-            // Safari特定特性：预加载元数据后触发播放
-            elements.videoPreview.play().catch(e => console.log('自动播放受限:', e));
-          });
-        }
-      } catch (error) {
-        console.error('获取视频播放地址失败:', error);
+      // 注入视频播放地址
+
+      try {
+
+        const baseUrl = window.location.origin; // 获取当前域名作为基础URL
+
+        // 构建完整的视频流URL
+
+        const videoUrl = `${baseUrl}/videoStream/${video.id}`;
+        elements.videoPreview.src = videoUrl;
+
+        // 设置视频预加载属性以提高兼容性
+        elements.videoPreview.preload = 'metadata';
+
+        // 检测浏览器类型
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+        // 等待元数据加载完成后再尝试播放
+        elements.videoPreview.addEventListener('loadedmetadata', () => {
+          console.log('视频元数据加载完成');
+        });
+
+        // Safari和其他浏览器可能需要不同的处理方式
+        elements.videoPreview.addEventListener('canplay', () => {
+          console.log('视频可以播放');
+          // 尝试播放，但不强制，因为可能受自动播放策略限制
+          elements.videoPreview.play().catch(e => console.log('自动播放受限:', e));
+        });
+
+        // 添加错误处理
+        elements.videoPreview.addEventListener('error', (e) => {
+          console.error('视频播放错误:', e.target.error);
+          // 尝试用不同方式加载视频
+          elements.videoPreview.load(); // 重新加载资源
+        });
+
+      } catch (error) {
+
+        console.error('获取视频播放地址失败:', error);
+
       }
 
       // 显示浮框
@@ -1157,7 +1475,7 @@
 
       // 绑定下载视频按钮事件
       elements.downloadBtn.addEventListener('click', async () => {
-        if (state.currentEditingVideo){
+        if (state.currentEditingVideo) {
           // e.stopPropagation();
           const baseUrl = window.location.origin;
           const downloader = new VideoDownloader(state.currentEditingVideo.id, baseUrl);
@@ -1175,7 +1493,7 @@
             console.error('下载初始化失败:', error);
             alert('下载失败: ' + error.message);
           }
-        }else{
+        } else {
           return;
         }
       })
@@ -1183,7 +1501,7 @@
       // 绑定先上传按钮事件
       elements.uploadFirstBtn.addEventListener('click', async () => {
         // 确认选择文件的流程没错
-        if (!state.currentFileId && ! state.currentUploadFile) {
+        if (!state.currentFileId && !state.currentUploadFile) {
           return;
         }
 
@@ -1425,8 +1743,8 @@
       getChunkSize() {
         const userAgent = navigator.userAgent.toLowerCase();
         const isIPhoneSafari = /iphone|ipod/.test(userAgent) &&
-                              /safari/.test(userAgent) &&
-                              !/chrome|edge|firefox/.test(userAgent);
+          /safari/.test(userAgent) &&
+          !/chrome|edge|firefox/.test(userAgent);
 
         if (isIPhoneSafari) {
           if (this.totalSize <= 25 * 1024 * 1024) return 256 * 1024; // 256KB
@@ -1457,7 +1775,7 @@
             end: data.end
           })),
           isAndroidTablet: /android/.test(navigator.userAgent.toLowerCase()) &&
-                          screen.width >= 768
+            screen.width >= 768
         });
 
         // 监听Worker消息
@@ -1545,4 +1863,5 @@
     }
   </script>
 </body>
+
 </html>

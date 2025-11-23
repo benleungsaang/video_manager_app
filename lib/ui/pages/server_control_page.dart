@@ -1,8 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
 import 'package:provider/provider.dart';
+
 import 'package:video_manager_app/main.dart';
+
+import 'package:file_picker/file_picker.dart'; // 新增导入
+
 import '../../services/server_service.dart';
 
 class ServerControlPage extends StatefulWidget {
@@ -76,292 +81,457 @@ class _ServerControlPageState extends State<ServerControlPage> {
       appBar: AppBar(
         title: const Text('服务器控制'),
         backgroundColor: Colors.blue[800],
-        // 避免AppBar被遮挡（可选）
         centerTitle: true,
       ),
-      // 关键：外层添加SingleChildScrollView，支持整个页面滚动
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(), // 回弹滚动效果
-        child: Consumer<ServerService>(
-          builder: (context, serverService, child) {
-            _portController.text = serverService.port.toString();
+      body: Consumer<ServerService>(
+        builder: (context, serverService, child) {
+          _portController.text = serverService.port.toString();
 
-            // 初始化新客户端的备注控制器
-            for (var clientId in serverService.clientDetails.keys) {
-              if (!_clientRemarkControllers.containsKey(clientId)) {
-                _clientRemarkControllers[clientId] = TextEditingController(
-                  text: serverService.clientDetails[clientId]?.remark,
-                );
-              }
+          // 初始化新客户端的备注控制器
+
+          for (var clientId in serverService.clientDetails.keys) {
+            if (!_clientRemarkControllers.containsKey(clientId)) {
+              _clientRemarkControllers[clientId] = TextEditingController(
+                text: serverService.clientDetails[clientId]?.remark,
+              );
             }
+          }
 
-            // 容器添加最大宽度约束，避免超宽
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height -
-                    AppBar().preferredSize.height -
-                    MediaQuery.of(context).padding.top,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 服务器开关按钮（固定宽度，避免拉伸）
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (serverService.isRunning) {
-                            await serverService.stopServer();
-                            await KeepAliveManager.stopForegroundService();
-                          } else {
-                            try {
-                              final port = int.parse(_portController.text);
-                              await serverService.startServer(customPort: port);
-                              await KeepAliveManager.startForegroundService();
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(e.toString())),
-                                );
-                              }
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: serverService.isRunning
-                              ? Colors.red
-                              : Colors.green,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 32, vertical: 16),
-                          textStyle: const TextStyle(fontSize: 18),
-                        ),
-                        child:
-                            Text(serverService.isRunning ? '停止服务器' : '启动服务器'),
-                      ),
-                    ),
+          return Row(
+            children: [
+              // 左侧：服务器控制区域
 
-                    const SizedBox(height: 16),
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 服务器开关按钮
 
-                    // 清除缓存按钮
-                    if (!serverService.isRunning)
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () async {
-                            await serverService.clearWebCache();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Web资源缓存已清除')),
-                              );
+                            if (serverService.isRunning) {
+                              await serverService.stopServer();
+
+                              await KeepAliveManager.stopForegroundService();
+                            } else {
+                              try {
+                                final port = int.parse(_portController.text);
+
+                                await serverService.startServer(
+                                    customPort: port);
+
+                                await KeepAliveManager.startForegroundService();
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.toString())),
+                                  );
+                                }
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: serverService.isRunning
+                                ? Colors.red
+                                : Colors.green,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
                           ),
-                          child: const Text('清除Web资源缓存'),
+                          child: Text(
+                            serverService.isRunning ? '停止服务器' : '启动服务器',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                    // 连接信息（换行显示，避免水平溢出）
-                    if (serverService.isRunning &&
-                        serverService.localIp != null)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('连接信息:',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          // 用SelectableText方便复制，同时自动换行
-                          SelectableText(
-                            '内网地址: http://${serverService.localIp}:${serverService.port}',
-                            style: const TextStyle(fontSize: 14),
+                      // 清除缓存按钮
+
+                      if (!serverService.isRunning)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await serverService.clearWebCache();
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Web资源缓存已清除')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: const Text('清除Web资源缓存'),
                           ),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // 连接信息
+
+                      if (serverService.isRunning &&
+                          serverService.localIp != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('连接信息',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              SelectableText(
+                                '内网地址: http://${serverService.localIp}:${serverService.port}',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // 端口设置
+
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('端口设置',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _portController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                hintText: '输入端口(1024-65535)',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 14),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                              enabled: !serverService.isRunning,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // 数据库导出按钮
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              final exportPath =
+                                  await serverService.exportDatabase();
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                    '数据库已导出至: $exportPath',
+                                  )),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('导出失败: $e')),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[600],
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Text('导出数据库',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 数据库导入按钮
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              final result =
+                                  await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['json'],
+                                dialogTitle: '选择数据库JSON文件',
+                              );
+
+                              if (result != null &&
+                                  result.files.single.path != null) {
+                                final filePath = result.files.single.path!;
+
+                                await serverService.importDatabase(filePath);
+
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('数据库导入成功')),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('导入失败: $e')),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple[600],
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Text('导入数据库',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 分割线
+
+              Container(
+                width: 1,
+                color: Colors.grey[300],
+              ),
+
+              // 右侧：客户端和日志区域
+
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 客户端列表标题
+
+                      Row(
+                        children: [
+                          const Text('客户端列表',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          Text('(${serverService.clientDetails.length})',
+                              style: const TextStyle(fontSize: 16)),
                         ],
                       ),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
-                    // 端口设置
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('端口设置:',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _portController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: '输入端口(1024-65535)',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 14),
-                          ),
-                          enabled: !serverService.isRunning,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
-                    ),
+                      // 客户端列表滚动区域
 
-                    const SizedBox(height: 20),
-
-                    // 客户端列表（优化卡片布局，避免溢出）
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('客户端列表 (${serverService.clientDetails.length}):',
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        if (serverService.isRunning &&
-                            serverService.clientDetails.isNotEmpty)
-                          Column(
-                            children: serverService.clientDetails.entries
-                                .map((entry) {
-                              final clientId = entry.key;
-                              final details = entry.value;
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                elevation: 2,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  // 用Column替换Row，避免水平溢出
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // 客户端基础信息（换行显示）
-                                      Wrap(
-                                        spacing: 12,
-                                        runSpacing: 6,
-                                        children: [
-                                          Text(
-                                              'ID: ${_truncateClientId(clientId)}',
-                                              style: const TextStyle(
-                                                  fontSize: 13)),
-                                          Text('设备: ${details.deviceType}',
-                                              style: const TextStyle(
-                                                  fontSize: 13)),
-                                          Text('连接时间: ${details.connectedAt}',
-                                              style: const TextStyle(
-                                                  fontSize: 13)),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      // 备注输入框+按钮（横向布局，限制宽度）
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: TextField(
-                                              controller: _getRemarkController(
-                                                  clientId, details.remark),
-                                              decoration: const InputDecoration(
-                                                labelText: '备注名称',
-                                                labelStyle:
-                                                    TextStyle(fontSize: 13),
-                                                border: OutlineInputBorder(),
-                                                contentPadding:
-                                                    EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 12),
-                                                isDense: true, // 紧凑模式
-                                              ),
-                                              style:
-                                                  const TextStyle(fontSize: 13),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          // 保存按钮
-                                          IconButton(
-                                            icon: const Icon(Icons.save,
-                                                size: 20),
-                                            onPressed: () {
-                                              final remark =
-                                                  _getRemarkController(clientId,
-                                                          details.remark)
-                                                      .text;
-                                              serverService.setClientRemark(
-                                                  clientId, remark);
-                                            },
-                                            tooltip: '保存备注',
-                                          ),
-                                          // 断开按钮
-                                          IconButton(
-                                            icon: const Icon(Icons.close,
-                                                color: Colors.red, size: 20),
-                                            onPressed: () {
-                                              serverService
-                                                  .disconnectClient(clientId);
-                                            },
-                                            tooltip: '断开连接',
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          )
-                        else if (serverService.isRunning)
-                          const Text('暂无客户端连接', style: TextStyle(fontSize: 14))
-                        else
-                          const Text('服务器未运行', style: TextStyle(fontSize: 14)),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // 消息日志（固定高度+内部滚动）
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('消息日志:',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        // 限制容器高度，内部独立滚动
-                        Container(
-                          height: 200, // 固定高度，避免占满屏幕
-                          width: double.infinity,
+                      Expanded(
+                        child: Container(
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey[300]!),
                             borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[50],
                           ),
-                          child: SingleChildScrollView(
-                            reverse: true, // 新消息在底部
-                            physics: const BouncingScrollPhysics(),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: serverService.messageLogs
-                                    .map((log) =>
-                                        _buildLogItem(log, serverService))
-                                    .toList(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                          child: serverService.isRunning &&
+                                  serverService.clientDetails.isNotEmpty
+                              ? ListView(
+                                  children: serverService.clientDetails.entries
+                                      .map((entry) {
+                                    final clientId = entry.key;
 
-                    // 底部留白，避免最后一个组件被遮挡
-                    const SizedBox(height: 20),
-                  ],
+                                    final details = entry.value;
+
+                                    return Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: _buildClientCard(
+                                          clientId, details, serverService),
+                                    );
+                                  }).toList(),
+                                )
+                              : serverService.isRunning
+                                  ? const Center(
+                                      child: Text('暂无客户端连接',
+                                          style: TextStyle(fontSize: 16)),
+                                    )
+                                  : const Center(
+                                      child: Text('服务器未运行',
+                                          style: TextStyle(fontSize: 16)),
+                                    ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // 消息日志标题
+
+                      const Text('消息日志',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+
+                      const SizedBox(height: 12),
+
+                      // 消息日志滚动区域
+
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: serverService.messageLogs.isEmpty
+                              ? const Center(
+                                  child: Text('暂无消息日志',
+                                      style: TextStyle(fontSize: 16)))
+                              : ListView.builder(
+                                  reverse: true, // 新消息在底部
+
+                                  itemCount: serverService.messageLogs.length,
+
+                                  itemBuilder: (context, index) {
+                                    final log =
+                                        serverService.messageLogs[index];
+
+                                    return _buildLogItem(log, serverService);
+                                  },
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
-        ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // 构建客户端卡片
+
+  Widget _buildClientCard(
+      String clientId, ClientDetails details, ServerService serverService) {
+    final hasRemark = details.remark != null && details.remark!.isNotEmpty;
+
+    final displayName =
+        hasRemark ? details.remark! : _truncateClientId(clientId);
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: ExpansionTile(
+        title: Text(displayName,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('连接时间: ${details.connectedAt}'),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _getRemarkController(clientId, details.remark),
+                    decoration: const InputDecoration(
+                      labelText: '设置备注',
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    final remark =
+                        _getRemarkController(clientId, details.remark).text;
+
+                    serverService.setClientRemark(clientId, remark);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child:
+                      const Text('保存', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    serverService.disconnectClient(clientId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child:
+                      const Text('断开', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -382,9 +552,22 @@ class _ServerControlPageState extends State<ServerControlPage> {
       default:
         color = Colors.black87;
     }
-    // 关键：获取客户端显示名称（备注名优先）
-    final clientDisplayName =
-        _getClientDisplayName(log.clientId, serverService);
+    // 获取客户端显示名称（备注名优先）
+
+    String clientDisplayName = '未知客户端';
+
+    if (log.clientId != null) {
+      final clientDetail = serverService.clientDetails[log.clientId!];
+
+      if (clientDetail != null &&
+          clientDetail.remark != null &&
+          clientDetail.remark!.isNotEmpty) {
+        clientDisplayName = clientDetail.remark!; // 显示备注名
+      } else {
+        clientDisplayName =
+            log.clientId!.substring(log.clientId!.length - 4); // 显示ID尾数
+      }
+    }
 
     // 解析 JSON 中的 action 和 params（核心简化逻辑）
     final Map<String, dynamic> parsedData = _parseLogData(log.data);
@@ -408,11 +591,10 @@ class _ServerControlPageState extends State<ServerControlPage> {
               children: [
                 Expanded(
                   child: Text(
-                    '[${log.timestamp}] 【$clientDisplayName】 $action | 参数: $simplifiedParams',
+                    '${log.timestamp} | $clientDisplayName | $action | $simplifiedParams',
                     style: TextStyle(
                       color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                     softWrap: true,
                   ),
@@ -499,40 +681,41 @@ class _ServerControlPageState extends State<ServerControlPage> {
       paramsStr = params.toString();
     }
 
-    // 限制长度为 50 字符，超出部分省略
-    return paramsStr.length > 50
-        ? '${paramsStr.substring(0, 50)}...'
+    // 限制长度为 30 字符，超出部分省略
+
+    return paramsStr.length > 30
+        ? '${paramsStr.substring(0, 30)}...'
         : paramsStr;
   }
+}
 
-  // 格式化JSON数据显示
-  String _formatJson(dynamic data) {
-    try {
-      if (data is String) {
-        // 如果是 JSON 字符串，先解析再格式化
-        final parsed = json.decode(data);
-        return JsonEncoder.withIndent('  ').convert(parsed);
-      }
-      return JsonEncoder.withIndent('  ').convert(data);
-    } catch (e) {
-      return data.toString();
+// 格式化JSON数据显示
+String _formatJson(dynamic data) {
+  try {
+    if (data is String) {
+      // 如果是 JSON 字符串，先解析再格式化
+      final parsed = json.decode(data);
+      return JsonEncoder.withIndent('  ').convert(parsed);
     }
+    return JsonEncoder.withIndent('  ').convert(data);
+  } catch (e) {
+    return data.toString();
   }
+}
 
-  // 截断过长的客户端ID
-  String _truncateClientId(String clientId) {
-    if (clientId.length > 15) {
-      return '${clientId.substring(0, 12)}...';
-    }
-    return clientId;
+// 截断过长的客户端ID
+String _truncateClientId(String clientId) {
+  if (clientId.length > 15) {
+    return '${clientId.substring(0, 12)}...';
   }
+  return clientId;
+}
 
-  // 生成设备连接摘要
-  String _getDeviceSummary(Map<String, String> devices) {
-    final counts = <String, int>{};
-    for (final device in devices.values) {
-      counts[device] = (counts[device] ?? 0) + 1;
-    }
-    return counts.entries.map((e) => '${e.key} ${e.value}台').join('，');
+// 生成设备连接摘要
+String _getDeviceSummary(Map<String, String> devices) {
+  final counts = <String, int>{};
+  for (final device in devices.values) {
+    counts[device] = (counts[device] ?? 0) + 1;
   }
+  return counts.entries.map((e) => '${e.key} ${e.value}台').join('，');
 }

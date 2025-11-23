@@ -4,7 +4,9 @@ import 'package:path_provider/path_provider.dart';
 import '../models/video.dart';
 import '../providers/video_provider.dart';
 import 'file_utils.dart'; // 引入文件工具类
+import 'storage_utils.dart'; // 引入存储工具类
 import '../../utils/video_player_utils.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class VideoUploader {
   // 本地视频复制处理（复制到APP目录）
@@ -17,9 +19,8 @@ class VideoUploader {
     int durationTime,
   ) async {
     try {
-      // 获取APP的视频存储目录
-      final appDir = await getApplicationDocumentsDirectory();
-      final videosDir = p.join(appDir.path, 'videos');
+      // 获取新存储位置的视频目录
+      final videosDir = StorageUtils.getVideosDirectory();
       await Directory(videosDir).create(recursive: true);
 
       // 复制文件到APP目录
@@ -45,6 +46,7 @@ class VideoUploader {
       await videoProvider.saveVideo(video);
       return video;
     } catch (e) {
+      print('文件复制失败: ${e.toString()}');
       throw Exception('文件复制失败: ${e.toString()}');
     }
   }
@@ -59,9 +61,8 @@ class VideoUploader {
     int durationTime,
   ) async {
     try {
-      // 获取APP的视频存储目录
-      final appDir = await getApplicationDocumentsDirectory();
-      final videosDir = p.join(appDir.path, 'videos');
+      // 获取新存储位置的视频目录
+      final videosDir = StorageUtils.getVideosDirectory();
       await Directory(videosDir).create(recursive: true);
 
       // 复制文件到APP目录
@@ -88,6 +89,7 @@ class VideoUploader {
       await videoProvider.saveVideo(video);
       return video;
     } catch (e) {
+      print('文件复制失败: ${e.toString()}');
       throw Exception('文件复制失败: ${e.toString()}');
     }
   }

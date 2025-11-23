@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../widgets/tag_list_item.dart';
-import '../../providers/tag_provider.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../widgets/tag_list_item.dart';
+import '../../providers/tag_provider.dart';
+import '../../utils/toast_utils.dart';
 
 class TagManagementPage extends StatefulWidget {
   const TagManagementPage({super.key});
@@ -41,12 +41,12 @@ class _TagManagementPageState extends State<TagManagementPage> {
                     Provider.of<TagProvider>(context, listen: false);
                 final newTag = await tagProvider.createTag(tagName);
 
-                if (newTag != null) {
-                  _tagNameController.clear();
-                  Navigator.pop(context);
-                  Fluttertoast.showToast(msg: '标签添加成功');
-                } else {
-                  Fluttertoast.showToast(msg: '标签已存在');
+                if (newTag != null) {
+                  _tagNameController.clear();
+                  Navigator.pop(context);
+                  ToastUtils.showSuccess('标签添加成功');
+                } else {
+                  ToastUtils.showWarning('标签已存在');
                 }
               }
             },
@@ -140,10 +140,10 @@ class _TagManagementPageState extends State<TagManagementPage> {
                       );
 
                       if (confirm == true) {
-                        await provider.deleteTag(tag.id);
-                        // 删除标签后重新计算所有标签的关联数量
-                        await provider.recalculateVideoCounts();
-                        Fluttertoast.showToast(msg: '标签已删除');
+                        await provider.deleteTag(tag.id);
+                        // 删除标签后重新计算所有标签的关联数量
+                        await provider.recalculateVideoCounts();
+                        ToastUtils.showSuccess('标签已删除');
                       }
                     },
                   );

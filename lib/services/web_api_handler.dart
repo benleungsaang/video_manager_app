@@ -1,18 +1,32 @@
-// lib/services/web_api_handler.dart
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+
 import 'package:path/path.dart' as p;
+
 import 'package:path_provider/path_provider.dart';
+
 import 'package:provider/provider.dart';
+
 import 'package:video_manager_app/main.dart';
+
 import 'package:video_manager_app/utils/file_utils.dart';
+
 import 'package:web_socket_channel/web_socket_channel.dart';
+
 import '../providers/tag_provider.dart';
+
 import '../providers/video_provider.dart';
+
 import '../models/tag.dart';
+
 import '../models/video.dart';
+
 import 'dart:convert';
+
+import '../utils/storage_utils.dart'; // 新增导入
+
+import 'video_compression_service.dart'; // 视频压缩服务
 
 // 二进制分块上传类
 class UploadingFile {
@@ -72,10 +86,11 @@ class WebApiHandler {
             'data': _tagProvider.tags.map(_tagToJson).toList()
           };
 
-        case 'createTag':
-          final Tag? tag = await _tagProvider.createTag(params['name'], initialVideoCount: 0);
-          return tag != null
-              ? {'success': true, 'data': _tagToJson(tag)}
+        case 'createTag':
+          final Tag? tag = await _tagProvider.createTag(params['name'],
+              initialVideoCount: 0);
+          return tag != null
+              ? {'success': true, 'data': _tagToJson(tag)}
               : {'success': false, 'error': '标签已存在'};
 
         // 删除标签
@@ -163,45 +178,46 @@ class WebApiHandler {
             'success': true,
             'data': _videoProvider.videos.map(_videoToJson).toList()
           };
-        case 'updateVideo':
-          // 处理视频更新
-          final Map<String, dynamic> params = request['params']['video'] ?? {};
-          final int duration = params['duration']; // 假设前端传入视频时长
-          final String? filePath = params['filePath'];
-          final int? fileSize = params['fileSize']; // 假设前端传入文件大小
-          final String id = params['id'];
-          final List<String> tagIds =
-              List<String>.from(params['tagIds'] ?? []); // 标签ID列表
-          final String? thumbnailPath = params['thumbnailPath'];
-          final String title = params['title'];
-          final String uploadTime = params['uploadTime'];
-          final String remark = params['remark'] ?? ''; // 备注信息
-
-          // 获取现有视频以获取未更新的字段
-          final existingVideo = _videoProvider.getVideoById(id);
-          if (existingVideo == null) {
-            return {'success': false, 'error': '视频不存在'};
-          }
-
-          // 创建更新后的Video对象
-          final updatedVideo = Video(
-            id: id,
-            title: title,
-            remark: remark,
-            filePath: filePath ?? existingVideo.filePath,
-            duration: duration,
-            fileSize: fileSize ?? existingVideo.fileSize,
-            uploadTime: DateTime.tryParse(uploadTime) ?? existingVideo.uploadTime,
-            tagIds: tagIds,
-            thumbnailPath: thumbnailPath ?? existingVideo.thumbnailPath,
-          );
-
-          // 保存视频（这会自动处理标签计数的更新）
-          await _videoProvider.saveVideo(updatedVideo);
-
-          return {
-            'success': true,
-            'data': _videoToJson(updatedVideo), // 返回完整的视频信息
+        case 'updateVideo':
+          // 处理视频更新
+          final Map<String, dynamic> params = request['params']['video'] ?? {};
+          final int duration = params['duration']; // 假设前端传入视频时长
+          final String? filePath = params['filePath'];
+          final int? fileSize = params['fileSize']; // 假设前端传入文件大小
+          final String id = params['id'];
+          final List<String> tagIds =
+              List<String>.from(params['tagIds'] ?? []); // 标签ID列表
+          final String? thumbnailPath = params['thumbnailPath'];
+          final String title = params['title'];
+          final String uploadTime = params['uploadTime'];
+          final String remark = params['remark'] ?? ''; // 备注信息
+
+          // 获取现有视频以获取未更新的字段
+          final existingVideo = _videoProvider.getVideoById(id);
+          if (existingVideo == null) {
+            return {'success': false, 'error': '视频不存在'};
+          }
+
+          // 创建更新后的Video对象
+          final updatedVideo = Video(
+            id: id,
+            title: title,
+            remark: remark,
+            filePath: filePath ?? existingVideo.filePath,
+            duration: duration,
+            fileSize: fileSize ?? existingVideo.fileSize,
+            uploadTime:
+                DateTime.tryParse(uploadTime) ?? existingVideo.uploadTime,
+            tagIds: tagIds,
+            thumbnailPath: thumbnailPath ?? existingVideo.thumbnailPath,
+          );
+
+          // 保存视频（这会自动处理标签计数的更新）
+          await _videoProvider.saveVideo(updatedVideo);
+
+          return {
+            'success': true,
+            'data': _videoToJson(updatedVideo), // 返回完整的视频信息
           };
         // 处理二进制块元数据
         case 'initBinaryUpload':
@@ -210,7 +226,7 @@ class WebApiHandler {
         case 'uploadBinaryChunk':
           return await _handleUploadBinaryChunk(channel, params, requestId);
         // 【 合并 】 分块上传的进制数据
-        case 'completeBinaryUpload':
+        case 'completeBinaryUpload':
           return await _handleCompleteBinaryUpload(params);
         // 添加取消二进制上传处理
         case 'cancelBinaryUpload':
@@ -219,8 +235,7 @@ class WebApiHandler {
             _uploadingFiles.remove(fileId);
           } else {
             // 检查是否有未合并的临时文件
-            final appDir = await getApplicationDocumentsDirectory();
-            final tempDir = p.join(appDir.path, 'temp_uploads');
+            final tempDir = StorageUtils.getTempDirectory();
             final tempFile = File(p.join(tempDir, fileId));
             if (await tempFile.exists()) {
               await tempFile.delete();
@@ -308,68 +323,10 @@ class WebApiHandler {
         json.encode({'id': requestId, 'success': true, 'progress': progress}));
   }
 
-  // 完成二进制上传
-  Future<Map<String, dynamic>> _handleCompleteBinaryUpload(
-      Map<String, dynamic> params) async {
-    final String fileId = params['fileId'];
-    final String name = params['name'];
-    final int duration = params['duration'];
-    final int fileSize = params['fileSize'];
-    final String remark = params['remark'] ?? '';
-    final List<String> tagIds = List<String>.from(params['tagIds'] ?? []);
-
-    if (!_uploadingFiles.containsKey(fileId)) {
-      return {'success': false, 'error': '未找到上传中的文件'};
-    }
-
-    final UploadingFile uploadingFile = _uploadingFiles[fileId]!;
-
-    // 验证完整性
-    if (uploadingFile.receivedSize != fileSize ||
-        uploadingFile.chunks.length != uploadingFile.totalChunks) {
-      return {'success': false, 'error': '文件分片不完整'};
-    }
-
-    // 合并文件
-    final appDir = await getApplicationDocumentsDirectory();
-    final videosDir = p.join(appDir.path, 'videos');
-    await Directory(videosDir).create(recursive: true);
-    final videoFilePath =
-        p.join(videosDir, '${DateTime.now().millisecondsSinceEpoch}_$name');
-
-    final File videoFile = File(videoFilePath);
-    final IOSink sink = videoFile.openWrite();
-
-    // 按顺序写入所有分片
-    for (int i = 0; i < uploadingFile.totalChunks; i++) {
-      sink.add(uploadingFile.chunks[i]!);
-    }
-    await sink.close();
-
-    // 生成缩略图
-    final thumbNailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
-
-    // 创建视频对象
-    final newVideo = Video(
-      id: 'video_${DateTime.now().millisecondsSinceEpoch}',
-      title: name,
-      remark: remark,
-      filePath: videoFilePath,
-      duration: duration,
-      fileSize: fileSize,
-      uploadTime: DateTime.now(),
-      tagIds: tagIds,
-      thumbnailPath: thumbNailPath,
-    );
-
-    // 保存视频
-    await _videoProvider.saveVideo(newVideo);
-    _uploadingFiles.remove(fileId);
-
-    return {'success': true, 'data': _videoToJson(newVideo)};
-  }
+  // 完成二进制上传
 
   // 转换Tag为JSON格式
+
   Map<String, dynamic> _tagToJson(Tag tag) {
     return {
       'id': tag.id,
@@ -379,6 +336,7 @@ class WebApiHandler {
   }
 
   // 转换Video为JSON格式
+
   Map<String, dynamic> _videoToJson(Video video) {
     return {
       'id': video.id,
@@ -391,5 +349,139 @@ class WebApiHandler {
       'duration': video.duration,
       'remark': video.remark
     };
+  }
+
+  // 处理二进制上传完成
+
+  Future<Map<String, dynamic>> _handleCompleteBinaryUpload(
+      Map<String, dynamic> params) async {
+    final String fileId = params['fileId'];
+
+    final String name = params['name'];
+
+    final int duration = params['duration'];
+
+    final int fileSize = params['fileSize'];
+
+    final String remark = params['remark'] ?? '';
+
+    final List<String> tagIds = List<String>.from(params['tagIds'] ?? []);
+
+    // 获取压缩参数，默认为完全压缩
+
+    final String compressMode = params['compressMode'] ?? 'full';
+
+    // 获取标题（如果没有提供则使用文件名，但去掉扩展名）
+
+    final String title =
+        params['title'] ?? name.replaceFirst(RegExp(r'\.[^.]+$'), '');
+
+    if (!_uploadingFiles.containsKey(fileId)) {
+      return {'success': false, 'error': '未找到上传中的文件'};
+    }
+
+    final UploadingFile uploadingFile = _uploadingFiles[fileId]!;
+
+    // 验证完整性
+
+    if (uploadingFile.receivedSize != fileSize ||
+        uploadingFile.chunks.length != uploadingFile.totalChunks) {
+      return {'success': false, 'error': '文件分片不完整'};
+    }
+
+    // 合并文件
+
+    final videosDir = StorageUtils.getVideosDirectory();
+
+    await Directory(videosDir).create(recursive: true);
+
+    final tempVideoFilePath = p.join(
+        videosDir, 'temp_${DateTime.now().millisecondsSinceEpoch}_$name');
+
+    final File videoFile = File(tempVideoFilePath);
+
+    final IOSink sink = videoFile.openWrite();
+
+    // 按顺序写入所有分片
+
+    for (int i = 0; i < uploadingFile.totalChunks; i++) {
+      sink.add(uploadingFile.chunks[i]!);
+    }
+
+    await sink.close();
+
+    // 根据压缩参数处理视频
+
+    String finalVideoFilePath = tempVideoFilePath;
+
+    bool compressionSuccessful = false;
+
+    if (compressMode == 'full' || compressMode == 'original') {
+      // 检查FFmpeg是否可用
+
+      if (await VideoCompressionService.isFFmpegAvailable()) {
+        print('开始对视频进行压缩，模式: $compressMode');
+
+        final compressedPath = await VideoCompressionService.compressVideo(
+          inputPath: tempVideoFilePath,
+          compressionMode: compressMode,
+        );
+
+        if (compressedPath != null) {
+          // 压缩成功，使用压缩后的文件
+
+          finalVideoFilePath = compressedPath;
+
+          compressionSuccessful = true;
+
+          print('视频压缩完成，新文件路径: $compressedPath');
+        } else {
+          print('视频压缩失败，使用原始文件');
+
+          // If compression failed, ensure the original file still exists
+
+          final originalFile = File(tempVideoFilePath);
+
+          if (!await originalFile.exists()) {
+            return {'success': false, 'error': '原始视频文件不存在或已被删除'};
+          }
+        }
+      } else {
+        print('FFmpeg不可用，跳过视频压缩');
+      }
+    }
+
+    // 生成缩略图
+
+    final thumbNailPath =
+        await FileUtils.generateVideoThumbnail(finalVideoFilePath);
+
+    // 获取最终文件大小
+
+    final File finalVideoFile = File(finalVideoFilePath);
+
+    final int finalFileSize = await finalVideoFile.length();
+
+    // 创建视频对象
+
+    final newVideo = Video(
+      id: 'video_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      remark: remark,
+      filePath: finalVideoFilePath,
+      duration: duration,
+      fileSize: finalFileSize,
+      uploadTime: DateTime.now(),
+      tagIds: tagIds,
+      thumbnailPath: thumbNailPath,
+    );
+
+    // 保存视频
+
+    await _videoProvider.saveVideo(newVideo);
+
+    _uploadingFiles.remove(fileId);
+
+    return {'success': true, 'data': _videoToJson(newVideo)};
   }
 }

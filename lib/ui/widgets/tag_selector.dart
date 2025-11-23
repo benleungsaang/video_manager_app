@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/tag_provider.dart';
-// import '../../models/tag.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/tag_provider.dart';
+// import '../../models/tag.dart';
+import '../../utils/toast_utils.dart';
 
 class TagSelector extends StatefulWidget {
   final List<String> selectedTagIds;
@@ -63,9 +63,9 @@ class _TagSelectorState extends State<TagSelector> {
           _selectedTagIds.add(newTag.id);
           widget.onTagsSelected(_selectedTagIds);
         });
-      } else {
-        Fluttertoast.showToast(msg: '标签已存在');
-      }
+      } else {
+        ToastUtils.showWarning('标签已存在');
+      }
     });
   }
 

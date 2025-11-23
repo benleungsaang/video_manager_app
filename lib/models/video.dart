@@ -37,22 +37,22 @@ class Video extends HiveObject {
   @HiveField(7)
   int? duration;
 
-  // 缩略图路径
-  @HiveField(8)
-  String? thumbnailPath;
-
-  Video({
-    required this.title,
-    required this.filePath,
-    required this.fileSize,
-    List<String>? tagIds,
-    String? remark,
-    DateTime? uploadTime,
-    this.duration,
-    this.thumbnailPath,
-    String? id,
-  })  : id = id ?? const Uuid().v4(),
-        tagIds = tagIds ?? [],
-        remark = remark ?? '',
+  // 缩略图路径
+  @HiveField(8)
+  String? thumbnailPath;
+
+  Video({
+    required this.title,
+    required this.filePath,
+    required this.fileSize,
+    List<String>? tagIds,
+    String? remark,
+    DateTime? uploadTime,
+    this.duration,
+    this.thumbnailPath,
+    String? id,
+  })  : id = id ?? const Uuid().v4(),
+        tagIds = tagIds ?? [],
+        remark = remark ?? '',
         uploadTime = uploadTime ?? DateTime.now();
 }

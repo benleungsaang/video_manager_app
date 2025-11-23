@@ -485,6 +485,11 @@
             <Item>\build\web\icons\</Item>
             <Item>\web\fonts\</Item>
             <Item>\web\css\</Item>
+            <Item>\build\permission_handler_android\.transforms\f708caf6f8f42b0eff92388118eb395a\transformed\bundleLibRuntimeToDirDebug\com\baseflow\permissionhandler\</Item>
+            <Item>\build\permission_handler_android\</Item>
+            <Item>*\ffmpegkit\</Item>
+            <Item>*\ffmpeg_kit_flutter_new\</Item>
+            <Item>\build\video_compress\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

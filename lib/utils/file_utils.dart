@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:video_thumbnail/video_thumbnail.dart'; // 新增依赖
+import 'storage_utils.dart'; // 新增导入
 
 class FileUtils {
   // 选择视频文件
@@ -32,16 +33,9 @@ class FileUtils {
     return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
   }
 
-  // 获取应用缓存目录
-  static Future<String> getCacheDirectory() async {
-    final directory = await getTemporaryDirectory();
-    return directory.path;
-  }
-
-  // 创建缩略图保存目录
+  // 获取缩略图保存目录
   static Future<String> getThumbnailDirectory() async {
-    final cacheDir = await getCacheDirectory();
-    final thumbnailDir = p.join(cacheDir, 'thumbnails');
+    final thumbnailDir = StorageUtils.getThumbnailsDirectory();
     await Directory(thumbnailDir).create(recursive: true);
     return thumbnailDir;
   }

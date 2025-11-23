@@ -40,16 +40,18 @@ analysis_benchmark.json
 .packages
 .pub-preload-cache/
 .pub/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+
+
 build/  # 第一步：忽略整个 build 目录（必须放在最前面）
 !build/web/  # 第二步：解除对 build/web 目录的忽略（关键！目录必须先放行）
 !build/web/index.html  # 第三步：明确保留需要的文件
 !build/web/ws.js  # 注意：如果你的文件是 ws.js，这里要改成 !build/web/ws.js
 !build/web/download-worker.js
 build/web/**/*  # 第四步：忽略 build/web 下其他所有文件（避免冗余）
-flutter_*.png
-linked_*.ds
-unlinked.ds
-unlinked_spec.ds
 
 # Android related
 **/android/**/gradle-wrapper.jar
