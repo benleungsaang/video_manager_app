@@ -150,7 +150,7 @@ class _ServerControlPageState extends State<ServerControlPage> {
                             serverService.isRunning ? '停止服务器' : '启动服务器',
                             style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -169,7 +169,10 @@ class _ServerControlPageState extends State<ServerControlPage> {
 
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Web资源缓存已清除')),
+                                  const SnackBar(
+                                      content: Text(
+                                    'Web资源缓存已清除',
+                                  )),
                                 );
                               }
                             },
@@ -181,7 +184,11 @@ class _ServerControlPageState extends State<ServerControlPage> {
                               ),
                               elevation: 2,
                             ),
-                            child: const Text('清除Web资源缓存'),
+                            child: const Text('清除Web资源缓存',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
                           ),
                         ),
 

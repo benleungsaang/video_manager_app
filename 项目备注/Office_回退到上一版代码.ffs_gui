@@ -77,6 +77,7 @@
             <Item>\.last_build_id</Item>
             <Item>\flutter.js</Item>
             <Item>\flutter_bootstrap.js</Item>
+            <Item>\.iflow\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>
@@ -84,12 +85,12 @@
     </Filter>
     <FolderPairs>
         <Pair>
-            <Left>E:\Flutter_Projects\video_manager_app\build\web</Left>
-            <Right>E:\Flutter_Projects\video_manager_app\web</Right>
+            <Left>E:\Flutter_Projects\video_manager_app\web</Left>
+            <Right>E:\Flutter_Projects\video_manager_app\build\web</Right>
         </Pair>
         <Pair>
-            <Left>E:\Flutter_Projects\video_manager_app</Left>
-            <Right>E:\Flutter_Projects\video_manager_app_code</Right>
+            <Left>E:\Flutter_Projects\video_manager_app_code</Left>
+            <Right>E:\Flutter_Projects\video_manager_app</Right>
         </Pair>
     </FolderPairs>
     <Errors Ignore="false" Retry="0" Delay="5"/>

@@ -45,7 +45,7 @@ linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 
-
+/build/
 build/  # 第一步：忽略整个 build 目录（必须放在最前面）
 !build/web/  # 第二步：解除对 build/web 目录的忽略（关键！目录必须先放行）
 !build/web/index.html  # 第三步：明确保留需要的文件

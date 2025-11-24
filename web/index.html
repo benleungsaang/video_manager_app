@@ -141,7 +141,8 @@
         <!-- 视频预览区域 -->
         <div class="mb-6">
           <div class="bg-gray-100 rounded-lg overflow-hidden">
-            <video id="video-preview" class="w-full aspect-video object-contain" controls
+            <video id="video-preview" class="w-full aspect-video object-contain" controls
+
               crossorigin="anonymous" playsinline webkit-playsinline preload="metadata"></video>
           </div>
           <div class="mt-2 text-sm text-gray-500 flex justify-between">
@@ -156,7 +157,7 @@
 
 
 
-                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
 
 
             <div class="text-sm font-medium text-gray-700 mb-2">压缩选项（默认：微信普通压缩）</div>
@@ -659,6 +660,7 @@
       progressContainerBottom: document.getElementById('upload-progress-container-bottom'),
       progressBarTop: document.getElementById('upload-progress-bar-top'),
       progressBarBottom: document.getElementById('upload-progress-bar-bottom'),
+      videoCompressBox: document.getElementById('video-compress-box'),
       // 确认对话框
       confirmModal: document.getElementById('confirm-modal'),
       confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
@@ -889,8 +891,7 @@
 
             <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
 
-              ${video.filePath ? video.filePath.split('/').pop().split('').pop() : '无文件名'}
-
+              ${formatDuration(video.duration)}
             </div>
 
           </div>
@@ -984,46 +985,86 @@
       elements.videoRemark.value = '';
       state.selectedTagIdsForUpload = [];
 
-      // 显示视频预览
-
-      const videoURL = URL.createObjectURL(file);
-
-      elements.videoPreview.src = videoURL;
-
-      elements.videoPreview.crossOrigin = 'anonymous';
-
-      elements.videoPreview.preload = 'metadata';
-
-      // 设置兼容性属性
-      elements.videoPreview.setAttribute('playsinline', 'true');
-      elements.videoPreview.setAttribute('webkit-playsinline', 'true');
-
-
-      // 获取视频信息
-
-      elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
-
-
-      // 加载视频元数据以获取时长
-      const handleMetadataLoaded = () => {
-        const duration = !isNaN(elements.videoPreview.duration)
-          ? Math.floor(elements.videoPreview.duration)
-          : 0; // 获取不到时长时赋值为 0
-
-        elements.videoDuration.textContent = `时长: ${formatDuration(duration)}`;
-      };
-
-      // 添加事件监听器以处理不同浏览器的兼容性
-      elements.videoPreview.addEventListener('loadedmetadata', handleMetadataLoaded);
-
-      // 添加错误处理
-      elements.videoPreview.addEventListener('error', (e) => {
-        console.error('视频预览错误:', e.target.error);
-      });
-
-      // 触发视频加载
+      // 显示视频预览
+
+
+
+      const videoURL = URL.createObjectURL(file);
+
+
+
+      elements.videoPreview.src = videoURL;
+
+
+
+      elements.videoPreview.crossOrigin = 'anonymous';
+
+
+
+      elements.videoPreview.preload = 'metadata';
+
+
+
+      // 设置兼容性属性
+
+      elements.videoPreview.setAttribute('playsinline', 'true');
+
+      elements.videoPreview.setAttribute('webkit-playsinline', 'true');
+
+
+
+
+
+      // 获取视频信息
+
+
+
+      elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
+
+
+
+
+
+      // 加载视频元数据以获取时长
+
+      const handleMetadataLoaded = () => {
+
+        const duration = !isNaN(elements.videoPreview.duration)
+
+          ? Math.floor(elements.videoPreview.duration)
+
+          : 0; // 获取不到时长时赋值为 0
+
+
+
+        elements.videoDuration.textContent = `时长: ${formatDuration(duration)}`;
+
+      };
+
+
+
+      // 添加事件监听器以处理不同浏览器的兼容性
+
+      elements.videoPreview.addEventListener('loadedmetadata', handleMetadataLoaded);
+
+
+
+      // 添加错误处理
+
+      elements.videoPreview.addEventListener('error', (e) => {
+
+        console.error('视频预览错误:', e.target.error);
+
+      });
+
+
+
+      // 触发视频加载
+
       elements.videoPreview.load();
 
+      // 显示压缩选项
+      elements.videoCompressBox.classList.remove('hidden')
       // 显示上传浮框
       elements.uploadFirstBtn.classList.remove('hidden');
       elements.downloadBtn.classList.add('hidden')
@@ -1125,6 +1166,8 @@
       // 隐藏预上传进度条
       elements.progressBarTop.style.width = '0%';
       elements.progressContainerTop.classList.add('hidden');
+      // 隐藏压缩选项
+      elements.videoCompressBox.classList.add('hidden')
       // 清空下方输入框
       elements.videoTitle.value = '';
       elements.newTagInputModal.value = '';
@@ -1279,52 +1322,99 @@
       elements.downloadBtn.classList.remove('hidden')
 
       // 从filePath中提取文件名
-      const fileName = video.filePath ? video.filePath.split('/').pop().split('').pop() : '';
+      const fileName = video.filePath
+              ? video.filePath.replace(/\\/g, '/').split('/').pop()
+              : '无文件名';
       // 更新视频信息显示 - 显示文件名而不是时长
       elements.videoSize.textContent = `大小: ${formatFileSize(video.fileSize)}`;
       elements.videoDuration.textContent = `文件名: ${fileName}`;
 
-      // 注入视频播放地址
-
-      try {
-
-        const baseUrl = window.location.origin; // 获取当前域名作为基础URL
-
-        // 构建完整的视频流URL
-
-        const videoUrl = `${baseUrl}/videoStream/${video.id}`;
-        elements.videoPreview.src = videoUrl;
-
-        // 设置视频预加载属性以提高兼容性
-        elements.videoPreview.preload = 'metadata';
-
-        // 检测浏览器类型
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-
-        // 等待元数据加载完成后再尝试播放
-        elements.videoPreview.addEventListener('loadedmetadata', () => {
-          console.log('视频元数据加载完成');
-        });
-
-        // Safari和其他浏览器可能需要不同的处理方式
-        elements.videoPreview.addEventListener('canplay', () => {
-          console.log('视频可以播放');
-          // 尝试播放，但不强制，因为可能受自动播放策略限制
-          elements.videoPreview.play().catch(e => console.log('自动播放受限:', e));
-        });
-
-        // 添加错误处理
-        elements.videoPreview.addEventListener('error', (e) => {
-          console.error('视频播放错误:', e.target.error);
-          // 尝试用不同方式加载视频
-          elements.videoPreview.load(); // 重新加载资源
-        });
-
-      } catch (error) {
-
-        console.error('获取视频播放地址失败:', error);
-
+      // 隐藏压缩选项
+      elements.videoCompressBox.classList.add('hidden')
+
+
+      // 注入视频播放地址
+
+
+
+      try {
+
+
+
+        const baseUrl = window.location.origin; // 获取当前域名作为基础URL
+
+
+
+        // 构建完整的视频流URL
+
+
+
+        const videoUrl = `${baseUrl}/videoStream/${video.id}`;
+
+        elements.videoPreview.src = videoUrl;
+
+
+
+        // 设置视频预加载属性以提高兼容性
+
+        elements.videoPreview.preload = 'metadata';
+
+
+
+        // 检测浏览器类型
+
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+
+
+        // 等待元数据加载完成后再尝试播放
+
+        elements.videoPreview.addEventListener('loadedmetadata', () => {
+
+          console.log('视频元数据加载完成');
+
+        });
+
+
+
+        // Safari和其他浏览器可能需要不同的处理方式
+
+        elements.videoPreview.addEventListener('canplay', () => {
+
+          console.log('视频可以播放');
+
+          // 尝试播放，但不强制，因为可能受自动播放策略限制
+
+          elements.videoPreview.play().catch(e => console.log('自动播放受限:', e));
+
+        });
+
+
+
+        // 添加错误处理
+
+        elements.videoPreview.addEventListener('error', (e) => {
+
+          console.error('视频播放错误:', e.target.error);
+
+          // 尝试用不同方式加载视频
+
+          elements.videoPreview.load(); // 重新加载资源
+
+        });
+
+
+
+      } catch (error) {
+
+
+
+        console.error('获取视频播放地址失败:', error);
+
+
+
       }
 
       // 显示浮框

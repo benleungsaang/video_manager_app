@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FreeFileSync XmlType="GUI" XmlFormat="23">
+    <Notes/>
+    <Compare>
+        <Variant>TimeAndSize</Variant>
+        <Symlinks>Exclude</Symlinks>
+        <IgnoreTimeShift/>
+    </Compare>
+    <Synchronize>
+        <Differences LeftOnly="right" LeftNewer="right" RightNewer="right" RightOnly="right"/>
+        <DeletionPolicy>RecycleBin</DeletionPolicy>
+        <VersioningFolder Style="Replace"/>
+    </Synchronize>
+    <Filter>
+        <Include>
+            <Item>*</Item>
+        </Include>
+        <Exclude>
+            <Item>\System Volume Information\</Item>
+            <Item>\$Recycle.Bin\</Item>
+            <Item>\RECYCLE?\</Item>
+            <Item>\Recovery\</Item>
+            <Item>*\thumbs.db</Item>
+            <Item>\node_modules\</Item>
+            <Item>\public\image\</Item>
+            <Item>\build\</Item>
+            <Item>\android\build\</Item>
+            <Item>\lib\generated\</Item>
+            <Item>*.g.dart</Item>
+            <Item>\assets\</Item>
+            <Item>pubspec.lock</Item>
+            <Item>.vscode\</Item>
+            <Item>.idea\</Item>
+            <Item>\.dart_tool\</Item>
+            <Item>\ios\</Item>
+            <Item>\linux\</Item>
+            <Item>\.flutter-plugins-dependencies</Item>
+            <Item>\.gitignore</Item>
+            <Item>\.metadata</Item>
+            <Item>\analysis_options.yaml</Item>
+            <Item>\devtools_options.yaml</Item>
+            <Item>\README.md</Item>
+            <Item>\video_demo.iml</Item>
+            <Item>\android\gradlew.bat</Item>
+            <Item>\android\local.properties</Item>
+            <Item>\android\settings.gradle.kts</Item>
+            <Item>\android\video_demo_android.iml</Item>
+            <Item>\android\.gradle\</Item>
+            <Item>\android\.kotlin\</Item>
+            <Item>\android\app\src\debug\</Item>
+            <Item>\android\app\src\profile\</Item>
+            <Item>\android\app\src\main\res\values-night\</Item>
+            <Item>\android\app\src\main\res\values\</Item>
+            <Item>\android\app\src\main\java\</Item>
+            <Item>\android\app\src\main\kotlin\</Item>
+            <Item>\android\app\src\main\res\</Item>
+            <Item>\android\gradle\</Item>
+            <Item>\android\.gitignore</Item>
+            <Item>\android\build.gradle.kts</Item>
+            <Item>\android\gradle.properties</Item>
+            <Item>\android\gradlew</Item>
+            <Item>\macos\</Item>
+            <Item>\test\</Item>
+            <Item>\web\icons\</Item>
+            <Item>\windows\</Item>
+            <Item>\*备注*\</Item>
+            <Item>\.git\</Item>
+            <Item>video_manager_app.iml</Item>
+            <Item>\icons\</Item>
+            <Item>\css\</Item>
+            <Item>\fonts\</Item>
+            <Item>\web\favicon.png</Item>
+            <Item>\favicon.png</Item>
+            <Item>\web\css\</Item>
+            <Item>\web\fonts\</Item>
+            <Item>\canvaskit\</Item>
+            <Item>\.last_build_id</Item>
+            <Item>\flutter.js</Item>
+            <Item>\flutter_bootstrap.js</Item>
+            <Item>\.iflow\</Item>
+        </Exclude>
+        <SizeMin Unit="None">0</SizeMin>
+        <SizeMax Unit="None">0</SizeMax>
+        <TimeSpan Type="None">0</TimeSpan>
+    </Filter>
+    <FolderPairs>
+        <Pair>
+            <Left>E:\Flutter_Projects\video_manager_app\build\web</Left>
+            <Right>E:\Flutter_Projects\video_manager_app\web</Right>
+        </Pair>
+        <Pair>
+            <Left>E:\Flutter_Projects\video_manager_app</Left>
+            <Right>E:\Flutter_Projects\video_manager_app_code</Right>
+        </Pair>
+    </FolderPairs>
+    <Errors Ignore="false" Retry="0" Delay="5"/>
+    <PostSyncCommand Condition="Completion"/>
+    <LogFolder/>
+    <EmailNotification Condition="Always"/>
+    <GridViewType>Action</GridViewType>
+</FreeFileSync>
