@@ -25,9 +25,10 @@ class StorageUtils {
           // 权限被授予，使用外部存储
           final externalStorageDir = await getExternalStorageDirectory();
           if (externalStorageDir != null) {
-            _rootDirectory = p.join(externalStorageDir.path, '..', _rootDirName); // 在外部存储根目录创建
+            _rootDirectory =
+                p.join('/storage/emulated/0', _rootDirName); // 在外部存储根目录创建
             await Directory(_rootDirectory).create(recursive: true);
-            print('使用外部存储目录 (MANAGE_EXTERNAL_STORAGE): $_rootDirectory');
+            print('使用外部存储根目录: $_rootDirectory');
           } else {
             // 使用应用专属外部存储目录（始终可访问）
             final externalDir = await getApplicationDocumentsDirectory();

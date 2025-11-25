@@ -490,16 +490,15 @@
             <Item>*\ffmpegkit\</Item>
             <Item>*\ffmpeg_kit_flutter_new\</Item>
             <Item>\build\video_compress\</Item>
+            <Item>\build\flutter_assets\</Item>
+            <Item>*.d | *.stamp</Item>
+            <Item>\build\675cd141c3ef0a3276c0e6ff39818722\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>
         <TimeSpan Type="None">0</TimeSpan>
     </Filter>
     <FolderPairs>
-        <Pair>
-            <Left>G:\Flutter_project\video_manager_app\build\web</Left>
-            <Right>G:\Flutter_project\video_manager_app\web</Right>
-        </Pair>
         <Pair>
             <Left>G:\Flutter_project\video_manager_app</Left>
             <Right>G:\Flutter_project\code_video_manager_app</Right>

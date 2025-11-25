@@ -59,6 +59,13 @@
       .tag-pill-unselected {
         @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
       }
+          /* 增大菜单按钮和删除按钮尺寸 */
+      .menu-btn {
+        @apply w-8 h-8 flex items-center justify-center rounded-full;
+      }
+      .menu-item {
+        @apply px-3 py-2 text-sm flex items-center;
+      }
     }
   </style>
 
@@ -157,31 +164,31 @@
 
 
 
-                    <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <!-- <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
 
 
-            <div class="text-sm font-medium text-gray-700 mb-2">压缩选项（默认：微信普通压缩）</div>
+            <div class="text-sm font-medium text-gray-700 mb-2">压缩选项</div>
 
 
             <div class="mt-2 text-xs text-gray-500">
 
 
-              <input type="radio" id="compress-mode-wechat-normal" name="compress-mode" value="full" class="mr-1" checked>
+              <input type="radio" id="compress-mode-wechat-normal" name="compress-mode" value="full" class="mr-1" disabled="true">
 
 
-              <label for="compress-mode-wechat-normal" class="inline">微信普通压缩</label>
+              <label for="compress-mode-wechat-normal" class="inline">极度压缩</label>
 
 
-              <input type="radio" id="compress-mode-wechat-original" name="compress-mode" value="original" class="ml-4 mr-1">
+              <input type="radio" id="compress-mode-wechat-original" name="compress-mode" value="original" class="ml-4 mr-1" checked>
 
 
-              <label for="compress-mode-wechat-original" class="inline">微信原画压缩</label>
+              <label for="compress-mode-wechat-original" class="inline">原画压缩</label>
 
 
             </div>
 
 
-          </div>
+          </div> -->
 
           <!-- 视频边编辑边上传，先上传的按钮 -->
 
@@ -601,7 +608,7 @@
 
       completeBinaryUpload: function (fileId, fileName, duration, tagIds, remark, title) {
 
-        const compressMode = document.querySelector('input[name="compress-mode"]:checked').value;
+        // const compressMode = document.querySelector('input[name="compress-mode"]:checked').value;
 
         return flutterChannel._sendRequest('completeBinaryUpload', {
 
@@ -613,7 +620,7 @@
           tagIds,
           remark,
           fileSize: state.currentUploadFile.size,
-          compressMode: compressMode,
+          // compressMode: compressMode,
           title: title  // 新增title参数
 
 
@@ -660,7 +667,7 @@
       progressContainerBottom: document.getElementById('upload-progress-container-bottom'),
       progressBarTop: document.getElementById('upload-progress-bar-top'),
       progressBarBottom: document.getElementById('upload-progress-bar-bottom'),
-      videoCompressBox: document.getElementById('video-compress-box'),
+      // videoCompressBox: document.getElementById('video-compress-box'),
       // 确认对话框
       confirmModal: document.getElementById('confirm-modal'),
       confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
@@ -867,7 +874,7 @@
 
             <div class="absolute top-2 right-2">
 
-              <button class="delete-menu-btn bg-black/50 text-white p-1 rounded-full" data-video-id="${video.id}">
+              <button class="menu-btn delete-menu-btn bg-black/50 text-white p-1 rounded-full" data-video-id="${video.id}">
 
                 <i class="fa fa-ellipsis-v"></i>
 
@@ -877,9 +884,9 @@
 
               <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10">
 
-                <button class="delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
+                <button class="menu-item delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
 
-                  <i class="fa fa-trash mr-1"></i>
+                  <i class="fa fa-trash mr-1 text-xl"></i>
 
                 </button>
 
@@ -1064,7 +1071,7 @@
       elements.videoPreview.load();
 
       // 显示压缩选项
-      elements.videoCompressBox.classList.remove('hidden')
+      // elements.videoCompressBox.classList.remove('hidden')
       // 显示上传浮框
       elements.uploadFirstBtn.classList.remove('hidden');
       elements.downloadBtn.classList.add('hidden')
@@ -1172,7 +1179,7 @@
       elements.progressBarTop.style.width = '0%';
       elements.progressContainerTop.classList.add('hidden');
       // 隐藏压缩选项
-      elements.videoCompressBox.classList.add('hidden')
+      // elements.videoCompressBox.classList.add('hidden')
       // 清空下方输入框
       elements.videoTitle.value = '';
       elements.newTagInputModal.value = '';
@@ -1335,7 +1342,7 @@
       elements.videoDuration.textContent = `文件名: ${fileName}`;
 
       // 隐藏压缩选项
-      elements.videoCompressBox.classList.add('hidden')
+      // elements.videoCompressBox.classList.add('hidden')
 
 
       // 注入视频播放地址

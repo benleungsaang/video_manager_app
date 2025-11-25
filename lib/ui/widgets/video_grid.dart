@@ -17,7 +17,7 @@ class VideoGrid extends StatelessWidget {
   final Function(String) onVideoSelected;
 
   const VideoGrid({
-    super.key, 
+    super.key,
     required this.videos,
     this.isMultiSelectMode = false,
     required this.selectedVideos,
@@ -49,7 +49,7 @@ class VideoGrid extends StatelessWidget {
   // 构建视频卡片
   Widget _buildVideoCard(BuildContext context, Video video) {
     bool isSelected = selectedVideos.contains(video.id);
-    
+
     return GestureDetector(
       onTap: () {
         if (isMultiSelectMode) {
@@ -68,7 +68,8 @@ class VideoGrid extends StatelessWidget {
       behavior: HitTestBehavior.translucent,
       child: Container(
         decoration: BoxDecoration(
-          border: isSelected ? Border.all(color: Colors.blue, width: 3.0) : null,
+          border:
+              isSelected ? Border.all(color: Colors.blue, width: 3.0) : null,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Stack(
@@ -91,11 +92,12 @@ class VideoGrid extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.grey[200],
-                            borderRadius:
-                                const BorderRadius.vertical(top: Radius.circular(8)),
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(8)),
                             image: video.thumbnailPath != null
                                 ? DecorationImage(
-                                    image: FileImage(File(video.thumbnailPath!)),
+                                    image:
+                                        FileImage(File(video.thumbnailPath!)),
                                     fit: BoxFit.cover,
                                   )
                                 : null,
@@ -115,10 +117,10 @@ class VideoGrid extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceBetween, // 水平方向两端对齐（一左一右）
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .center, // 垂直方向居中对齐（避免两个元素高低不一）
                                 children: [
                                   // 标题
                                   Text(
@@ -144,12 +146,22 @@ class VideoGrid extends StatelessWidget {
                                 ]),
                             const SizedBox(height: 4),
                             Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceBetween, // 水平方向两端对齐（一左一右）
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .center, // 垂直方向居中对齐（避免两个元素高低不一）
                                 children: [
-                                  Text(''),
+                                  Text(
+                                    // 原始文件名
+                                    video.filePath.split('/').last.length > 35
+                                        ? '${video.filePath.split('/').last.substring(0, 35)} . . .'
+                                        : video.filePath.split('/').last,
+                                    textAlign: TextAlign.left,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                   Text(
                                     // video.fileSize as String,
                                     '文件大小: ${FileUtils.formatFileSize(video.fileSize)}',
@@ -162,10 +174,10 @@ class VideoGrid extends StatelessWidget {
                                 ]),
                             // const SizedBox(height: 2),
                             Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceBetween, // 水平方向两端对齐（一左一右）
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .center, // 垂直方向居中对齐（避免两个元素高低不一）
                                 children: [
                                   Text(''),
 
@@ -197,10 +209,10 @@ class VideoGrid extends StatelessWidget {
                                 ]),
                             const SizedBox(height: 6),
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween, // 水平方向两端对齐（一左一右）
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.center, // 垂直方向居中对齐（避免两个元素高低不一）
+                              mainAxisAlignment: MainAxisAlignment
+                                  .spaceBetween, // 水平方向两端对齐（一左一右）
+                              crossAxisAlignment: CrossAxisAlignment
+                                  .center, // 垂直方向居中对齐（避免两个元素高低不一）
                               children: [
                                 Text(''),
                                 // 标签

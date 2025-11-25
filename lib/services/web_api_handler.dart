@@ -395,10 +395,10 @@ class WebApiHandler {
 
     await Directory(videosDir).create(recursive: true);
 
-    final tempVideoFilePath = p.join(
-        videosDir, 'temp_${DateTime.now().millisecondsSinceEpoch}_$name');
+    final videoFilePath = p.join(videosDir,
+        'unTransCode_${DateTime.now().millisecondsSinceEpoch}_$name');
 
-    final File videoFile = File(tempVideoFilePath);
+    final File videoFile = File(videoFilePath);
 
     final IOSink sink = videoFile.openWrite();
 
@@ -410,103 +410,105 @@ class WebApiHandler {
 
     await sink.close();
 
+    final thumbNailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
+
     // 创建一个待处理的视频对象，先返回给前端
-    final pendingVideo = Video(
+    final video = Video(
       id: 'video_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
       remark: remark,
-      filePath: tempVideoFilePath, // 使用临时文件路径
+      filePath: videoFilePath, // 使用临时文件路径
       duration: duration,
       fileSize: fileSize, // 使用上传的文件大小
       uploadTime: DateTime.now(),
       tagIds: tagIds,
-      thumbnailPath: null, // 暂时没有缩略图，将在后台生成
+      thumbnailPath: thumbNailPath, // 暂时没有缩略图，将在后台生成
     );
 
     // 保存视频（先保存一个基础版本）
-    await _videoProvider.saveVideo(pendingVideo);
+    await _videoProvider.saveVideo(video);
 
     // 从上传列表中移除（已完成上传部分）
     _uploadingFiles.remove(fileId);
 
-    // 异步执行压缩和后续处理，不阻塞前端响应
-    _processVideoInBackground(pendingVideo).then((processedVideo) {
-      if (processedVideo != null) {
-        // 更新数据库中的视频信息
-        _videoProvider.saveVideo(processedVideo).then((_) {
-          print('视频后台处理完成: ${processedVideo.title}');
-        }).catchError((error) {
-          print('保存处理后的视频失败: $error');
-        });
-      }
-    }).catchError((error) {
-      print('视频后台处理失败: $error');
-      // 即使后台处理失败，上传的文件仍然保留
-    });
+    // // 异步执行压缩和后续处理，不阻塞前端响应
+    // _processVideoInBackground(pendingVideo).then((processedVideo) {
+    //   if (processedVideo != null) {
+    //     // 更新数据库中的视频信息
+    //     _videoProvider.saveVideo(processedVideo).then((_) {
+    //       print('视频后台处理完成: ${processedVideo.title}');
+    //     }).catchError((error) {
+    //       print('保存处理后的视频失败: $error');
+    //     });
+    //   }
+    // }).catchError((error) {
+    //   print('视频后台处理失败: $error');
+    //   // 即使后台处理失败，上传的文件仍然保留
+    // });
 
     // 立即返回上传完成响应，不等待压缩操作
-    return {'success': true, 'data': _videoToJson(pendingVideo)};
+    return {'success': true, 'data': _videoToJson(video)};
   }
 
   // 异步处理视频压缩和生成缩略图等后台任务
-  Future<Video?> _processVideoInBackground(Video pendingVideo) async {
-    try {
-      String finalVideoFilePath = pendingVideo.filePath!;
+  // Future<Video?> _processVideoInBackground(Video pendingVideo) async {
+  //   try {
+  //     String finalVideoFilePath = pendingVideo.filePath!;
 
-      // // 根据压缩参数处理视频
-      // if (compressMode == 'full' || compressMode == 'original') {
-      //   // 检查FFmpeg是否可用
-      //   if (await VideoCompressionService.isFFmpegAvailable()) {
-      //     print('开始对视频进行压缩，模式: $compressMode, 路径: $finalVideoFilePath');
+  // // 根据压缩参数处理视频
+  // if (compressMode == 'full' || compressMode == 'original') {
+  //   // 检查FFmpeg是否可用
+  //   if (await VideoCompressionService.isFFmpegAvailable()) {
+  //     print('开始对视频进行压缩，模式: $compressMode, 路径: $finalVideoFilePath');
 
-      //     final compressedPath = await VideoCompressionService.compressVideo(
-      //       inputPath: finalVideoFilePath,
-      //       compressionMode: compressMode,
-      //     );
+  //     final compressedPath = await VideoCompressionService.compressVideo(
+  //       inputPath: finalVideoFilePath,
+  //       compressionMode: compressMode,
+  //     );
 
-      //     if (compressedPath != null) {
-      //       // 压缩成功，使用压缩后的文件
-      //       finalVideoFilePath = compressedPath;
-      //       print('视频压缩完成，新文件路径: $compressedPath');
-      //     } else {
-      //       print('视频压缩失败，使用原始文件');
-      //       // 如果压缩失败，确保原始文件仍然存在
-      //       final originalFile = File(finalVideoFilePath);
-      //       if (!await originalFile.exists()) {
-      //         print('原始视频文件不存在或已被删除');
-      //         return null;
-      //       }
-      //     }
-      //   } else {
-      //     print('FFmpeg不可用，跳过视频压缩');
-      //   }
-      // }
+  //     if (compressedPath != null) {
+  //       // 压缩成功，使用压缩后的文件
+  //       finalVideoFilePath = compressedPath;
+  //       print('视频压缩完成，新文件路径: $compressedPath');
+  //     } else {
+  //       print('视频压缩失败，使用原始文件');
+  //       // 如果压缩失败，确保原始文件仍然存在
+  //       final originalFile = File(finalVideoFilePath);
+  //       if (!await originalFile.exists()) {
+  //         print('原始视频文件不存在或已被删除');
+  //         return null;
+  //       }
+  //     }
+  //   } else {
+  //     print('FFmpeg不可用，跳过视频压缩');
+  //   }
+  // }
 
-      // 生成缩略图
-      final thumbNailPath =
-          await FileUtils.generateVideoThumbnail(finalVideoFilePath);
+  //     // 生成缩略图
+  //     final thumbNailPath =
+  //         await FileUtils.generateVideoThumbnail(finalVideoFilePath);
 
-      // 获取最终文件大小
-      final File finalVideoFile = File(finalVideoFilePath);
-      final int finalFileSize = await finalVideoFile.length();
+  //     // 获取最终文件大小
+  //     final File finalVideoFile = File(finalVideoFilePath);
+  //     final int finalFileSize = await finalVideoFile.length();
 
-      // 创建处理完成的视频对象
-      final processedVideo = Video(
-        id: pendingVideo.id,
-        title: pendingVideo.title,
-        remark: pendingVideo.remark,
-        filePath: finalVideoFilePath,
-        duration: pendingVideo.duration,
-        fileSize: finalFileSize,
-        uploadTime: pendingVideo.uploadTime,
-        tagIds: pendingVideo.tagIds,
-        thumbnailPath: thumbNailPath,
-      );
+  //     // 创建处理完成的视频对象
+  //     final processedVideo = Video(
+  //       id: pendingVideo.id,
+  //       title: pendingVideo.title,
+  //       remark: pendingVideo.remark,
+  //       filePath: finalVideoFilePath,
+  //       duration: pendingVideo.duration,
+  //       fileSize: finalFileSize,
+  //       uploadTime: pendingVideo.uploadTime,
+  //       tagIds: pendingVideo.tagIds,
+  //       thumbnailPath: thumbNailPath,
+  //     );
 
-      return processedVideo;
-    } catch (e) {
-      print('后台处理视频时发生错误: $e');
-      return null;
-    }
-  }
+  //     return processedVideo;
+  //   } catch (e) {
+  //     print('后台处理视频时发生错误: $e');
+  //     return null;
+  //   }
+  // }
 }

@@ -18,6 +18,10 @@ import '../pages/tag_management_page.dart';
 
 import '../../providers/video_provider.dart';
 
+import '../../models/transcode_task.dart';
+import '../../providers/transcode_provider.dart';
+import '../widgets/transcode_queue_panel.dart';
+
 class HomePage extends StatefulWidget {
   final String? initialSearchKeyword; // 添加初始搜索关键字参数
 
@@ -50,6 +54,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _searchController.dispose();
+    // 在页面销毁时取消所有转码任务
+    final transcodeProvider =
+        Provider.of<TranscodeProvider>(context, listen: false);
+    transcodeProvider.cancelAllTasks();
     super.dispose();
   }
 
@@ -126,6 +134,98 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  bool _showTranscodeQueue = false; // 控制转码队列面板显示状态
+
+  // 显示/隐藏转码队列，并添加选中视频到队列
+  void _transcodeSelectedVideos() async {
+    final transcodeProvider =
+        Provider.of<TranscodeProvider>(context, listen: false);
+
+    // 如果当前显示转码队列，则隐藏它
+    if (_showTranscodeQueue) {
+      setState(() {
+        _showTranscodeQueue = false;
+      });
+      return;
+    } else {
+      // 否则显示转码队列，并添加新选中的视频到队列（避免重复）
+      setState(() {
+        _showTranscodeQueue = true;
+      });
+
+      if (_selectedVideos.isEmpty) return;
+
+      // 获取选中的视频
+      final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+      final selectedVideoObjects = videoProvider.videos
+          .where((video) => _selectedVideos.contains(video.id))
+          .toList();
+
+      // 检查哪些视频ID还没有在任务列表中
+      final existingTaskVideoIds =
+          transcodeProvider.tasks.map((task) => task.videoId).toSet();
+      final newVideosToTranscode = selectedVideoObjects
+          .where((video) => !existingTaskVideoIds.contains(video.id))
+          .toList();
+
+      // 为新视频创建转码任务
+      final tasks = <TranscodeTask>[];
+      for (final video in newVideosToTranscode) {
+        tasks.add(TranscodeTask(
+          id: DateTime.now().millisecondsSinceEpoch.toString() +
+              video.id, // 创建唯一ID
+          videoId: video.id,
+          videoTitle: video.title,
+          inputFilePath: video.filePath,
+          inputFileSize: video.fileSize,
+          startTime: DateTime.now(),
+        ));
+      }
+
+      // 添加新任务到队列
+      if (tasks.isNotEmpty) {
+        transcodeProvider.addTasks(tasks);
+      }
+    }
+  }
+
+  // 显示按文件路径筛选对话框
+  void _showFilePathFilterDialog() async {
+    final TextEditingController controller =
+        TextEditingController(text: 'unTransCode');
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('按文件路径筛选'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '输入要搜索的关键字',
+            prefixIcon: Icon(Icons.search),
+          ),
+          autofocus: true,
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('筛选'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+      videoProvider.filterVideosByFilePath(result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,6 +236,16 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.blue[800],
         actions: [
           if (_isMultiSelectMode) ...[
+            IconButton(
+              icon: const Icon(Icons.filter_list, color: Colors.white),
+              onPressed: _showFilePathFilterDialog,
+              tooltip: '按文件路径筛选',
+            ),
+            IconButton(
+              icon: const Icon(Icons.sync, color: Colors.white),
+              onPressed: _transcodeSelectedVideos,
+              tooltip: '显示/隐藏转码队列',
+            ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.white),
               onPressed: _deleteSelectedVideos,
@@ -161,137 +271,157 @@ class _HomePageState extends State<HomePage> {
               onPressed: _toggleMultiSelectMode,
               tooltip: '退出多选',
             ),
-          ] else ...[
-            IconButton(
-              icon: const Icon(Icons.select_all, color: Colors.white),
-              onPressed: _toggleMultiSelectMode,
-              tooltip: '多选模式',
-            ),
-            IconButton(
-              icon: const Icon(Icons.add, color: Colors.white),
-              onPressed: () async {
-                // 使用UploadButton的上传逻辑
-
-                final result = await FileUtils.pickVideo();
-
-                if (result != null && result.files.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => VideoPlayPage(
-                        filePath: result.files.single.path,
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.tag, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TagManagementPage(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.cloud, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ServerControlPage(),
-                  ),
-                );
-              },
-            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.select_all, color: Colors.white),
+              onPressed: _toggleMultiSelectMode,
+              tooltip: '多选模式',
+            ),
+            IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: () async {
+                // 使用UploadButton的上传逻辑
+
+                final result = await FileUtils.pickVideo();
+
+                if (result != null && result.files.isNotEmpty) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VideoPlayPage(
+                        filePath: result.files.single.path,
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.tag, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TagManagementPage(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.cloud, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ServerControlPage(),
+                  ),
+                );
+              },
+            ),
           ],
         ],
       ),
-      body: Column(
+      body: Row(
+        // 使用Row来容纳视频网格和转码队列面板
         children: [
-          // 搜索栏和按钮
-
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
+          // 搜索栏和视频网格（占据主要区域）
+          Expanded(
+            child: Column(
               children: [
-                // 搜索框（占剩余宽度）
+                // 搜索栏和按钮
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      // 搜索框（占剩余宽度）
 
-                Expanded(
-                  flex: 10,
-                  child: TextField(
-                    controller: _searchController,
+                      Expanded(
+                        flex: 10,
+                        child: TextField(
+                          controller: _searchController,
 
-                    decoration: InputDecoration(
-                      hintText: '搜索视频标题、标签或备注...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
+                          decoration: InputDecoration(
+                            hintText: '搜索视频标题、标签或备注...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
 
-                                _handleSearch(); // 清空搜索并重置结果
-                              },
-                            )
-                          : null,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                                      _handleSearch(); // 清空搜索并重置结果
+                                    },
+                                  )
+                                : null,
+                            border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(8.0)),
+                            ),
+                          ),
+
+                          onSubmitted: (_) => _handleSearch(), // 回车触发搜索
+                        ),
                       ),
-                    ),
 
-                    onSubmitted: (_) => _handleSearch(), // 回车触发搜索
+                      const SizedBox(width: 10),
+
+                      // 搜索按钮
+
+                      SizedBox(
+                        height: 48, // 与搜索框同高
+
+                        child: ElevatedButton.icon(
+                          onPressed: _handleSearch,
+                          icon: const Icon(Icons.search, size: 18),
+                          label: const Text('搜索'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[600],
+                            foregroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(8.0)), // 与搜索框相同的圆角
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(width: 10),
-
-                // 搜索按钮
-
-                SizedBox(
-                  height: 48, // 与搜索框同高
-
-                  child: ElevatedButton.icon(
-                    onPressed: _handleSearch,
-                    icon: const Icon(Icons.search, size: 18),
-                    label: const Text('搜索'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[600],
-                      foregroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(8.0)), // 与搜索框相同的圆角
-                      ),
-                    ),
+                // 视频网格
+                Expanded(
+                  child: Consumer<VideoProvider>(
+                    builder: (context, provider, child) {
+                      if (provider.videos.isEmpty) {
+                        return const Center(
+                          child: Text('暂无视频，请上传视频'),
+                        );
+                      }
+                      return VideoGrid(
+                        videos: provider.videos,
+                        isMultiSelectMode: _isMultiSelectMode,
+                        selectedVideos: _selectedVideos,
+                        onVideoSelected: _toggleVideoSelection,
+                      );
+                    },
                   ),
                 ),
               ],
             ),
           ),
-
-          // 视频网格
-          Expanded(
-            child: Consumer<VideoProvider>(
-              builder: (context, provider, child) {
-                if (provider.videos.isEmpty) {
-                  return const Center(
-                    child: Text('暂无视频，请上传视频'),
-                  );
-                }
-                return VideoGrid(
-                  videos: provider.videos,
-                  isMultiSelectMode: _isMultiSelectMode,
-                  selectedVideos: _selectedVideos,
-                  onVideoSelected: _toggleVideoSelection,
+          // 转码队列面板（仅在需要显示时显示）
+          if (_showTranscodeQueue)
+            Consumer<TranscodeProvider>(
+              builder: (context, transcodeProvider, child) {
+                return TranscodeQueuePanel(
+                  onHide: () {
+                    setState(() {
+                      _showTranscodeQueue = false; // 隐藏转码队列面板
+                    });
+                  },
                 );
               },
             ),
-          ),
         ],
       ),
     );

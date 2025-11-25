@@ -6,6 +6,7 @@ import 'package:video_manager_app/services/server_service.dart';
 import 'services/hive_service.dart';
 import 'providers/video_provider.dart';
 import 'providers/tag_provider.dart';
+import 'providers/transcode_provider.dart';
 import 'ui/pages/home_page.dart';
 import 'utils/file_utils.dart'; // 引入文件工具类
 import 'utils/storage_utils.dart'; // 引入存储工具类
@@ -65,6 +66,7 @@ class MyApp extends StatelessWidget {
         // 【视频/标签】 操作能力：提供加载、创建、更新、删除标签的方法（如 createTag()、deleteTag() 等），子组件调用后会同步更新全局状态。
         ChangeNotifierProvider(create: (_) => VideoProvider()..loadVideos()),
         ChangeNotifierProvider(create: (_) => TagProvider()..loadTags()),
+        ChangeNotifierProvider(create: (_) => TranscodeProvider()),
         // ChangeNotifierProvider(create: (_) => ServerService()),
       ],
       child: MaterialApp(

@@ -43,4 +43,10 @@ class VideoProvider with ChangeNotifier {
     _videos = _repository.searchVideos(keyword);
     notifyListeners();
   }
+
+  // 按文件路径筛选视频
+  void filterVideosByFilePath(String keyword) {
+    _videos = _repository.filterVideosByFilePath(keyword);
+    notifyListeners();
+  }
 }
