@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频管理Web端 1.3</title>
+  <!-- 引入Tailwind CSS用于快速构建UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入Font Awesome图标库 -->
+  <link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
+  <link rel="stylesheet" type="text/x-font-otf" href="fonts/MaterialIcons-Regular.otf">
+  <link rel="stylesheet" type="text/x-font-otf" href="fonts/fontawesome-webfont.ttf">
+  <link rel="stylesheet" type="text/x-font-otf" href="fonts/fontawesome-webfont.woff">
+  <link rel="stylesheet" type="text/x-font-otf" href="fonts/fontawesome-webfont.woff2">
+
+  <!-- 配置Tailwind自定义颜色 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+          },
+        },
+      }
+    }
+
+  </script>
+
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+      .upload-area {
+        border: 2px dashed #cbd5e1;
+        transition: all 0.3s ease;
+      }
+      .upload-area:hover {
+        border-color: #3b82f6;
+      }
+      .modal-backdrop {
+        backdrop-filter: blur(4px);
+      }
+      .tag-pill {
+        @apply px-2 py-1 rounded-full text-xs cursor-pointer;
+      }
+      .tag-pill-selected {
+        @apply bg-primary text-white;
+      }
+      .tag-pill-unselected {
+        @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+      }
+          /* 增大菜单按钮和删除按钮尺寸 */
+      .menu-btn {
+        @apply w-8 h-8 flex items-center justify-center rounded-full;
+      }
+      .menu-item {
+        @apply px-3 py-2 text-sm flex items-center;
+      }
+    }
+  </style>
+
+  <!-- 注册Service Worker 用于后续视频播放，下载/合并-->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(registration => {
+            console.log('ServiceWorker注册成功: ', registration.scope);
+          })
+          .catch(err => {
+            console.log('ServiceWorker注册失败: ', err);
+          });
+      });
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <!-- 顶部导航栏 -->
+  <header class="bg-white shadow-md">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-primary">视频管理系统</h1>
+
+      <!-- 搜索框 -->
+      <div class="flex-1 max-w-md mx-8">
+        <div class="relative">
+          <input type="text" id="search-input" placeholder="搜索 【 整个数据库 】 视频 - 标题或标签..."
+            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+      </div>
+
+      <!-- 上传视频按钮 -->
+      <button id="upload-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition">
+        <i class="fa fa-cloud-upload mr-1"></i> 上传视频
+      </button>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+
+    <!-- 本地视频筛选 -->
+    <div class="mb-6">
+      <!-- <div class="flex items-center mb-2">
+          <i class="fa fa-filter text-gray-500 mr-2"></i>
+          <span class="text-gray-600 font-medium">当前视频筛选：</span>
+        </div> -->
+      <div class="relative">
+        <input type="text" id="filter-input" placeholder="在 【 当前搜索结果 】 中筛选 - 标题或标签..."
+          class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+        <i class="fa fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+      </div>
+    </div>
+
+    <!-- 视频列表区域 -->
+    <div id="video-grid" class="video-grid">
+      <!-- 视频卡片会通过JavaScript动态生成 -->
+      <div class="text-center text-gray-500 py-12">
+        <i class="fa fa-film text-4xl mb-4"></i>
+        <p>暂无视频，请上传视频文件</p>
+      </div>
+    </div>
+  </main>
+
+  <!---------------------- 视频上传浮框 --------------------------->
+  <div id="upload-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- 浮框头部 -->
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="text-xl font-bold">上传视频</h3>
+        <button id="close-upload-modal" class="text-gray-500 hover:text-gray-700 p-2">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <!-- 浮框内容 -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <!-- 视频预览区域 -->
+        <div class="mb-6">
+          <div class="bg-gray-100 rounded-lg overflow-hidden">
+            <video id="video-preview" class="w-full aspect-video object-contain" controls
+
+              crossorigin="anonymous" playsinline webkit-playsinline preload="metadata"></video>
+          </div>
+          <div class="mt-2 text-sm text-gray-500 flex justify-between">
+
+            <span id="video-duration">时长: --:--</span>
+
+            <span id="video-size">大小: --</span>
+
+          </div>
+
+          <!-- 压缩选项 -->
+
+
+
+                    <!-- <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+
+
+            <div class="text-sm font-medium text-gray-700 mb-2">压缩选项</div>
+
+
+            <div class="mt-2 text-xs text-gray-500">
+
+
+              <input type="radio" id="compress-mode-wechat-normal" name="compress-mode" value="full" class="mr-1" disabled="true">
+
+
+              <label for="compress-mode-wechat-normal" class="inline">极度压缩</label>
+
+
+              <input type="radio" id="compress-mode-wechat-original" name="compress-mode" value="original" class="ml-4 mr-1" checked>
+
+
+              <label for="compress-mode-wechat-original" class="inline">原画压缩</label>
+
+
+            </div>
+
+
+          </div> -->
+
+          <!-- 视频边编辑边上传，先上传的按钮 -->
+
+          <button id="upload-first-btn"
+            class="hidden bg-secondary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+
+            先上传视频
+
+          </button>
+          <!-- 视频边编辑边上传，先上传的按钮 -->
+          <button id="download-btn"
+            class="hidden bg-primary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+            下载视频
+          </button>
+          <!-- 预上传 - 进度条 -->
+          <div class="px-6 pb-2 hidden" id="upload-progress-container-top">
+            <div class="text-sm text-gray-600 mb-1">预上传进度</div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div id="upload-progress-bar-top" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 视频信息表单 -->
+        <div class="space-y-4">
+          <!-- 标题输入 -->
+          <div>
+            <label for="video-title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span
+                class="text-red-500">*</span></label>
+            <input type="text" id="video-title"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="请输入视频标题">
+          </div>
+
+          <!-- 标签选择 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">标签</label>
+            <div id="tag-selection" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto p-2 border rounded-lg">
+              <!-- 标签会动态生成 -->
+              <p class="text-gray-500 text-sm w-full text-center">待添加标签...</p>
+            </div>
+            <div class="flex items-center">
+              <input type="text" id="new-tag-input-modal" placeholder="添加新标签"
+                class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary">
+              <button id="add-tag-btn-modal" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90">
+                添加
+              </button>
+            </div>
+          </div>
+
+          <!-- 备注信息 -->
+          <div>
+            <label for="video-remark" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <textarea id="video-remark" rows="3"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="请输入备注信息（可选）"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 浮框底部 -->
+      <div class="p-4 border-t flex justify-end gap-3">
+        <button id="cancel-upload-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+          取消
+        </button>
+        <button id="save-video-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+          保存视频
+        </button>
+      </div>
+      <!-- 浮框底部 - 进度条 -->
+      <div class="px-6 pb-2 hidden" id="upload-progress-container-bottom">
+        <div class="text-sm text-gray-600 mb-1">上传进度</div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div id="upload-progress-bar-bottom" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 确认取消对话框 -->
+  <div id="confirm-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl w-full max-w-md p-6">
+      <h3 class="text-xl font-bold mb-4">确认取消</h3>
+      <p class="text-gray-600 mb-6">确定要取消上传吗？已上传的部分将被丢弃。</p>
+      <div class="flex justify-end gap-3">
+        <button id="confirm-cancel-btn"
+          class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+          继续编辑
+        </button>
+        <button id="confirm-ok-btn" class="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition">
+          确认取消
+        </button>
+      </div>
+    </div>
+  </div>
+  <!---------------------- 视频上传浮框 --------------------------->
+
+  <!-- 操作成功提示框 toast -->
+  <div id="toast"
+    class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+    操作成功
+  </div>
+
+  <script>
+
+    // 与Flutter原生通信的通道
+
+    const flutterChannel = {
+      // 存储WebSocket实例
+      _ws: null,
+
+      // 存储请求的回调函数，用requestId映射
+      _callbacks: new Map(),
+
+
+
+      // 获取或生成客户端唯一ID
+      _getClientId() {
+
+        let clientId = localStorage.getItem('clientId');
+
+        if (!clientId) {
+
+          // 生成一个UUID作为客户端ID
+
+          clientId = 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+          localStorage.setItem('clientId', clientId);
+
+        }
+
+        return clientId;
+
+      },
+
+
+
+      // 初始化WebSocket连接
+      _initWebSocket() {
+
+        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+
+          return Promise.resolve();
+
+        }
+
+
+
+        return new Promise((resolve, reject) => {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const clientId = this._getClientId();
+          const wsUrl = `${wsProtocol}//${window.location.host}/ws?clientId=${clientId}`;
+          this._ws = new WebSocket(wsUrl);
+          this._ws.onopen = () => {
+
+            console.log('WebSocket连接已建立，客户端ID:', clientId);
+
+            // 监听服务端消息
+
+            this._ws.onmessage = (event) => this._handleMessage(event);
+
+            resolve();
+
+          };
+          this._ws.onerror = (error) => {
+
+            console.error('WebSocket连接错误:', error);
+
+            reject(error);
+
+          };
+          this._ws.onclose = () => {
+
+            console.log('WebSocket连接已关闭，尝试重连...');
+
+            this._ws = null;
+
+            // 3秒后尝试重连
+
+            setTimeout(() => this._initWebSocket(), 3000);
+
+          };
+
+        });
+
+      },
+
+
+      // 处理从服务端收到的消息
+      _handleMessage(event) {
+
+        try {
+
+          const response = JSON.parse(event.data);
+
+          console.log('收到服务端响应:', response);
+
+
+
+          // 查找对应的回调函数
+
+          const callback = this._callbacks.get(response.id);
+
+          if (callback) {
+
+            callback(response);
+
+            this._callbacks.delete(response.id);
+
+          }
+
+        } catch (error) {
+
+          console.error('处理消息错误:', error);
+
+        }
+
+      },
+
+      // 生成唯一请求ID（修改这部分）
+      _generateRequestId() {
+        // 使用时间戳+随机数确保唯一性
+        return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+      },
+
+      // 发送请求到服务端
+      _sendRequest(action, params = {}) {
+        return new Promise(async (resolve, reject) => {
+          try {
+            // 确保连接已建立
+            await this._initWebSocket();
+
+            // 生成唯一请求ID
+            const requestId = this._generateRequestId();
+
+            // 存储回调函数
+            this._callbacks.set(requestId, (response) => {
+              if (response.success) {
+                resolve(response.data);
+              } else {
+                reject(new Error(response.error || '请求失败'));
+              }
+            });
+
+            // 发送请求
+            const request = {
+              id: requestId,
+              action: action,
+              params: params
+            };
+            console.log('发送请求:', request);
+            this._ws.send(JSON.stringify(request));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      },
+
+      // 标签相关接口
+
+      // 载入标签列表
+
+      getTags: function () { return flutterChannel._sendRequest('getTags'); },
+
+      // 新增标签
+
+      addTag: function (tagName) { return flutterChannel._sendRequest('createTag', { name: tagName }); },
+
+      // 删除标签
+
+      deleteTag: function (tagId) { return flutterChannel._sendRequest('deleteTag', { id: tagId }); },
+
+
+
+      // 视频相关接口
+
+      // 载入视频列表
+
+      getVideos: function () { return flutterChannel._sendRequest('getVideos'); },
+      // 获取视频播放链接
+
+      getVideoUrl: function (videoId) { return flutterChannel._sendRequest('getVideoUrl', { videoId: videoId }); },
+
+      // 获取视频大小
+
+      getVideoSize: function (videoId) { return flutterChannel._sendRequest('getVideoSize', { videoId: videoId }); },
+      // 删除视频
+
+      deleteVideo: function (videoId) { return flutterChannel._sendRequest('deleteVideo', { id: videoId }); },
+
+      // 获取视频缩略图
+
+      getThumbnail: function (videoId) { return flutterChannel._sendRequest('getThumbnail', { videoId: videoId }); },
+
+      //  搜索视频
+
+      searchVideos: function (searchTerm) { return flutterChannel._sendRequest('searchVideos', { query: searchTerm }); },
+
+      // 更新视频信息
+
+      updateVideo: function (video) { return flutterChannel._sendRequest('updateVideo', { video: video }); },
+      // 分块上传二进制数据
+      sendBinaryChunk: function (params) {
+
+        return new Promise((resolve, reject) => {
+
+          const requestId = flutterChannel._generateRequestId();
+
+          let binarySent = false;
+
+
+
+          // 发送块元数据
+
+          const metaRequest = {
+
+            id: requestId,
+
+            action: 'uploadBinaryChunk',
+
+            params: {
+
+              fileId: params.fileId,
+
+              chunkIndex: params.chunkIndex,
+
+              totalChunks: params.totalChunks
+
+            }
+
+          };
+
+
+
+          // 监听元数据响应
+
+          const metaListener = (event) => {
+
+            const response = JSON.parse(event.data);
+
+            if (response.id === requestId && response.status === 'ready') {
+
+              flutterChannel._ws.removeEventListener('message', metaListener);
+
+
+
+              // 发送二进制数据
+
+              params.blob.arrayBuffer().then(buffer => {
+
+                flutterChannel._ws.send(buffer);
+
+                binarySent = true;
+
+
+
+                // 监听块确认
+
+                const chunkListener = (event) => {
+
+                  const chunkResponse = JSON.parse(event.data);
+
+                  if (chunkResponse.id === requestId) {
+
+                    flutterChannel._ws.removeEventListener('message', chunkListener);
+
+                    if (chunkResponse.success) {
+
+                      resolve(chunkResponse);
+
+                    } else {
+
+                      reject(new Error(chunkResponse.error));
+
+                    }
+
+                  }
+
+                };
+
+                flutterChannel._ws.addEventListener('message', chunkListener);
+
+              });
+
+            }
+
+          };
+
+
+
+          flutterChannel._ws.addEventListener('message', metaListener);
+
+          flutterChannel._ws.send(JSON.stringify(metaRequest));
+
+
+
+          // 超时处理
+
+          setTimeout(() => {
+
+            if (!binarySent) {
+
+              flutterChannel._ws.removeEventListener('message', metaListener);
+
+              reject(new Error('发送超时'));
+
+            }
+
+          }, 10000);
+
+        });
+
+      },
+
+      // 完成二进制文件上传
+
+      completeBinaryUpload: function (fileId, fileName, duration, tagIds, remark, title) {
+
+        // const compressMode = document.querySelector('input[name="compress-mode"]:checked').value;
+
+        return flutterChannel._sendRequest('completeBinaryUpload', {
+
+          fileId,
+
+
+          name: fileName,
+          duration,
+          tagIds,
+          remark,
+          fileSize: state.currentUploadFile.size,
+          // compressMode: compressMode,
+          title: title  // 新增title参数
+
+
+        })
+      },
+    }
+    // 状态管理
+    const state = {
+      videos: [],
+      originalVideos: null, // 用于存储原始视频列表，搜索时使用
+      tags: [],
+      selectedTagIds: [],
+      currentEditingVideo: null, // 当前正在编辑的视频
+      selectedTagIdsForUpload: [], // 上传视频时选择的标签ID
+      pendingUploads: new Map(), // 存储已上传但未合并的文件ID
+      currentUploadFile: null, // 当前要上传的 文件
+      currentFileId: null, // 当前要上传 文件的ID
+      cancelUpload: false, // 是否正在执行缓存
+    }
+
+    // DOM元素引用
+    const elements = {
+      searchInput: document.getElementById('search-input'), // 数据库搜索输入框
+      filterInput: document.getElementById('filter-input'), // 本地视频筛选输入框
+      uploadBtn: document.getElementById('upload-btn'), // 上传按钮
+      videoGrid: document.getElementById('video-grid'), // 视频网格容器
+
+      // 上传浮框相关元素
+      uploadModal: document.getElementById('upload-modal'),
+      uploadFirstBtn: document.getElementById('upload-first-btn'),
+      downloadBtn: document.getElementById('download-btn'),
+      closeUploadModal: document.getElementById('close-upload-modal'),
+      videoPreview: document.getElementById('video-preview'),
+      videoTitle: document.getElementById('video-title'),
+      videoDuration: document.getElementById('video-duration'),
+      videoSize: document.getElementById('video-size'),
+      videoRemark: document.getElementById('video-remark'),
+      tagSelection: document.getElementById('tag-selection'),
+      newTagInputModal: document.getElementById('new-tag-input-modal'),
+      addTagBtnModal: document.getElementById('add-tag-btn-modal'),
+      saveVideoBtn: document.getElementById('save-video-btn'),
+      cancelUploadBtn: document.getElementById('cancel-upload-btn'),
+      progressContainerTop: document.getElementById('upload-progress-container-top'),
+      progressContainerBottom: document.getElementById('upload-progress-container-bottom'),
+      progressBarTop: document.getElementById('upload-progress-bar-top'),
+      progressBarBottom: document.getElementById('upload-progress-bar-bottom'),
+      // videoCompressBox: document.getElementById('video-compress-box'),
+      // 确认对话框
+      confirmModal: document.getElementById('confirm-modal'),
+      confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+      confirmOkBtn: document.getElementById('confirm-ok-btn'),
+      // 隐藏的文件输入
+      fileInput: document.createElement('input')
+    }
+
+    // 初始化文件输入元素(上传视频模块 相关设置)
+    elements.fileInput.type = 'file';
+    elements.fileInput.accept = 'video/*';
+    elements.fileInput.classList.add('hidden');
+    document.body.appendChild(elements.fileInput);
+
+
+    // 初始化函数
+
+    async function init() {
+      console.log('初始化函数 init() 被调用');
+      try {
+        // 加载视频和标签数据
+        await loadTags();
+        await loadVideos();
+
+        // 绑定事件监听器
+        bindEvents();
+      } catch (error) {
+        console.log('初始化失败:', error);
+      }
+    }
+
+    // 加载视频列表
+    async function loadVideos() {
+      try {
+        console.log('加载视频列表...');
+        const videos = await flutterChannel.getVideos();
+        state.videos = videos;
+        renderVideoGrid();
+      } catch (error) {
+        console.error('加载视频失败:', error);
+      }
+    }
+
+    // 加载标签列表
+    async function loadTags() {
+      try {
+        console.log('加载标签列表...');
+        const tags = await flutterChannel.getTags();
+        state.tags = tags;
+        // renderTagFilters();
+        // renderTagList();
+      } catch (error) {
+        console.error('加载标签失败:', error);
+      }
+    }
+
+    // 优化：避免重复请求，对相同路径的缩略图进行缓存，减少重复请求
+    const thumbnailCache = new Map();
+    // 渲染视频缩略图
+    async function renderVideoThumbnail(video) {
+      if (!video.id) {
+        return '<i class="fa fa-film text-4xl text-gray-400"></i>';
+      }
+
+      // 检查缓存
+      if (thumbnailCache.has(video.id)) {
+        return thumbnailCache.get(video.id);
+      }
+
+      try {
+        // 获取Base64格式的缩略图
+        const thumbnailData = await flutterChannel.getThumbnail(video.id);
+        // 明确检查base64字段是否存在
+        if (!thumbnailData) {
+          throw new Error('缩略图数据格式错误，缺少base64字段');
+        }
+
+        const imgHtml = `<img src="data:image/jpeg;base64,${thumbnailData.base64}"
+                    alt="${video.title}"
+                    class="w-full h-full object-cover">`;
+        thumbnailCache.set(video.id, imgHtml);
+        return imgHtml;
+      } catch (error) {
+        console.error(`加载缩略图失败（视频ID: ${video.id}）:`, error);
+        return '<i class="fa fa-film text-4xl text-gray-400"></i>';
+      }
+    }
+
+    // 渲染视频网格
+
+    async function renderVideoGrid() {
+
+      // 1. 应用标签筛选
+
+      let filteredVideos = state.videos;
+
+      if (state.selectedTagIds.length > 0) {
+
+        filteredVideos = state.videos.filter(video =>
+
+          state.selectedTagIds.every(tagId => video.tagIds.includes(tagId))
+
+        );
+
+      }
+
+
+
+      // 2. 应用本地筛选（使用localeCompare避免中文问题）
+
+      const filterTerm = elements.filterInput.value.trim();
+
+      if (filterTerm) {
+
+
+
+        const keywords = filterTerm.split(/\s+/).filter(k => k).map(k => k.toLowerCase());
+
+
+
+        filteredVideos = filteredVideos.filter(video => {
+
+          return keywords.every(keyword => {
+
+            // 标题
+
+            const matchTitle = video.title.toLocaleString().includes(keyword);
+
+            // 标签
+
+            const matchTag = video.tagIds.some(tagId => {
+
+              const tag = state.tags.find(t => t.id === tagId);
+
+              return tag && tag.name.toLowerCase().includes(keyword);
+
+            });
+
+            // 备注
+
+            const matchRemark = video?.remark // 判断是否有remark
+
+              ? video.remark.toLowerCase().includes(keyword) // 有的话常规筛选
+
+              : false;
+
+
+
+            return matchTitle || matchTag || matchRemark;
+
+          })
+
+        }) // filteredVideos
+
+      } // if
+
+
+
+      // 3. 无匹配结果时的显示
+
+      if (filteredVideos.length === 0) {
+
+        elements.videoGrid.innerHTML = `
+
+          <div class="text-center text-gray-500 py-12">
+
+            <i class="fa fa-search text-4xl mb-4"></i>
+
+            <p>未找到匹配的视频</p>
+
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+
+
+
+      const videoCards = await Promise.all(filteredVideos.map(async (video) => {
+
+        const thumbnailHtml = await renderVideoThumbnail(video);
+
+        return `
+
+      <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition cursor-pointer" data-video-id="${video.id}">
+
+        <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition">
+
+          <div class="relative aspect-video bg-gray-100">
+
+            <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+
+              ${formatFileSize(video.fileSize)}
+
+            </div>
+
+              ${thumbnailHtml}
+
+            <!-- ↓ ↓ ↓ 视频卡片右上角 - 功能菜单 ↓ ↓ ↓ -->
+
+            <div class="absolute top-2 right-2">
+
+              <button class="menu-btn delete-menu-btn bg-black/50 text-white p-1 rounded-full" data-video-id="${video.id}">
+
+                <i class="fa fa-ellipsis-v"></i>
+
+              </button>
+
+              <!-- 删除菜单 -->
+
+              <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10">
+
+                <button class="menu-item delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
+
+                  <i class="fa fa-trash mr-1 text-xl"></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+            <!-- ↑ ↑ ↑ 视频卡片右上角 - 功能菜单 ↑ ↑ ↑ -->
+
+            <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+
+              ${formatDuration(video.duration)}
+            </div>
+
+          </div>
+
+          <div class="p-4">
+
+            <h3 class="font-semibold text-gray-800 mb-1 truncate">${video.title}</h3>
+
+            <div class="text-xs text-gray-500 mb-1">
+
+              ${formatDate(video.uploadTime)}
+
+            </div>
+
+            <div class="flex flex-wrap gap-1 mb-2">
+
+              ${video.tagIds.map(tagId => {
+
+          const tag = state.tags.find(t => t.id === tagId);
+
+          return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>`
+
+            :
+
+            `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">当前未有标签</span>`;
+
+        }).join('')}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      `}));
+
+      elements.videoGrid.innerHTML = videoCards.join('');
+
+    }
+
+    // 渲染标签选择区域
+    function renderTagSelection() {
+      if (state.tags.length === 0) {
+        elements.tagSelection.innerHTML = '<p class="text-gray-500 text-sm w-full text-center">暂无标签，请添加标签</p>';
+        return;
+      }
+
+      elements.tagSelection.innerHTML = state.tags.map(tag => `
+        <span
+          class="tag-pill ${state.selectedTagIdsForUpload.includes(tag.id) ? 'tag-pill-selected' : 'tag-pill-unselected'}"
+          data-tag-id="${tag.id}"
+        >
+          ${tag.name}
+        </span>
+      `).join('');
+
+      // 绑定标签选择事件
+      document.querySelectorAll('#tag-selection .tag-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+          const tagId = e.currentTarget.dataset.tagId;
+          toggleTagSelection(tagId);
+        });
+      });
+    }
+
+    // 切换标签选择状态
+    function toggleTagSelection(tagId) {
+      if (state.selectedTagIdsForUpload.includes(tagId)) {
+        state.selectedTagIdsForUpload = state.selectedTagIdsForUpload.filter(id => id !== tagId);
+      } else {
+        state.selectedTagIdsForUpload.push(tagId);
+      }
+      renderTagSelection();
+    }
+
+    // 处理视频文件选择
+    function handleFileSelection(file) {
+      if (!file || !file.type.includes('video')) {
+        alert('请选择有效的 mp4格式 视频文件');
+        return;
+      }
+
+      // 保存当前上传的文件
+      state.currentUploadFile = file;
+      state.currentFileId = 'video_' + Date.now(); // 唯一标识
+
+      // 重置表单
+      elements.videoTitle.value = file.name.replace(/\.[^/.]+$/, ""); // 去除扩展名作为默认标题
+      elements.videoRemark.value = '';
+      state.selectedTagIdsForUpload = [];
+
+      // 显示视频预览
+
+
+
+      const videoURL = URL.createObjectURL(file);
+
+
+
+      elements.videoPreview.src = videoURL;
+
+
+
+      elements.videoPreview.crossOrigin = 'anonymous';
+
+
+
+      elements.videoPreview.preload = 'metadata';
+
+
+
+      // 设置兼容性属性
+
+      elements.videoPreview.setAttribute('playsinline', 'true');
+
+      elements.videoPreview.setAttribute('webkit-playsinline', 'true');
+
+
+
+
+
+      // 获取视频信息
+
+
+
+      elements.videoSize.textContent = `大小: ${formatFileSize(file.size)}`;
+
+
+
+
+
+      // 加载视频元数据以获取时长
+
+      const handleMetadataLoaded = () => {
+
+        const duration = !isNaN(elements.videoPreview.duration)
+
+          ? Math.floor(elements.videoPreview.duration)
+
+          : 0; // 获取不到时长时赋值为 0
+
+
+
+        elements.videoDuration.textContent = `时长: ${formatDuration(duration)}`;
+
+      };
+
+
+
+      // 添加事件监听器以处理不同浏览器的兼容性
+
+      elements.videoPreview.addEventListener('loadedmetadata', handleMetadataLoaded);
+
+
+
+      // 添加错误处理
+
+      elements.videoPreview.addEventListener('error', (e) => {
+
+        console.error('视频预览错误:', e.target.error);
+
+      });
+
+
+
+      // 触发视频加载
+
+      elements.videoPreview.load();
+
+      // 显示压缩选项
+      // elements.videoCompressBox.classList.remove('hidden')
+      // 显示上传浮框
+      elements.uploadFirstBtn.classList.remove('hidden');
+      elements.downloadBtn.classList.add('hidden')
+      elements.uploadModal.classList.remove('hidden');
+
+      // 加载标签
+      loadTags();
+      renderTagSelection();
+    }
+
+    // 保存视频信息并上传
+    async function saveVideo() {
+      const title = elements.videoTitle.value.trim();
+      if (!title) {
+        alert('请输入视频标题');
+        return;
+      }
+      if (state.currentEditingVideo) {
+        state.currentEditingVideo.tagIds = state.selectedTagIdsForUpload,
+          state.currentEditingVideo.remark = elements.videoRemark.value.trim()
+        await flutterChannel.updateVideo(state.currentEditingVideo)
+        await loadVideos();
+        initUploadModal()
+        showToast('视频信息更新成功');
+        return;
+      }
+      if (!state.currentUploadFile) {
+        alert('未找到视频文件，请重新选择');
+        elements.progressContainerTop.classList.add('hidden');
+        elements.progressContainerBottom.classList.add('hidden');
+        return;
+      }
+
+      if (state.currentFileId && !state.pendingUploads.has(state.currentFileId)) {
+        // 准备上传数据
+        const fileId = state.currentFileId;
+        const videoFile = state.currentUploadFile;
+
+        // 显示进度条容器
+        elements.progressContainerTop.classList.remove('hidden');
+        elements.progressBarTop.style.width = '0%';
+        elements.progressContainerBottom.classList.remove('hidden');
+        elements.progressBarBottom.style.width = '0%';
+
+        // 禁用按钮并显示上传中状态
+        elements.saveVideoBtn.disabled = true;
+        elements.saveVideoBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 上传中...';
+        elements.cancelUploadBtn.disabled = true;
+
+        // 分块上传
+        await uploadBinary(fileId, videoFile)
+      }
+
+      const duration = Math.floor(elements.videoPreview.duration);
+      // 使用不带扩展名的文件名作为标题
+      const titleWithoutExt = elements.videoTitle.value.trim(); // 使用用户输入的标题（已去除扩展名）
+
+      try {
+        // 完成上传（不等待后端转换任务）
+        flutterChannel.completeBinaryUpload(
+          state.currentFileId,
+          state.currentUploadFile.name, // 保留原始文件名用于存储
+          duration,
+          state.selectedTagIdsForUpload,
+          elements.videoRemark.value.trim(),
+          titleWithoutExt  // 使用不带后缀的标题
+        ).then(result => {
+          console.log('视频上传完成（后台转换中）:', result);
+          showToast('视频上传成功（后台转换中）');
+        }).catch(error => {
+          console.error('上传失败:', error);
+          alert(`上传失败: ${error.message || '未知错误'}`);
+        });
+
+        // 刷新列表并重置状态（不等待转换完成）
+        await loadVideos();
+        state.selectedTagIdsForUpload = [];
+        elements.uploadModal.classList.add('hidden');
+        showToast('视频上传完成（后台处理中）');
+        elements.videoPreview.src = '';
+        URL.revokeObjectURL(elements.videoPreview.src);
+      } catch (error) {
+        console.error('上传失败:', error);
+        alert(`上传失败: ${error.message || '未知错误'}`);
+      } finally {
+        elements.saveVideoBtn.disabled = false;
+        elements.saveVideoBtn.textContent = '保存视频';
+        elements.cancelUploadBtn.disabled = false;
+        state.currentUploadFile = null;
+        elements.progressContainerTop.classList.add('hidden')
+        elements.progressContainerBottom.classList.add('hidden')
+      }
+    }
+
+    // 初始化视频详细内容
+    function initUploadModal() {
+      // 清除视频预览
+      elements.videoPreview.src = '';
+      if (elements.videoPreview.src) {
+        URL.revokeObjectURL(elements.videoPreview.src);
+      }
+      // 隐藏预上传按钮
+      elements.uploadFirstBtn.classList.add('hidden');
+      // 隐藏预上传进度条
+      elements.progressBarTop.style.width = '0%';
+      elements.progressContainerTop.classList.add('hidden');
+      // 隐藏压缩选项
+      // elements.videoCompressBox.classList.add('hidden')
+      // 清空下方输入框
+      elements.videoTitle.value = '';
+      elements.newTagInputModal.value = '';
+      elements.videoRemark.value = '';
+      // 隐藏底部上传进度条
+      elements.progressBarTop.style.width = '0%';
+      elements.progressContainerBottom.classList.add('hidden');
+      // 恢复保存按钮状态
+      elements.saveVideoBtn.disabled = false
+      // 重置 state 关于操作上传文件的状态
+      state.currentEditingVideo = null;
+      state.selectedTagIdsForUpload = [];
+      state.pendingUploads = new Map(), // 存储已上传但未合并的文件ID
+        state.currentUploadFile = null;
+      state.currentFileId = null;
+      state.cancelUpload = false, // 是否正在执行缓存
+        elements.uploadModal.classList.add('hidden')
+    }
+
+    // 缓存视频，预上传
+    async function uploadBinary(fileId, videoFile) {
+      try {
+        elements.saveVideoBtn.disabled = true
+        // 初始化上传
+        await flutterChannel._sendRequest('initBinaryUpload', {
+          fileId,
+          fileName: videoFile.name,
+          totalSize: videoFile.size,
+          mimeType: videoFile.type
+        });
+
+        // 分块上传
+        await uploadBinaryInChunks(fileId, videoFile, (progress) => {
+          elements.progressBarTop.style.width = `${progress}%`;
+          elements.progressBarBottom.style.width = `${progress}%`;
+        });
+        elements.saveVideoBtn.disabled = false
+      } catch (errer) {
+        console.error('预传失败:', error);
+        alert(`预传失败: ${error.message || '未知错误'}`);
+      }
+
+    }
+
+    // 获取当前设备，以便优化上传分块大小
+    function calcChunkSize(totalSize) {
+      // { isMobile: 是否移动设备, isIPhoneSafari: 是否苹果手机Safari }
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isMobile = /iphone|ipod|ipad|android|windows phone/.test(userAgent);
+      const isIPhone = /iphone|ipod/.test(userAgent); // 仅匹配苹果手机（排除 iPad）
+      const isSafari = /safari/.test(userAgent) && !/chrome|edge|firefox/.test(userAgent); // 纯 Safari（排除伪装 Safari 的浏览器）
+      const isIPhoneSafari = isIPhone && isSafari;
+      let chunkSize;
+
+      // return {
+      //   isMobile,
+      //   isIPhoneSafari: isIPhone && isSafari
+      // };
+      if (isIPhoneSafari) {
+        // 苹果手机 Safari 规则
+        if (totalSize <= 25 * 1024 * 1024) { // ≤25MB
+          chunkSize = 256 * 1024; // 256KB
+        } else if (totalSize <= 50 * 1024 * 1024) { // 25MB~50MB
+          chunkSize = 512 * 1024; // 512KB
+        } else { // ＞50MB
+          chunkSize = 1 * 1024 * 1024; // 1MB
+        }
+      } else {
+        // 电脑浏览器规则（Chrome/Firefox/Edge/非Safari手机浏览器）
+        if (totalSize <= 100 * 1024 * 1024) { // ≤100MB
+          chunkSize = 1 * 1024 * 1024; // 1MB
+        } else if (totalSize <= 500 * 1024 * 1024) { // 100MB~500MB
+          chunkSize = 2 * 1024 * 1024; // 2MB
+        } else { // ＞500MB
+          chunkSize = 2 * 1024 * 1024; // 2MB
+        }
+      }
+      return chunkSize
+    }
+
+    // 分块上传二进制视频文件
+    async function uploadBinaryInChunks(fileId, videoFile, onProgress) {
+      const totalSize = videoFile.size;
+      const chunkSize = calcChunkSize(totalSize); // 256KB/块
+      const totalChunks = Math.ceil(totalSize / chunkSize);
+
+      for (let start = 0; start < totalSize; start += chunkSize) {
+        if (state.cancelUpload) {
+          sendCancelToBackend(fileId);
+          return;
+        }
+        const end = Math.min(start + chunkSize, totalSize);
+        const chunkBlob = videoFile.slice(start, end);
+        const chunkIndex = Math.floor(start / chunkSize);
+
+        try {
+          // 发送二进制块
+          await flutterChannel.sendBinaryChunk({
+            fileId,
+            chunkIndex,
+            totalChunks,
+            blob: chunkBlob
+          });
+
+          // 更新进度
+          const progress = Math.floor((end / totalSize) * 100);
+          onProgress(progress);
+
+          // Safari兼容性延迟
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (error) {
+          console.error(`块 ${chunkIndex} 上传失败:`, error);
+          throw new Error(`上传失败，块索引: ${chunkIndex}`);
+        }
+      }
+    }
+
+    function sendCancelToBackend(fileId) {
+      // 如果有已上传但未合并的文件，通知后端删除
+      try {
+        flutterChannel._sendRequest('cancelBinaryUpload', {
+          fileId: fileId
+        });
+        state.pendingUploads.delete(state.currentFileId);
+        console.log('分块上传任务已被取消，发送清空服务器缓存命令...')
+      } catch (error) {
+        console.error('取消上传失败:', error);
+      }
+    }
+
+    // 添加打开视频详情的函数
+    async function openVideoDetail(video) {
+      // 保存当前编辑的视频
+      state.currentEditingVideo = video;
+
+      // 填充表单数据
+      elements.videoTitle.value = video.title;
+      elements.videoRemark.value = video.remark || '';
+      state.selectedTagIdsForUpload = [...video.tagIds];
+
+      // 显示视频预览
+      const thumbnailData = await flutterChannel.getThumbnail(video.id);
+      if (thumbnailData && thumbnailData.videoUrl) {
+        elements.videoPreview.src = thumbnailData.videoUrl;
+      }
+
+      // 更新浮框标题
+      document.querySelector('#upload-modal h3').textContent = '视频详情';
+
+      // 更新按钮文本
+      elements.saveVideoBtn.textContent = '保存修改';
+      elements.downloadBtn.classList.remove('hidden')
+
+      // 从filePath中提取文件名
+      const fileName = video.filePath
+              ? video.filePath.replace(/\\/g, '/').split('/').pop()
+              : '无文件名';
+      // 更新视频信息显示 - 显示文件名而不是时长
+      elements.videoSize.textContent = `大小: ${formatFileSize(video.fileSize)}`;
+      elements.videoDuration.textContent = `文件名: ${fileName}`;
+
+      // 隐藏压缩选项
+      // elements.videoCompressBox.classList.add('hidden')
+
+
+      // 注入视频播放地址
+
+
+
+      try {
+
+
+
+        const baseUrl = window.location.origin; // 获取当前域名作为基础URL
+
+
+
+        // 构建完整的视频流URL
+
+
+
+        const videoUrl = `${baseUrl}/videoStream/${video.id}`;
+
+        elements.videoPreview.src = videoUrl;
+
+
+
+        // 设置视频预加载属性以提高兼容性
+
+        elements.videoPreview.preload = 'metadata';
+
+
+
+        // 检测浏览器类型
+
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+
+
+        // 等待元数据加载完成后再尝试播放
+
+        elements.videoPreview.addEventListener('loadedmetadata', () => {
+
+          console.log('视频元数据加载完成');
+
+        });
+
+
+
+        // Safari和其他浏览器可能需要不同的处理方式
+
+        elements.videoPreview.addEventListener('canplay', () => {
+
+          console.log('视频可以播放');
+
+          // 尝试播放，但不强制，因为可能受自动播放策略限制
+
+          elements.videoPreview.play().catch(e => console.log('自动播放受限:', e));
+
+        });
+
+
+
+        // 添加错误处理
+
+        elements.videoPreview.addEventListener('error', (e) => {
+
+          console.error('视频播放错误:', e.target.error);
+
+          // 尝试用不同方式加载视频
+
+          elements.videoPreview.load(); // 重新加载资源
+
+        });
+
+
+
+      } catch (error) {
+
+
+
+        console.error('获取视频播放地址失败:', error);
+
+
+
+      }
+
+      // 显示浮框
+      elements.uploadFirstBtn.classList.add('hidden');
+      elements.uploadModal.classList.remove('hidden');
+
+      // 加载并渲染标签
+      await loadTags();
+      renderTagSelection();
+    }
+
+    // 绑定所有事件处理程序
+    function bindEvents() {
+      // 视频卡片点击事件
+      elements.videoGrid.addEventListener('click', async (e) => {
+        const deleteMenuBtn = e.target.closest('.delete-menu-btn');
+        if (deleteMenuBtn) {
+          e.stopPropagation(); // 阻止事件冒泡到视频卡片
+          const videoId = deleteMenuBtn.dataset.videoId;
+          const deleteMenu = deleteMenuBtn.nextElementSibling;
+
+          // 隐藏其他所有删除菜单
+          document.querySelectorAll('.delete-menu').forEach(menu => {
+            if (menu !== deleteMenu) {
+              menu.classList.add('hidden');
+            }
+          });
+
+          // 切换当前删除菜单显示状态
+          deleteMenu.classList.toggle('hidden');
+          return;
+        }
+
+        // 处理删除视频按钮点击
+        const deleteVideoBtn = e.target.closest('.delete-video-btn');
+        if (deleteVideoBtn) {
+          e.stopPropagation(); // 阻止事件冒泡到视频卡片
+          const videoId = deleteVideoBtn.dataset.videoId;
+          if (confirm('确定要删除这个视频吗？此操作不可恢复。')) {
+            try {
+              await flutterChannel.deleteVideo(videoId);
+              showToast('视频已删除');
+              await loadVideos(); // 重新加载视频列表
+            } catch (error) {
+              console.error('删除视频失败:', error);
+              alert('删除失败: ' + (error.message || '未知错误'));
+            }
+          }
+          // 隐藏删除菜单
+          deleteVideoBtn.closest('.delete-menu').classList.add('hidden');
+          return;
+        }
+
+        const videoCard = e.target.closest('[data-video-id]');
+        if (videoCard) {
+          const videoId = videoCard.dataset.videoId;
+          const video = state.videos.find(v => v.id === videoId);
+          if (video) {
+            await openVideoDetail(video);
+          }
+        }
+      });
+
+      // 上传按钮点击事件
+      elements.uploadBtn.addEventListener('click', () => {
+        elements.fileInput.click();
+      });
+
+      // 文件选择事件
+      elements.fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleFileSelection(e.target.files[0]);
+          // 重置输入值，允许重复选择同一文件
+          e.target.value = '';
+        }
+      });
+
+      // 本地筛选框输入事件（实时筛选）
+      elements.filterInput.addEventListener('input', renderVideoGrid);
+
+      // 顶部搜索框回车事件（调用后端搜索）
+      elements.searchInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+          const searchTerm = elements.searchInput.value.trim();
+          if (searchTerm) {
+            // 显示加载状态
+            elements.videoGrid.innerHTML = `
+              <div class="text-center text-gray-500 py-12">
+                <i class="fa fa-spinner fa-spin text-4xl mb-4"></i>
+                <p>正在搜索视频...</p>
+              </div>
+            `;
+
+            try {
+              // 调用后端搜索接口
+              const searchResults = await flutterChannel.searchVideos(searchTerm);
+              // 保存原始视频列表，方便后续筛选恢复
+              state.originalVideos = state.videos;
+              // 使用搜索结果更新视频列表
+              state.videos = searchResults;
+              // 清空标签筛选
+              state.selectedTagIds = [];
+              // 重新渲染
+              renderVideoGrid();
+              // renderTagFilters();
+            } catch (error) {
+              console.error('搜索失败:', error);
+              elements.videoGrid.innerHTML = `
+                <div class="text-center text-gray-500 py-12">
+                  <i class="fa fa-exclamation-triangle text-4xl mb-4 text-red-500"></i>
+                  <p>搜索失败，请重试</p>
+                </div>
+              `;
+            }
+          } else {
+            // 搜索框为空时恢复原始视频列表
+            if (state.originalVideos) {
+              state.videos = state.originalVideos;
+              state.originalVideos = null;
+              renderVideoGrid();
+            }
+          }
+        }
+      });
+
+      // 关闭上传浮框
+      elements.closeUploadModal.addEventListener('click', () => {
+        if (state.currentUploadFile) {
+          elements.confirmModal.classList.remove('hidden');
+        } else if (state.currentEditingVideo) {
+          // 检查是否有修改
+          const hasChanges =
+            state.currentEditingVideo.title !== elements.videoTitle.value.trim() ||
+            (state.currentEditingVideo.remark || '') !== elements.videoRemark.value.trim() ||
+            JSON.stringify(state.currentEditingVideo.tagIds) !== JSON.stringify(state.selectedTagIdsForUpload);
+
+          if (hasChanges) {
+            elements.confirmModal.classList.remove('hidden');
+          } else {
+            elements.uploadModal.classList.add('hidden');
+            state.currentEditingVideo = null;
+          }
+        } else {
+          elements.downloadBtn.classList.add('hidden')
+          elements.uploadModal.classList.add('hidden');
+        }
+      });
+
+      // 绑定下载视频按钮事件
+      elements.downloadBtn.addEventListener('click', async () => {
+        if (state.currentEditingVideo) {
+          // e.stopPropagation();
+          const baseUrl = window.location.origin;
+          const downloader = new VideoDownloader(state.currentEditingVideo.id, baseUrl);
+
+          try {
+            const totalSize = await downloader.init();
+            console.log(`开始下载，总大小: ${formatFileSize(totalSize)}`);
+
+            downloader.startDownload(progress => {
+              console.log(`下载进度: ${progress}%`);
+              // 更新UI显示进度
+              elements.downloadBtn.innerHTML = `<i class="fa fa-download mr-1"></i> ${progress}%`;
+            });
+          } catch (error) {
+            console.error('下载初始化失败:', error);
+            alert('下载失败: ' + error.message);
+          }
+        } else {
+          return;
+        }
+      })
+
+      // 绑定先上传按钮事件
+      elements.uploadFirstBtn.addEventListener('click', async () => {
+        // 确认选择文件的流程没错
+        if (!state.currentFileId && !state.currentUploadFile) {
+          return;
+        }
+
+        elements.saveVideoBtn.textContent = '正在预上传...';
+        elements.saveVideoBtn.disabled = true;
+
+        // 显示进度条
+        elements.progressBarTop.style.width = '0%';
+        elements.progressBarBottom.style.width = '0%';
+
+        elements.progressContainerTop.classList.remove('hidden')
+        elements.progressContainerBottom.classList.remove('hidden')
+
+        try {
+          // 执行预上传
+          await uploadBinary(state.currentFileId, state.currentUploadFile)
+          // 保存到待处理上传列表
+          state.pendingUploads.set(state.currentFileId, {
+            file: state.currentUploadFile,
+            uploaded: true
+          });
+
+          elements.saveVideoBtn.textContent = '保存视频';
+          elements.saveVideoBtn.disabled = false;
+
+        } catch (errer) {
+          alert(`预上传失败: ${error.message || '未知错误'}`);
+          return;
+        }
+
+      });
+
+      // 取消上传按钮
+      elements.cancelUploadBtn.addEventListener('click', () => {
+        elements.confirmModal.classList.remove('hidden');
+      });
+
+      // 确认取消对话框 - 继续编辑
+      elements.confirmCancelBtn.addEventListener('click', () => {
+        elements.confirmModal.classList.add('hidden');
+      });
+
+      // 确认取消对话框 - 确认取消
+      elements.confirmOkBtn.addEventListener('click', () => {
+        // 标记取消后续上传
+        state.cancelUpload = true
+
+        // 初始化上传浮框内容
+        initUploadModal();
+
+        // 关闭对话框
+        elements.confirmModal.classList.add('hidden');
+        elements.uploadModal.classList.add('hidden');
+      });
+
+      // 保存视频按钮
+      elements.saveVideoBtn.addEventListener('click', saveVideo);
+
+      // 模态框外部点击关闭
+      elements.uploadModal.addEventListener('click', (e) => {
+        if (e.target === elements.uploadModal && state.currentUploadFile) {
+          elements.confirmModal.classList.remove('hidden');
+        }
+      });
+
+      elements.confirmModal.addEventListener('click', (e) => {
+        if (e.target === elements.confirmModal) {
+          elements.confirmModal.classList.add('hidden');
+        }
+      });
+
+      // 浮框中添加标签按钮
+      elements.addTagBtnModal.addEventListener('click', async () => {
+        const tagName = elements.newTagInputModal.value.trim();
+        if (tagName) {
+          try {
+            // 检查标签是否已存在
+            const existingTag = state.tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+            if (existingTag) {
+              // 已存在则直接选中
+              if (!state.selectedTagIdsForUpload.includes(existingTag.id)) {
+                state.selectedTagIdsForUpload.push(existingTag.id);
+              }
+              elements.newTagInputModal.value = '';
+              renderTagSelection();
+              return;
+            }
+
+
+
+            // 对不存在的标签进行添加
+            const newTag = await flutterChannel.addTag(tagName);
+            // 更新本地标签列表
+            state.tags.push(newTag);
+            state.selectedTagIdsForUpload.push(newTag.id);
+            // 清空输入框
+            elements.newTagInputModal.value = '';
+            // 重新渲染标签选择区域
+            renderTagSelection();
+          } catch (error) {
+            console.error('添加标签失败:', error);
+            alert(`添加标签失败: ${error.message || '未知错误'}`);
+          }
+        }
+      });
+
+      // 浮框中按Enter键添加标签
+      elements.newTagInputModal.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          elements.addTagBtnModal.click();
+        }
+      });
+
+      // 为每个视频卡片的删除按钮事件做绑定
+      document.querySelectorAll('.delete-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const videoId = btn.dataset.videoId;
+          document.querySelectorAll('.delete-menu').forEach(menu => {
+            menu.classList.add('hidden');
+          });
+          btn.nextElementSibling.classList.toggle('hidden');
+        });
+      });
+
+      // 点击页面其他区域隐藏所有删除菜单
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.delete-menu').forEach(menu => {
+          menu.classList.add('hidden');
+        });
+      })
+    }
+
+    // 工具函数：格式化时长
+    function formatDuration(seconds) {
+      if (!seconds) return '00:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 工具函数：格式化文件大小
+    function formatFileSize(bytes) {
+      if (bytes <= 0) return "0 B";
+      const suffixes = ["B", "KB", "MB", "GB", "TB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${suffixes[i]}`;
+    }
+
+    // 工具函数：格式化日期
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    }
+
+    // 工具函数：显示操作成功提示框
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    // 页面加载完成后初始化
+    window.addEventListener('DOMContentLoaded', init);
+
+    // 视频下载管理器 - 支持断点续传和分块下载
+    class VideoDownloader {
+      constructor(videoId, baseUrl) {
+        this.videoId = videoId;
+        this.baseUrl = baseUrl;
+        this.videoUrl = `${baseUrl}/videoStream/${videoId}`;
+        this.chunks = new Map(); // 存储已下载的分块
+        this.totalSize = 0;
+        this.worker = null;
+        this.isDownloading = false;
+      }
+
+      // 初始化下载 - 获取文件总大小
+      async init() {
+        try {
+          // 1. 明确发送 HEAD 请求（仅要头信息）
+          // console.log(`发送视频信息请求： ${this.videoUrl}`)
+          //   const response = await fetch(this.videoUrl, {
+          //     method: 'HEAD',
+          //     mode: 'cors', // 显式指定跨域模式（内网也需要）
+          //       credentials: 'omit', // 禁用凭证（避免跨域权限问题）
+          //     headers: {
+          //       'Origin': window.location.origin, // 显式声明请求源
+          //       'Cache-Control': 'no-cache', // 禁用缓存
+          //       'Pragma': 'no-cache',
+          //       'Accept': '*/*', // 匹配后端 Content-Type
+          //     },
+          //   });
+
+          // // const response = await fetch(this.videoUrl, { method: 'HEAD' });
+          // if (!response.ok) throw new Error('获取文件信息失败');
+          // console.log(response)
+          // console.log(`response.headers： ${response.headers}`)
+          // console.log(`response.status： ${response.status}`)
+          // this.totalSize = parseInt(response.headers.get('Content-Length'));
+          const fileSize = await flutterChannel.getVideoSize(this.videoId)
+          this.totalSize = fileSize['videoSize']
+          await this.loadCache(); // 加载缓存的分块
+          return this.totalSize;
+        } catch (error) {
+          console.error('初始化下载失败:', error);
+          throw error;
+        }
+      }
+
+      // 从Cache API加载缓存的分块
+      async loadCache() {
+        if (!('caches' in window)) return;
+
+        const cache = await caches.open(`video_${this.videoId}`);
+        const keys = await cache.keys();
+
+        for (const key of keys) {
+          if (key.url.startsWith(this.videoUrl) && key.headers.get('Range')) {
+            const range = key.headers.get('Range').match(/bytes=(\d+)-(\d*)/);
+            if (range) {
+              const start = parseInt(range[1]);
+              const end = range[2] ? parseInt(range[2]) : this.totalSize - 1;
+              const response = await cache.match(key);
+              const blob = await response.blob();
+              this.chunks.set(start, { end, blob });
+            }
+          }
+        }
+      }
+
+      // 计算分块大小（根据设备类型）
+      getChunkSize() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isIPhoneSafari = /iphone|ipod/.test(userAgent) &&
+          /safari/.test(userAgent) &&
+          !/chrome|edge|firefox/.test(userAgent);
+
+        if (isIPhoneSafari) {
+          if (this.totalSize <= 25 * 1024 * 1024) return 256 * 1024; // 256KB
+          if (this.totalSize <= 50 * 1024 * 1024) return 512 * 1024; // 512KB
+          if (this.totalSize <= 100 * 1024 * 1024) return 1 * 1024 * 1024; // 1MB
+          return 2 * 1024 * 1024; // 2MB
+        } else {
+          return this.totalSize <= 100 * 1024 * 1024 ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+        }
+      }
+
+      // 开始下载
+      startDownload(onProgress) {
+        if (this.isDownloading) return;
+        this.isDownloading = true;
+
+        // 创建Web Worker处理分块下载
+        this.worker = new Worker('download-worker.js');
+
+        // 向Worker发送初始化信息
+        this.worker.postMessage({
+          type: 'init',
+          videoUrl: this.videoUrl,
+          totalSize: this.totalSize,
+          chunkSize: this.getChunkSize(),
+          cachedChunks: Array.from(this.chunks.entries()).map(([start, data]) => ({
+            start,
+            end: data.end
+          })),
+          isAndroidTablet: /android/.test(navigator.userAgent.toLowerCase()) &&
+            screen.width >= 768
+        });
+
+        // 监听Worker消息
+        this.worker.onmessage = (e) => {
+          switch (e.data.type) {
+            case 'progress':
+              onProgress(e.data.progress);
+              break;
+            case 'chunk':
+              this.saveChunk(e.data.start, e.data.end, e.data.blob);
+              break;
+            case 'complete':
+              this.completeDownload();
+              break;
+            case 'error':
+              console.error('下载错误:', e.data.error);
+              this.isDownloading = false;
+              break;
+          }
+        };
+      }
+
+      // 保存分块到缓存
+      async saveChunk(start, end, blob) {
+        this.chunks.set(start, { end, blob });
+
+        // 保存到Cache API
+        if ('caches' in window) {
+          const cache = await caches.open(`video_${this.videoId}`);
+          const request = new Request(this.videoUrl, {
+            headers: { 'Range': `bytes=${start}-${end}` }
+          });
+          const response = new Response(blob, {
+            status: 206,
+            headers: {
+              'Content-Range': `bytes ${start}-${end}/${this.totalSize}`,
+              'Content-Type': 'application/octet-stream'
+            }
+          });
+          await cache.put(request, response);
+        }
+      }
+
+      // 完成下载并合并文件
+      async completeDownload() {
+        this.isDownloading = false;
+        this.worker.terminate();
+
+        // 按顺序合并分块
+        const sortedChunks = Array.from(this.chunks.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([_, data]) => data.blob);
+
+        const videoBlob = new Blob(sortedChunks, { type: 'video/mp4' });
+        const url = URL.createObjectURL(videoBlob);
+
+        // 触发下载
+        elements.downloadBtn.innerHTML = `<i class="fa fa-download mr-1"></i>下载完成`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video_${this.videoId}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          this.cleanupCache(); // 清理缓存
+        }, 1000);
+      }
+
+      // 清理缓存
+      async cleanupCache() {
+        if ('caches' in window) {
+          await caches.delete(`video_${this.videoId}`);
+        }
+      }
+
+      // 取消下载
+      cancel() {
+        if (this.worker) {
+          this.worker.terminate();
+        }
+        this.isDownloading = false;
+      }
+    }
+  </script>
+</body>
+
+</html>
