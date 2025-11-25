@@ -85,10 +85,6 @@
     </Filter>
     <FolderPairs>
         <Pair>
-            <Left>E:\Flutter_Projects\video_manager_app\web</Left>
-            <Right>E:\Flutter_Projects\video_manager_app\build\web</Right>
-        </Pair>
-        <Pair>
             <Left>E:\Flutter_Projects\video_manager_app_code</Left>
             <Right>E:\Flutter_Projects\video_manager_app</Right>
         </Pair>

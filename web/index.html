@@ -1123,22 +1123,27 @@
       const titleWithoutExt = elements.videoTitle.value.trim(); // 使用用户输入的标题（已去除扩展名）
 
       try {
-        // 完成上传
-        const result = await flutterChannel.completeBinaryUpload(
+        // 完成上传（不等待后端转换任务）
+        flutterChannel.completeBinaryUpload(
           state.currentFileId,
           state.currentUploadFile.name, // 保留原始文件名用于存储
           duration,
           state.selectedTagIdsForUpload,
           elements.videoRemark.value.trim(),
           titleWithoutExt  // 使用不带后缀的标题
-        );
-        console.log('视频上传完成:', result);
+        ).then(result => {
+          console.log('视频上传完成（后台转换中）:', result);
+          showToast('视频上传成功（后台转换中）');
+        }).catch(error => {
+          console.error('上传失败:', error);
+          alert(`上传失败: ${error.message || '未知错误'}`);
+        });
 
-        // 刷新列表并重置状态
+        // 刷新列表并重置状态（不等待转换完成）
         await loadVideos();
         state.selectedTagIdsForUpload = [];
         elements.uploadModal.classList.add('hidden');
-        showToast('视频上传成功');
+        showToast('视频上传完成（后台处理中）');
         elements.videoPreview.src = '';
         URL.revokeObjectURL(elements.videoPreview.src);
       } catch (error) {

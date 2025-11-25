@@ -15,15 +15,24 @@ import 'package:path/path.dart' as p;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
-import 'web_api_handler.dart';
-import '../utils/storage_utils.dart'; // 新增导入
-import 'database_export_service.dart'; // 新增导入
-import '../repositories/video_repository.dart'; // 新增导入
-import '../repositories/tag_repository.dart'; // 新增导入
-// import '../providers/tag_provider.dart';
-// import '../providers/video_provider.dart';
-// import 'package:provider/provider.dart';
-// import 'package:video_manager_app/main.dart';
+import 'web_api_handler.dart';
+
+import '../utils/storage_utils.dart'; // 新增导入
+
+import 'database_export_service.dart'; // 新增导入
+
+import '../repositories/video_repository.dart'; // 新增导入
+
+import '../repositories/tag_repository.dart'; // 新增导入
+
+// import '../providers/tag_provider.dart';
+
+// import '../providers/video_provider.dart';
+
+// import 'package:provider/provider.dart';
+
+// import 'package:video_manager_app/main.dart';
+
 // import 'package:video_manager_app/models/video.dart';
 
 // 消息类型枚举
@@ -135,7 +144,7 @@ class ServerService with ChangeNotifier {
   // 新增方法：记录消息日志
   void _logMessage(String? clientId, String type, dynamic data) {
     if (clientId == null) return; // 如果clientId为空，则不记录日志
-    
+
     _messageLogs.add(MessageLog(
       clientId: clientId,
       type: type,
@@ -514,7 +523,7 @@ class ServerService with ChangeNotifier {
 
     // 从请求参数获取客户端ID（如果有的话）
     String? clientId = request.url.queryParameters['clientId'];
-    
+
     // 如果没有提供客户端ID，则生成一个临时ID
     if (clientId == null || clientId.isEmpty) {
       // 改进临时ID生成，确保唯一性
@@ -602,8 +611,9 @@ class ServerService with ChangeNotifier {
       if (messageJson['action'] == 'uploadBinaryChunk') {
         _pendingBinaryRequests[clientId] = messageJson;
       }
-
-      print('收到客户端【 $clientId 】发来指令: $messageJson');
+      if (messageJson['action'] != 'uploadBinaryChunk') {
+        print('收到客户端【 $clientId 】发来指令: $messageJson');
+      }
       // 记录消息日志
       _logMessage(clientId, messageJson['action'] ?? 'unknown', messageJson);
 
@@ -884,42 +894,55 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  void setPort(int newPort) {
-    if (newPort < 1024 || newPort > 65535) {
-      throw Exception("端口必须在1024-65535范围内");
-    }
-    _port = newPort;
-    notifyListeners();
-  }
-
-  // 导出数据库
-  Future<String> exportDatabase() async {
-    // 导入需要的类
-    final videoRepo = VideoRepository();
-    final tagRepo = TagRepository();
-    final exportService = DatabaseExportService(videoRepo, tagRepo);
-
-    try {
-      return await exportService.exportDatabaseToFile();
-    } catch (e) {
-      print('导出数据库失败: $e');
-      rethrow;
-    }
-  }
-
-  // 导入数据库
-  Future<void> importDatabase(String filePath) async {
-    // 导入需要的类
-    final videoRepo = VideoRepository();
-    final tagRepo = TagRepository();
-    final exportService = DatabaseExportService(videoRepo, tagRepo);
-
-    try {
-      await exportService.importDatabaseFromFile(filePath);
-      notifyListeners(); // 通知UI更新
-    } catch (e) {
-      print('导入数据库失败: $e');
-      rethrow;
-    }
+  void setPort(int newPort) {
+    if (newPort < 1024 || newPort > 65535) {
+      throw Exception("端口必须在1024-65535范围内");
+    }
+
+    _port = newPort;
+
+    notifyListeners();
+  }
+
+  // 导出数据库
+
+  Future<String> exportDatabase() async {
+    // 导入需要的类
+
+    final videoRepo = VideoRepository();
+
+    final tagRepo = TagRepository();
+
+    final exportService = DatabaseExportService(videoRepo, tagRepo);
+
+    try {
+      return await exportService.exportDatabaseToFile();
+    } catch (e) {
+      print('导出数据库失败: $e');
+
+      rethrow;
+    }
+  }
+
+  // 导入数据库
+
+  Future<void> importDatabase(String filePath) async {
+    // 导入需要的类
+
+    final videoRepo = VideoRepository();
+
+    final tagRepo = TagRepository();
+
+    final exportService = DatabaseExportService(videoRepo, tagRepo);
+
+    try {
+      await exportService.importDatabaseFromFile(filePath);
+
+      notifyListeners(); // 通知UI更新
+    } catch (e) {
+      print('导入数据库失败: $e');
+
+      rethrow;
+    }
   }
 }

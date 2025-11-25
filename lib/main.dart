@@ -1,50 +1,50 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:video_manager_app/services/server_service.dart';
-// import 'package:hive_flutter/hive_flutter.dart';
-import 'services/hive_service.dart';
-import 'providers/video_provider.dart';
-import 'providers/tag_provider.dart';
-import 'ui/pages/home_page.dart';
-import 'utils/file_utils.dart'; // 引入文件工具类
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:video_manager_app/services/server_service.dart';
+// import 'package:hive_flutter/hive_flutter.dart';
+import 'services/hive_service.dart';
+import 'providers/video_provider.dart';
+import 'providers/tag_provider.dart';
+import 'ui/pages/home_page.dart';
+import 'utils/file_utils.dart'; // 引入文件工具类
 import 'utils/storage_utils.dart'; // 引入存储工具类
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // 确保添加这行
-  // 初始化新的存储目录
-  await StorageUtils.init();
-  // 初始化Hive数据库
-  await HiveService.init();
-
-  // 初始化时生成所有视频的缩略图（如果缺失）
-  final tagProvider = TagProvider()..loadTags();
-  final videoProvider = VideoProvider()..loadVideos();
-  final serverService = ServerService();
-
-  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
-
-  final videoPaths = videoProvider.videos
-      .where((v) => v.thumbnailPath == null)
-      .map((v) => v.filePath)
-      .toList();
-  if (videoPaths.isNotEmpty) {
-    await FileUtils.generateThumbnailsForVideos(videoPaths);
-    // 重新加载视频列表（更新缩略图路径）
-    videoProvider.loadVideos();
-  }
-
-  // runApp(const MyApp());
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: videoProvider), // 使用已创建的实例
-        ChangeNotifierProvider.value(value: tagProvider), // 使用已创建的实例
-        ChangeNotifierProvider.value(value: serverService), // 使用已初始化的实例
-      ],
-      child: const MyApp(),
-    ),
-  );
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // 确保添加这行
+  // 初始化新的存储目录
+  await StorageUtils.init();
+  // 初始化Hive数据库
+  await HiveService.init();
+
+  // 初始化时生成所有视频的缩略图（如果缺失）
+  final tagProvider = TagProvider()..loadTags();
+  final videoProvider = VideoProvider()..loadVideos();
+  final serverService = ServerService();
+
+  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
+
+  final videoPaths = videoProvider.videos
+      .where((v) => v.thumbnailPath == null)
+      .map((v) => v.filePath)
+      .toList();
+  if (videoPaths.isNotEmpty) {
+    await FileUtils.generateThumbnailsForVideos(videoPaths);
+    // 重新加载视频列表（更新缩略图路径）
+    videoProvider.loadVideos();
+  }
+
+  // runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: videoProvider), // 使用已创建的实例
+        ChangeNotifierProvider.value(value: tagProvider), // 使用已创建的实例
+        ChangeNotifierProvider.value(value: serverService), // 使用已初始化的实例
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 // 全局导航键，用于在非组件上下文中访问Provider
@@ -81,7 +81,7 @@ class MyApp extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ),
+        ),
         home: HomePage(),
       ),
     );

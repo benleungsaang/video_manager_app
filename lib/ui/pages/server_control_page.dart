@@ -1,13 +1,9 @@
 import 'dart:convert';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
-
 import 'package:provider/provider.dart';
-
 import 'package:video_manager_app/main.dart';
-
 import 'package:file_picker/file_picker.dart'; // 新增导入
-
 import '../../services/server_service.dart';
 
 class ServerControlPage extends StatefulWidget {
@@ -324,16 +320,24 @@ class _ServerControlPageState extends State<ServerControlPage> {
                                 await serverService.importDatabase(filePath);
 
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('数据库导入成功')),
+                                  // 显示成功信息
+                                  final snackBar = SnackBar(
+                                    content: Text('数据库导入成功'),
+                                    backgroundColor: Colors.green,
+                                    duration: const Duration(seconds: 3),
                                   );
+                                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
                                 }
                               }
                             } catch (e) {
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('导入失败: $e')),
+                                // 显示错误信息
+                                final snackBar = SnackBar(
+                                  content: Text('导入失败: $e'),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 3),
                                 );
+                                ScaffoldMessenger.of(context).showSnackBar(snackBar);
                               }
                             }
                           },
@@ -725,4 +729,16 @@ String _getDeviceSummary(Map<String, String> devices) {
     counts[device] = (counts[device] ?? 0) + 1;
   }
   return counts.entries.map((e) => '${e.key} ${e.value}台').join('，');
+}
+
+// 格式化Duration为可读字符串
+String _formatDuration(Duration? duration) {
+  if (duration == null) return '00:00:00.0';
+
+  String twoDigits(int n) => n.toString().padLeft(2, '0');
+  String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+  String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+  String threeDigitMilliseconds = (duration.inMilliseconds.remainder(1000) ~/ 100).toString();
+
+  return "${twoDigits(duration.inHours)}:${twoDigitMinutes}:${twoDigitSeconds}.${threeDigitMilliseconds}";
 }

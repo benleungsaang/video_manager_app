@@ -6,7 +6,7 @@ class ToastUtils {
   static void showSuccess(String message) {
     Fluttertoast.showToast(
       msg: message,
-      toastLength: Toast.LENGTH_SHORT, // 2秒后自动消失
+      toastLength: Toast.LENGTH_LONG, // 3.5秒后自动消失
       gravity: ToastGravity.CENTER,
       backgroundColor: Colors.green,
       textColor: Colors.white,
