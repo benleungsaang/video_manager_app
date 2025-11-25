@@ -26,7 +26,7 @@ import 'dart:convert';
 
 import '../utils/storage_utils.dart'; // 新增导入
 
-import 'video_compression_service.dart'; // 视频压缩服务
+// import 'video_compression_service.dart'; // 视频压缩服务
 
 // 二进制分块上传类
 class UploadingFile {
@@ -369,7 +369,7 @@ class WebApiHandler {
 
     // 获取压缩参数，默认为完全压缩
 
-    final String compressMode = params['compressMode'] ?? 'full';
+    // final String compressMode = params['compressMode'] ?? 'full';
 
     // 获取标题（如果没有提供则使用文件名，但去掉扩展名）
 
@@ -430,7 +430,7 @@ class WebApiHandler {
     _uploadingFiles.remove(fileId);
 
     // 异步执行压缩和后续处理，不阻塞前端响应
-    _processVideoInBackground(pendingVideo, compressMode).then((processedVideo) {
+    _processVideoInBackground(pendingVideo).then((processedVideo) {
       if (processedVideo != null) {
         // 更新数据库中的视频信息
         _videoProvider.saveVideo(processedVideo).then((_) {
@@ -449,41 +449,42 @@ class WebApiHandler {
   }
 
   // 异步处理视频压缩和生成缩略图等后台任务
-  Future<Video?> _processVideoInBackground(Video pendingVideo, String compressMode) async {
+  Future<Video?> _processVideoInBackground(Video pendingVideo) async {
     try {
       String finalVideoFilePath = pendingVideo.filePath!;
 
-      // 根据压缩参数处理视频
-      if (compressMode == 'full' || compressMode == 'original') {
-        // 检查FFmpeg是否可用
-        if (await VideoCompressionService.isFFmpegAvailable()) {
-          print('开始对视频进行压缩，模式: $compressMode, 路径: $finalVideoFilePath');
+      // // 根据压缩参数处理视频
+      // if (compressMode == 'full' || compressMode == 'original') {
+      //   // 检查FFmpeg是否可用
+      //   if (await VideoCompressionService.isFFmpegAvailable()) {
+      //     print('开始对视频进行压缩，模式: $compressMode, 路径: $finalVideoFilePath');
 
-          final compressedPath = await VideoCompressionService.compressVideo(
-            inputPath: finalVideoFilePath,
-            compressionMode: compressMode,
-          );
+      //     final compressedPath = await VideoCompressionService.compressVideo(
+      //       inputPath: finalVideoFilePath,
+      //       compressionMode: compressMode,
+      //     );
 
-          if (compressedPath != null) {
-            // 压缩成功，使用压缩后的文件
-            finalVideoFilePath = compressedPath;
-            print('视频压缩完成，新文件路径: $compressedPath');
-          } else {
-            print('视频压缩失败，使用原始文件');
-            // 如果压缩失败，确保原始文件仍然存在
-            final originalFile = File(finalVideoFilePath);
-            if (!await originalFile.exists()) {
-              print('原始视频文件不存在或已被删除');
-              return null;
-            }
-          }
-        } else {
-          print('FFmpeg不可用，跳过视频压缩');
-        }
-      }
+      //     if (compressedPath != null) {
+      //       // 压缩成功，使用压缩后的文件
+      //       finalVideoFilePath = compressedPath;
+      //       print('视频压缩完成，新文件路径: $compressedPath');
+      //     } else {
+      //       print('视频压缩失败，使用原始文件');
+      //       // 如果压缩失败，确保原始文件仍然存在
+      //       final originalFile = File(finalVideoFilePath);
+      //       if (!await originalFile.exists()) {
+      //         print('原始视频文件不存在或已被删除');
+      //         return null;
+      //       }
+      //     }
+      //   } else {
+      //     print('FFmpeg不可用，跳过视频压缩');
+      //   }
+      // }
 
       // 生成缩略图
-      final thumbNailPath = await FileUtils.generateVideoThumbnail(finalVideoFilePath);
+      final thumbNailPath =
+          await FileUtils.generateVideoThumbnail(finalVideoFilePath);
 
       // 获取最终文件大小
       final File finalVideoFile = File(finalVideoFilePath);
