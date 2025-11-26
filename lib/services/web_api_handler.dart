@@ -180,17 +180,16 @@ class WebApiHandler {
           };
         case 'updateVideo':
           // 处理视频更新
-          final Map<String, dynamic> params = request['params']['video'] ?? {};
-          final int duration = params['duration']; // 假设前端传入视频时长
-          final String? filePath = params['filePath'];
-          final int? fileSize = params['fileSize']; // 假设前端传入文件大小
-          final String id = params['id'];
-          final List<String> tagIds =
-              List<String>.from(params['tagIds'] ?? []); // 标签ID列表
-          final String? thumbnailPath = params['thumbnailPath'];
-          final String title = params['title'];
-          final String uploadTime = params['uploadTime'];
-          final String remark = params['remark'] ?? ''; // 备注信息
+          final Map<String, dynamic> videoData = request['params']['video'] ?? {};
+          final String id = videoData['id'];
+          final String title = videoData['title'];
+          final String? filePath = videoData['filePath'];
+          final int? fileSize = videoData['fileSize']; // 假设前端传入文件大小
+          final List<String> tagIds = List<String>.from(videoData['tagIds'] ?? []); // 标签ID列表
+          final String? thumbnailPath = videoData['thumbnailPath'];
+          final String uploadTime = videoData['uploadTime'];
+          final int? duration = videoData['duration']; // 假设前端传入视频时长
+          final String remark = videoData['remark'] ?? ''; // 备注信息
 
           // 获取现有视频以获取未更新的字段
           final existingVideo = _videoProvider.getVideoById(id);
@@ -204,12 +203,12 @@ class WebApiHandler {
             title: title,
             remark: remark,
             filePath: filePath ?? existingVideo.filePath,
-            duration: duration,
+            duration: duration ?? existingVideo.duration,
             fileSize: fileSize ?? existingVideo.fileSize,
-            uploadTime:
-                DateTime.tryParse(uploadTime) ?? existingVideo.uploadTime,
+            uploadTime: DateTime.parse(uploadTime),
             tagIds: tagIds,
             thumbnailPath: thumbnailPath ?? existingVideo.thumbnailPath,
+            transcode: existingVideo.transcode, // 保留现有转码状态
           );
 
           // 保存视频（这会自动处理标签计数的更新）
@@ -328,27 +327,13 @@ class WebApiHandler {
   // 转换Tag为JSON格式
 
   Map<String, dynamic> _tagToJson(Tag tag) {
-    return {
-      'id': tag.id,
-      'name': tag.name,
-      'videoCount': tag.videoCount,
-    };
+    return tag.toJson();
   }
 
   // 转换Video为JSON格式
 
   Map<String, dynamic> _videoToJson(Video video) {
-    return {
-      'id': video.id,
-      'title': video.title,
-      'filePath': video.filePath,
-      'thumbnailPath': video.thumbnailPath,
-      'tagIds': video.tagIds,
-      'uploadTime': video.uploadTime.toIso8601String(),
-      'fileSize': video.fileSize,
-      'duration': video.duration,
-      'remark': video.remark
-    };
+    return video.toJson();
   }
 
   // 处理二进制上传完成

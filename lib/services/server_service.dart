@@ -421,9 +421,12 @@ class ServerService with ChangeNotifier {
       if (request.method == 'HEAD') {
         final _fileSize = video.fileSize.toString();
         print('fileSize inside: ${_fileSize}');
+        // 根据文件扩展名确定Content-Type
+        final fileExtension = file.path.split('.').last.toLowerCase();
+        final contentType = _getVideoContentType(fileExtension);
         final headers = {
           'Content-Length': _fileSize,
-          'Content-Type': 'application/octet-stream',
+          'Content-Type': contentType,
           'Accept-Ranges': 'bytes',
           'Cache-Control': 'public, max-age=3600',
           // 跨域配置
@@ -471,6 +474,10 @@ class ServerService with ChangeNotifier {
       end = end > fileLength - 1 ? fileLength - 1 : end;
       final contentLength = end - start + 1;
 
+      // 根据文件扩展名确定Content-Type
+      final fileExtension = file.path.split('.').last.toLowerCase();
+      final contentType = _getVideoContentType(fileExtension);
+
       // 打开文件为随机访问流（支持跳转到指定位置读取，避免加载整个文件）
       final raf = await file.open(mode: FileMode.read);
       await raf.setPosition(start); // 跳转到 Range 指定的起始位置
@@ -502,7 +509,7 @@ class ServerService with ChangeNotifier {
         rangeHeader != null ? 206 : 200, // 206：Partial Content（分块响应）；200：完整响应
         body: stream, // 响应体为流式数据（避免内存溢出）
         headers: {
-          'Content-Type': 'application/octet-stream', // 兼容下载和播放
+          'Content-Type': contentType, // 使用根据文件扩展名确定的类型
           'Content-Length': contentLength.toString(), // 当前分块的字节数
           'Content-Range': 'bytes $start-$end/$fileLength', // 告知客户端当前分块的范围和总长度
           'Accept-Ranges': 'bytes', // 再次声明支持 Range 请求
@@ -943,6 +950,34 @@ class ServerService with ChangeNotifier {
       print('导入数据库失败: $e');
 
       rethrow;
+    }
+  }
+
+  // 根据文件扩展名获取视频的Content-Type
+  String _getVideoContentType(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'mp4':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case 'webm':
+        return 'video/webm';
+      case 'ogg':
+        return 'video/ogg';
+      case 'avi':
+        return 'video/x-msvideo';
+      case 'wmv':
+        return 'video/x-ms-wmv';
+      case 'flv':
+        return 'video/x-flv';
+      case 'm4v':
+        return 'video/x-m4v';
+      case '3gp':
+        return 'video/3gpp';
+      case 'mkv':
+        return 'video/x-matroska';
+      default:
+        return 'application/octet-stream'; // 默认类型
     }
   }
 }

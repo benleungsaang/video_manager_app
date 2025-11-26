@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import '../../models/video.dart';
 
 import 'package:provider/provider.dart';
 
@@ -21,6 +25,7 @@ import '../../providers/video_provider.dart';
 import '../../models/transcode_task.dart';
 import '../../providers/transcode_provider.dart';
 import '../widgets/transcode_queue_panel.dart';
+import '../widgets/file_replace_dialog.dart';
 
 class HomePage extends StatefulWidget {
   final String? initialSearchKeyword; // 添加初始搜索关键字参数
@@ -226,6 +231,171 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // 显示文件替换对话框
+  void _showFileReplaceDialog() async {
+    // 扫描当前目录中的unTransCode和Soonwin文件
+    String currentDirPath = '';
+    try {
+      // 获取当前视频文件路径的目录
+      final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+      if (videoProvider.videos.isNotEmpty) {
+        String firstVideoPath = videoProvider.videos.first.filePath;
+        currentDirPath = firstVideoPath.substring(0, firstVideoPath.lastIndexOf('/'));
+      }
+    } catch (e) {
+      print('获取当前目录失败: $e');
+    }
+
+    if (currentDirPath.isEmpty) {
+      // 如果无法从视频中获取目录，则使用应用文档目录
+      try {
+        final directory = await path_provider.getApplicationDocumentsDirectory();
+        currentDirPath = directory.path;
+      } catch (e) {
+        print('获取应用文档目录失败: $e');
+        return;
+      }
+    }
+
+    // 扫描文件
+    final unTransCodeFiles = <String>[];
+    final soonwinFiles = <String>[];
+
+    try {
+      final dir = Directory(currentDirPath);
+      if (await dir.exists()) {
+        await for (final entity in dir.list()) {
+          if (entity is File) {
+            String fileName = p.basename(entity.path);
+            if (fileName.startsWith('unTransCode_')) {
+              unTransCodeFiles.add(entity.path);
+            } else if (fileName.startsWith('Soonwin_')) {
+              soonwinFiles.add(entity.path);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('扫描目录失败: $e');
+    }
+
+    // 配对文件
+    final filePairs = <Map<String, String>>[];
+    for (final unTransCodeFile in unTransCodeFiles) {
+      String unTransCodeFileName = p.basename(unTransCodeFile);
+      String baseName = unTransCodeFileName.substring('unTransCode_'.length); // 获取基础名称
+
+      // 寻找对应的Soonwin文件
+      String targetSoonwinFileName = 'Soonwin_$baseName';
+      String? soonwinFile = soonwinFiles.firstWhere(
+        (file) => p.basename(file) == targetSoonwinFileName,
+        orElse: () => '',
+      );
+
+      if (soonwinFile.isNotEmpty) {
+        filePairs.add({
+          'unTransCode': unTransCodeFile,
+          'Soonwin': soonwinFile,
+        });
+      }
+    }
+
+    // 显示对话框
+    if (filePairs.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => FileReplaceDialog(
+          filePairs: filePairs,
+          onReplace: (selectedPairs) => _performFileReplacement(selectedPairs),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('提示'),
+          content: const Text('未找到匹配的 unTransCode_ 和 Soonwin_ 文件对'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // 执行文件替换
+  Future<void> _performFileReplacement(List<Map<String, String>> selectedPairs) async {
+    final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+    List<String> errors = [];
+
+    for (final pair in selectedPairs) {
+      String unTransCodeFile = pair['unTransCode']!;
+      String soonwinFile = pair['Soonwin']!;
+      String unTransCodeFileName = p.basename(unTransCodeFile);
+      String baseName = unTransCodeFileName.substring('unTransCode_'.length);
+
+      try {
+        // 找到对应的视频对象
+        Video? targetVideo;
+        for (final video in videoProvider.videos) {
+          String videoFileName = p.basename(video.filePath);
+          if (videoFileName == unTransCodeFileName) {
+            targetVideo = video;
+            break;
+          }
+        }
+
+        if (targetVideo != null) {
+          // 更新视频对象的filePath
+          Video updatedVideo = Video(
+            id: targetVideo.id,
+            title: targetVideo.title,
+            filePath: soonwinFile,
+            fileSize: targetVideo.fileSize,
+            tagIds: targetVideo.tagIds,
+            remark: targetVideo.remark,
+            transcode: targetVideo.transcode,
+            uploadTime: targetVideo.uploadTime,
+            duration: targetVideo.duration,
+            thumbnailPath: targetVideo.thumbnailPath,
+          );
+
+          await videoProvider.saveVideo(updatedVideo);
+
+          // 删除原unTransCode文件
+          File(unTransCodeFile).delete();
+        } else {
+          errors.add('未找到视频对象对应: $unTransCodeFileName');
+        }
+      } catch (e) {
+        errors.add('处理文件对 $baseName 时出错: $e');
+      }
+    }
+
+    // 显示结果
+    String resultMessage = '文件替换完成！';
+    if (errors.isNotEmpty) {
+      resultMessage += '\n\n错误:\n${errors.join('\n')}';
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('替换结果'),
+        content: Text(resultMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -273,9 +443,15 @@ class _HomePageState extends State<HomePage> {
             ),
           ] else ...[
             IconButton(
-              icon: const Icon(Icons.select_all, color: Colors.white),
-              onPressed: _toggleMultiSelectMode,
-              tooltip: '多选模式',
+              icon: const Icon(Icons.cloud, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ServerControlPage(),
+                  ),
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.add, color: Colors.white),
@@ -308,15 +484,14 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.cloud, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ServerControlPage(),
-                  ),
-                );
-              },
+              icon: const Icon(Icons.swap_horiz, color: Colors.white),
+              onPressed: _showFileReplaceDialog,
+              tooltip: '文件替换',
+            ),
+            IconButton(
+              icon: const Icon(Icons.select_all, color: Colors.white),
+              onPressed: _toggleMultiSelectMode,
+              tooltip: '多选模式',
             ),
           ],
         ],

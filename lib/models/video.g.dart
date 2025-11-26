@@ -22,6 +22,7 @@ class VideoAdapter extends TypeAdapter<Video> {
       fileSize: fields[3] as int,
       tagIds: (fields[4] as List?)?.cast<String>(),
       remark: fields[5] as String?,
+      transcode: fields[9] as String?,
       uploadTime: fields[6] as DateTime?,
       duration: fields[7] as int?,
       thumbnailPath: fields[8] as String?,
@@ -32,7 +33,7 @@ class VideoAdapter extends TypeAdapter<Video> {
   @override
   void write(BinaryWriter writer, Video obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class VideoAdapter extends TypeAdapter<Video> {
       ..writeByte(7)
       ..write(obj.duration)
       ..writeByte(8)
-      ..write(obj.thumbnailPath);
+      ..write(obj.thumbnailPath)
+      ..writeByte(9)
+      ..write(obj.transcode);
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:video_manager_app/services/server_service.dart';
 // import 'package:hive_flutter/hive_flutter.dart';
 import 'services/hive_service.dart';
+import 'services/thumbnail_service.dart';
 import 'providers/video_provider.dart';
 import 'providers/tag_provider.dart';
 import 'providers/transcode_provider.dart';
@@ -18,22 +19,17 @@ void main() async {
   // 初始化Hive数据库
   await HiveService.init();
 
-  // 初始化时生成所有视频的缩略图（如果缺失）
+  // 初始化Provider实例
   final tagProvider = TagProvider()..loadTags();
   final videoProvider = VideoProvider()..loadVideos();
+  final transcodeProvider = TranscodeProvider();
   final serverService = ServerService();
 
-  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
+  // 初始化缩略图服务并生成缺失的缩略图
+  final thumbnailService = ThumbnailService(videoProvider);
+  await thumbnailService.generateMissingThumbnails();
 
-  final videoPaths = videoProvider.videos
-      .where((v) => v.thumbnailPath == null)
-      .map((v) => v.filePath)
-      .toList();
-  if (videoPaths.isNotEmpty) {
-    await FileUtils.generateThumbnailsForVideos(videoPaths);
-    // 重新加载视频列表（更新缩略图路径）
-    videoProvider.loadVideos();
-  }
+  // serverService.initApiHandler(tagProvider, videoProvider); // 关联中转层
 
   // runApp(const MyApp());
   runApp(
@@ -41,9 +37,10 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: videoProvider), // 使用已创建的实例
         ChangeNotifierProvider.value(value: tagProvider), // 使用已创建的实例
+        ChangeNotifierProvider.value(value: transcodeProvider), // 使用已创建的实例
         ChangeNotifierProvider.value(value: serverService), // 使用已初始化的实例
       ],
-      child: const MyApp(),
+      child: MyApp(),
     ),
   );
 }
@@ -57,35 +54,23 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 用于同时注册多个状态管理器（Provider），使整个应用可以共享这些状态。
-    return MultiProvider(
-      providers: [
-        // ChangeNotifierProvider：具体的状态提供者，将VideoProvider和TagProvider实例注入到应用中
-        // 注册后，应用中任何子组件都可以通过Provider.of<VideoProvider>(context)获取视频数据，实现跨组件数据共享。
-        // 主要共享以下核心状态：
-        // 【视频/标签】 列表：通过 List<Tag> _tags 存储所有标签数据（包括标签名称、ID、关联视频数量等），可通过 tags 属性获取。
-        // 【视频/标签】 操作能力：提供加载、创建、更新、删除标签的方法（如 createTag()、deleteTag() 等），子组件调用后会同步更新全局状态。
-        ChangeNotifierProvider(create: (_) => VideoProvider()..loadVideos()),
-        ChangeNotifierProvider(create: (_) => TagProvider()..loadTags()),
-        ChangeNotifierProvider(create: (_) => TranscodeProvider()),
-        // ChangeNotifierProvider(create: (_) => ServerService()),
-      ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey, // 配置全局key
-        title: '视频管理APP',
-        theme: ThemeData(
-          primarySwatch: Colors.indigo,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          // 平板适配主题
-          appBarTheme: const AppBarTheme(
-            toolbarHeight: 60,
-            titleTextStyle: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+    // 所有Provider实例已在main()函数中创建，通过MultiProvider传递，避免重复创建
+    return MaterialApp(
+      navigatorKey: navigatorKey, // 配置全局key
+      title: '视频管理APP',
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        // 平板适配主题
+        appBarTheme: const AppBarTheme(
+          toolbarHeight: 60,
+          titleTextStyle: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        home: HomePage(),
       ),
+      home: HomePage(),
     );
   }
 }

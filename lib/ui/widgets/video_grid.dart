@@ -124,8 +124,8 @@ class VideoGrid extends StatelessWidget {
                                 children: [
                                   // 标题
                                   Text(
-                                    video.title.length > 20
-                                        ? '${video.title.substring(0, 20)} . . .'
+                                    video.title.length > 10
+                                        ? '${video.title.substring(0, 10)}...'
                                         : video.title,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
@@ -153,8 +153,8 @@ class VideoGrid extends StatelessWidget {
                                 children: [
                                   Text(
                                     // 原始文件名
-                                    video.filePath.split('/').last.length > 35
-                                        ? '${video.filePath.split('/').last.substring(0, 35)} . . .'
+                                    video.filePath.split('/').last.length > 30
+                                        ? '${video.filePath.split('/').last.substring(0, 30)} . . .'
                                         : video.filePath.split('/').last,
                                     textAlign: TextAlign.left,
                                     style: TextStyle(

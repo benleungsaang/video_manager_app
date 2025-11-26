@@ -62,26 +62,12 @@ class DatabaseExportService {
 
   // 将Video对象转换为Map
   Map<String, dynamic> _videoToMap(Video video) {
-    return {
-      'id': video.id,
-      'title': video.title,
-      'filePath': video.filePath,
-      'fileSize': video.fileSize,
-      'tagIds': video.tagIds,
-      'remark': video.remark,
-      'uploadTime': video.uploadTime.toIso8601String(),
-      'duration': video.duration,
-      'thumbnailPath': video.thumbnailPath,
-    };
+    return video.toJson();
   }
 
   // 将Tag对象转换为Map
   Map<String, dynamic> _tagToMap(Tag tag) {
-    return {
-      'id': tag.id,
-      'name': tag.name,
-      'videoCount': tag.videoCount,
-    };
+    return tag.toJson();
   }
 
   // 使用自定义编码器处理DateTime
@@ -139,11 +125,8 @@ class DatabaseExportService {
   Future<void> _importTags(List<Map<String, dynamic>> tagsData) async {
     for (final tagData in tagsData) {
       try {
-        final tag = Tag(
-          id: tagData['id'] as String,
-          name: tagData['name'] as String,
-          videoCount: tagData['videoCount'] as int? ?? 0,
-        );
+        // 使用fromJson方法创建Tag对象
+        final tag = Tag.fromJson(tagData);
         
         // 使用put方法直接保存，保留原始ID
         await HiveService.tagBox.put(tag.id, tag);
@@ -172,17 +155,12 @@ class DatabaseExportService {
           }
         }
         
-        final video = Video(
-          id: videoData['id'] as String,
-          title: videoData['title'] as String,
-          filePath: filePath,
-          fileSize: videoData['fileSize'] as int,
-          tagIds: List<String>.from(videoData['tagIds'] ?? []),
-          remark: videoData['remark'] as String? ?? '',
-          uploadTime: DateTime.parse(videoData['uploadTime'] as String),
-          duration: videoData['duration'] as int?,
-          thumbnailPath: videoData['thumbnailPath'] as String?,
-        );
+        // 更新视频数据中的filePath
+        final updatedVideoData = Map<String, dynamic>.from(videoData);
+        updatedVideoData['filePath'] = filePath;
+        
+        // 使用fromJson方法创建Video对象
+        final video = Video.fromJson(updatedVideoData);
         
         // 使用put方法直接保存，保留原始ID
         await HiveService.videoBox.put(video.id, video);

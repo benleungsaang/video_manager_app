@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>视频管理Web端 1.3</title>
+  <title>视频管理Web端 1.1</title>
   <!-- 引入Tailwind CSS用于快速构建UI -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入Font Awesome图标库 -->
@@ -148,9 +148,8 @@
         <!-- 视频预览区域 -->
         <div class="mb-6">
           <div class="bg-gray-100 rounded-lg overflow-hidden">
-            <video id="video-preview" class="w-full aspect-video object-contain" controls
-
-              crossorigin="anonymous" playsinline webkit-playsinline preload="metadata"></video>
+            <video id="video-preview" class="w-full aspect-video object-contain" controls crossorigin="anonymous"
+              playsinline webkit-playsinline preload="metadata"></video>
           </div>
           <div class="mt-2 text-sm text-gray-500 flex justify-between">
 
@@ -164,7 +163,7 @@
 
 
 
-                    <!-- <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <!-- <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
 
 
             <div class="text-sm font-medium text-gray-700 mb-2">压缩选项</div>
@@ -979,7 +978,7 @@
     // 处理视频文件选择
     function handleFileSelection(file) {
       if (!file || !file.type.includes('video')) {
-        alert('请选择有效的 mp4格式 视频文件');
+        alert('请选择有效的视频文件');
         return;
       }
 
@@ -1058,11 +1057,11 @@
 
       // 添加错误处理
 
-      elements.videoPreview.addEventListener('error', (e) => {
+      // elements.videoPreview.addEventListener('error', (e) => {
 
-        console.error('视频预览错误:', e.target.error);
+      //   console.error('视频预览错误:', e.target.error);
 
-      });
+      // });
 
 
 
@@ -1094,7 +1093,7 @@
           state.currentEditingVideo.remark = elements.videoRemark.value.trim()
         await flutterChannel.updateVideo(state.currentEditingVideo)
         await loadVideos();
-        initUploadModal()
+        initUploadModal() // 这会重置所有状态，包括currentEditingVideo
         showToast('视频信息更新成功');
         return;
       }
@@ -1125,7 +1124,17 @@
         await uploadBinary(fileId, videoFile)
       }
 
-      const duration = Math.floor(elements.videoPreview.duration);
+
+
+
+
+
+
+      const duration = !isNaN(elements.videoPreview.duration)
+
+        ? Math.floor(elements.videoPreview.duration)
+
+        : 0; // 获取不到时长时赋值为 0
       // 使用不带扩展名的文件名作为标题
       const titleWithoutExt = elements.videoTitle.value.trim(); // 使用用户输入的标题（已去除扩展名）
 
@@ -1139,8 +1148,9 @@
           elements.videoRemark.value.trim(),
           titleWithoutExt  // 使用不带后缀的标题
         ).then(result => {
-          console.log('视频上传完成（后台转换中）:', result);
-          showToast('视频上传成功（后台转换中）');
+          loadVideos();
+          console.log('视频上传完成:', result);
+          showToast('视频上传成功');
         }).catch(error => {
           console.error('上传失败:', error);
           alert(`上传失败: ${error.message || '未知错误'}`);
@@ -1149,8 +1159,9 @@
         // 刷新列表并重置状态（不等待转换完成）
         await loadVideos();
         state.selectedTagIdsForUpload = [];
+        state.currentEditingVideo = null; // 重置编辑状态
         elements.uploadModal.classList.add('hidden');
-        showToast('视频上传完成（后台处理中）');
+        showToast('视频上传完成');
         elements.videoPreview.src = '';
         URL.revokeObjectURL(elements.videoPreview.src);
       } catch (error) {
@@ -1166,8 +1177,11 @@
       }
     }
 
-    // 初始化视频详细内容
-    function initUploadModal() {
+    // 移除视频预览的错误监听器（如果存在）
+      if (elements.videoPreview._errorHandler) {
+        elements.videoPreview.removeEventListener('error', elements.videoPreview._errorHandler);
+        elements.videoPreview._errorHandler = null;
+      }
       // 清除视频预览
       elements.videoPreview.src = '';
       if (elements.videoPreview.src) {
@@ -1197,7 +1211,7 @@
       state.currentFileId = null;
       state.cancelUpload = false, // 是否正在执行缓存
         elements.uploadModal.classList.add('hidden')
-    }
+
 
     // 缓存视频，预上传
     async function uploadBinary(fileId, videoFile) {
@@ -1310,6 +1324,39 @@
       }
     }
 
+    // 初始化视频详细内容
+    function initUploadModal() {
+      // 清除视频预览
+      elements.videoPreview.src = '';
+      if (elements.videoPreview.src) {
+        URL.revokeObjectURL(elements.videoPreview.src);
+      }
+      // 隐藏预上传按钮
+      elements.uploadFirstBtn.classList.add('hidden');
+      // 隐藏预上传进度条
+      elements.progressBarTop.style.width = '0%';
+      elements.progressContainerTop.classList.add('hidden');
+      // 清空下方输入框
+      elements.videoTitle.value = '';
+      elements.newTagInputModal.value = '';
+      elements.videoRemark.value = '';
+      // 隐藏底部上传进度条
+      elements.progressBarTop.style.width = '0%';
+      elements.progressContainerBottom.classList.add('hidden');
+      // 恢复保存按钮状态
+      elements.saveVideoBtn.disabled = false
+      // 重置 state 关于操作上传文件的状态
+      state.currentEditingVideo = null;
+      state.selectedTagIdsForUpload = [];
+      state.pendingUploads = new Map(), // 存储已上传但未合并的文件ID
+        state.currentUploadFile = null;
+      state.currentFileId = null;
+      state.cancelUpload = false, // 是否正在执行缓存
+        elements.uploadModal.classList.add('hidden')
+    }
+
+
+
     // 添加打开视频详情的函数
     async function openVideoDetail(video) {
       // 保存当前编辑的视频
@@ -1335,8 +1382,8 @@
 
       // 从filePath中提取文件名
       const fileName = video.filePath
-              ? video.filePath.replace(/\\/g, '/').split('/').pop()
-              : '无文件名';
+        ? video.filePath.replace(/\\/g, '/').split('/').pop()
+        : '无文件名';
       // 更新视频信息显示 - 显示文件名而不是时长
       elements.videoSize.textContent = `大小: ${formatFileSize(video.fileSize)}`;
       elements.videoDuration.textContent = `文件名: ${fileName}`;
@@ -1358,64 +1405,56 @@
 
 
         // 构建完整的视频流URL
-
-
-
         const videoUrl = `${baseUrl}/videoStream/${video.id}`;
 
+        // 根据文件扩展名设置不同的处理方式
+        const fileExtension = (video.filePath || '').split('.').pop().toLowerCase();
+
+        // 设置视频源和属性以提高兼容性
         elements.videoPreview.src = videoUrl;
-
-
-
-        // 设置视频预加载属性以提高兼容性
-
+        elements.videoPreview.type = fileExtension === 'mov' ? 'video/quicktime' : `video/${fileExtension}`;
         elements.videoPreview.preload = 'metadata';
+        elements.videoPreview.setAttribute('playsinline', 'true');
+        elements.videoPreview.setAttribute('webkit-playsinline', 'true');
+        elements.videoPreview.crossOrigin = 'anonymous';
 
 
 
         // 检测浏览器类型
-
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 
 
         // 等待元数据加载完成后再尝试播放
-
         elements.videoPreview.addEventListener('loadedmetadata', () => {
+            console.log('视频元数据加载完成');
 
-          console.log('视频元数据加载完成');
-
+            // 修复Safari中自动播放问题
+            if (isSafari && !isIOS) {
+              // 在桌面Safari中，阻止自动播放
+              elements.videoPreview.pause();
+            }
         });
 
 
 
         // Safari和其他浏览器可能需要不同的处理方式
-
         elements.videoPreview.addEventListener('canplay', () => {
-
           console.log('视频可以播放');
-
-          // 尝试播放，但不强制，因为可能受自动播放策略限制
-
-          elements.videoPreview.play().catch(e => console.log('自动播放受限:', e));
-
+          // 不再自动播放，符合浏览器自动播放策略
         });
 
 
 
         // 添加错误处理
+        elements.videoPreview.addEventListener('error', handleVideoError);
 
-        elements.videoPreview.addEventListener('error', (e) => {
-
-          console.error('视频播放错误:', e.target.error);
-
-          // 尝试用不同方式加载视频
-
-          elements.videoPreview.load(); // 重新加载资源
-
-        });
+        // 保存错误处理函数引用以便后续移除
+        if (!elements.videoPreview._errorHandler) {
+          elements.videoPreview._errorHandler = handleVideoError;
+        }
 
 
 
@@ -1436,6 +1475,17 @@
       // 加载并渲染标签
       await loadTags();
       renderTagSelection();
+    }
+
+    // 视频播放错误处理函数
+    function handleVideoError(e) {
+      // 检查视频源是否为空，如果是则不执行重新加载
+      if (!elements.videoPreview.src || elements.videoPreview.src === '') {
+        return; // 如果src为空，不执行任何操作
+      }
+      console.error('视频播放错误:', e.target.error);
+      // 尝试用不同方式加载视频
+      elements.videoPreview.load(); // 重新加载资源
     }
 
     // 绑定所有事件处理程序
@@ -1555,6 +1605,10 @@
       // 关闭上传浮框
       elements.closeUploadModal.addEventListener('click', () => {
         if (state.currentUploadFile) {
+          // 上传模式下的确认对话框
+          document.querySelector('#confirm-modal h3').textContent = '确认取消';
+          document.querySelector('#confirm-modal p').textContent = '确定要取消上传吗？已上传的部分将被丢弃。';
+          document.querySelector('#confirm-ok-btn').textContent = '确认取消';
           elements.confirmModal.classList.remove('hidden');
         } else if (state.currentEditingVideo) {
           // 检查是否有修改
@@ -1564,6 +1618,10 @@
             JSON.stringify(state.currentEditingVideo.tagIds) !== JSON.stringify(state.selectedTagIdsForUpload);
 
           if (hasChanges) {
+            // 编辑模式下的确认对话框
+            document.querySelector('#confirm-modal h3').textContent = '确认放弃编辑';
+            document.querySelector('#confirm-modal p').textContent = '是否放弃当前编辑内容？';
+            document.querySelector('#confirm-ok-btn').textContent = '放弃编辑';
             elements.confirmModal.classList.remove('hidden');
           } else {
             elements.uploadModal.classList.add('hidden');
@@ -1580,7 +1638,11 @@
         if (state.currentEditingVideo) {
           // e.stopPropagation();
           const baseUrl = window.location.origin;
-          const downloader = new VideoDownloader(state.currentEditingVideo.id, baseUrl);
+          // 从filePath中提取原始文件名
+          const originalFileName = state.currentEditingVideo.filePath
+            ? state.currentEditingVideo.filePath.replace(/\\/g, '/').split('/').pop()
+            : `video_${state.currentEditingVideo.id}`;
+          const downloader = new VideoDownloader(state.currentEditingVideo.id, baseUrl, originalFileName);
 
           try {
             const totalSize = await downloader.init();
@@ -1664,8 +1726,35 @@
 
       // 模态框外部点击关闭
       elements.uploadModal.addEventListener('click', (e) => {
-        if (e.target === elements.uploadModal && state.currentUploadFile) {
-          elements.confirmModal.classList.remove('hidden');
+        if (e.target === elements.uploadModal) {
+          // 如果是上传模式，需要确认
+          if (state.currentUploadFile) {
+            // 上传模式下的确认对话框
+            document.querySelector('#confirm-modal h3').textContent = '确认取消';
+            document.querySelector('#confirm-modal p').textContent = '确定要取消上传吗？已上传的部分将被丢弃。';
+            document.querySelector('#confirm-ok-btn').textContent = '确认取消';
+            elements.confirmModal.classList.remove('hidden');
+          } else if (state.currentEditingVideo) {
+            // 如果是编辑模式，检查是否有修改
+            const hasChanges =
+              state.currentEditingVideo.title !== elements.videoTitle.value.trim() ||
+              (state.currentEditingVideo.remark || '') !== elements.videoRemark.value.trim() ||
+              JSON.stringify(state.currentEditingVideo.tagIds) !== JSON.stringify(state.selectedTagIdsForUpload);
+
+            if (hasChanges) {
+              // 编辑模式下的确认对话框
+              document.querySelector('#confirm-modal h3').textContent = '确认放弃编辑';
+              document.querySelector('#confirm-modal p').textContent = '是否放弃当前编辑内容？';
+              document.querySelector('#confirm-ok-btn').textContent = '放弃编辑';
+              elements.confirmModal.classList.remove('hidden');
+            } else {
+              elements.uploadModal.classList.add('hidden');
+              state.currentEditingVideo = null;
+            }
+          } else {
+            // 非上传非编辑模式，直接关闭
+            elements.uploadModal.classList.add('hidden');
+          }
         }
       });
 
@@ -1777,10 +1866,11 @@
 
     // 视频下载管理器 - 支持断点续传和分块下载
     class VideoDownloader {
-      constructor(videoId, baseUrl) {
+      constructor(videoId, baseUrl, originalFileName = null) {
         this.videoId = videoId;
         this.baseUrl = baseUrl;
         this.videoUrl = `${baseUrl}/videoStream/${videoId}`;
+        this.originalFileName = originalFileName; // 保存原始文件名
         this.chunks = new Map(); // 存储已下载的分块
         this.totalSize = 0;
         this.worker = null;
@@ -1931,14 +2021,45 @@
           .sort((a, b) => a[0] - b[0])
           .map(([_, data]) => data.blob);
 
-        const videoBlob = new Blob(sortedChunks, { type: 'video/mp4' });
+        // 根据原始文件名确定MIME类型和扩展名
+        let mimeType = 'video/mp4'; // 默认MIME类型
+        let fileExtension = '.mp4'; // 默认扩展名
+        if (this.originalFileName) {
+          const ext = this.originalFileName.toLowerCase().split('.').pop();
+          if (ext === 'mov') {
+            mimeType = 'video/quicktime';
+            fileExtension = '.mov';
+          } else if (ext === 'mp4') {
+            mimeType = 'video/mp4';
+            fileExtension = '.mp4';
+          } else if (ext === 'webm') {
+            mimeType = 'video/webm';
+            fileExtension = '.webm';
+          } else if (ext === 'ogg') {
+            mimeType = 'video/ogg';
+            fileExtension = '.ogg';
+          } else if (ext === 'avi') {
+            mimeType = 'video/x-msvideo';
+            fileExtension = '.avi';
+          } else if (ext === 'wmv') {
+            mimeType = 'video/x-ms-wmv';
+            fileExtension = '.wmv';
+          } else if (ext === 'flv') {
+            mimeType = 'video/x-flv';
+            fileExtension = '.flv';
+          } else {
+            fileExtension = '.' + ext; // 使用原始扩展名
+          }
+        }
+
+        const videoBlob = new Blob(sortedChunks, { type: mimeType });
         const url = URL.createObjectURL(videoBlob);
 
         // 触发下载
         elements.downloadBtn.innerHTML = `<i class="fa fa-download mr-1"></i>下载完成`;
         const a = document.createElement('a');
         a.href = url;
-        a.download = `video_${this.videoId}.mp4`;
+        a.download = this.originalFileName || `video_${this.videoId}${fileExtension}`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {

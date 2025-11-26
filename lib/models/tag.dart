@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
 
 part 'tag.g.dart';
 
@@ -22,4 +23,33 @@ class Tag extends HiveObject {
     this.videoCount = 0,
     String? id,
   }) : id = id ?? const Uuid().v4();
+
+  // 序列化方法
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'videoCount': videoCount,
+    };
+  }
+
+  // 反序列化方法
+  factory Tag.fromJson(Map<String, dynamic> json) {
+    return Tag(
+      id: json['id'] as String? ?? const Uuid().v4(),
+      name: json['name'] as String,
+      videoCount: json['videoCount'] as int? ?? 0,
+    );
+  }
+
+  // 从JSON字符串创建Tag实例
+  factory Tag.fromJsonString(String jsonString) {
+    final Map<String, dynamic> json = jsonDecode(jsonString);
+    return Tag.fromJson(json);
+  }
+
+  // 将Tag实例转换为JSON字符串
+  String toJsonString() {
+    return jsonEncode(toJson());
+  }
 }
