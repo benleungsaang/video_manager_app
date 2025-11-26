@@ -31,7 +31,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
   List<String> _selectedTagIds = [];
   File? _sourceFile;
   Video? _existingVideo;
-  final VideoPlayerUtils _playerUtils = VideoPlayerUtils();
+  late VideoPlayerUtils _playerUtils;
   bool _isProcessing = false;
   bool _isSaved = false;
   bool _isInitializing = true;
@@ -42,16 +42,27 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
     super.initState();
     _titleController = TextEditingController();
     _remarkController = TextEditingController();
+    _playerUtils = VideoPlayerUtils(); // 延迟初始化，避免不必要的资源占用
     _initVideo();
   }
 
   @override
   void dispose() {
-    _playerUtils.dispose();
+    // 确保播放器资源被正确释放
+    _disposePlayer();
     _titleController.dispose();
     _remarkController.dispose();
     _newTagController.dispose();
     super.dispose();
+  }
+
+  // 专门的播放器资源释放方法
+  void _disposePlayer() {
+    try {
+      _playerUtils.dispose();
+    } catch (e) {
+      print('释放播放器资源时出错: $e');
+    }
   }
 
   // 初始化视频（加载文件+初始化播放器）
@@ -83,24 +94,19 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
       }
     } catch (e) {
       ToastUtils.showError(context, '初始化失败: ${e.toString()}');
+
+      // 如果初始化失败，确保释放可能已创建的播放器资源
+      _disposePlayer();
     } finally {
-      setState(() => _isInitializing = false);
+      if (mounted) {
+        setState(() => _isInitializing = false);
+      }
     }
   }
 
   // 处理标签选择变化
   void _onTagsSelected(List<String> tagIds) {
     setState(() => _selectedTagIds = tagIds);
-  }
-
-  // 添加新标签
-  void _addNewTag() {
-    if (_newTagController.text.trim().isNotEmpty) {
-      // 这里需要一个标签服务来添加新标签，暂时只是模拟
-      // 在实际实现中，需要调用标签服务添加新标签
-      ToastUtils.showInfo('暂不支持直接添加新标签，功能待实现');
-      _newTagController.clear();
-    }
   }
 
   // 保存视频（本地复制并保存信息）
@@ -134,7 +140,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
         _existingVideo!.title = _titleController.text.trim();
         _existingVideo!.remark = _remarkController.text.trim(); // 更新备注
         _existingVideo!.tagIds = _selectedTagIds;
-        _existingVideo!.duration = _playerUtils.getdDuration();
+        _existingVideo!.duration = _playerUtils.getDuration();
 
         // 如果没有缩略图，生成一个
         if (_existingVideo!.thumbnailPath == null ||
@@ -149,8 +155,8 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
       } else {
         // 确保视频播放器已初始化后再获取时长
         int durationTime = 0;
-        if (_playerUtils.getdDuration() > 0) {
-          durationTime = _playerUtils.getdDuration();
+        if (_playerUtils.getDuration() > 0) {
+          durationTime = _playerUtils.getDuration();
         } else {
           // 如果无法获取视频时长，使用0作为默认值
           // 播放器可能还未完全加载时长信息
@@ -226,7 +232,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: Colors.grey[800],
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(28),
                           ),
                           child: _playerUtils.getPlayerWidget(),
                         ),

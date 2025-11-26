@@ -72,6 +72,121 @@ class ClientDetails {
   }) : connectedAt = connectedAt ?? DateTime.now().toString().substring(0, 19);
 }
 
+// 连接池管理类
+class ConnectionPool {
+  final Map<String, WebSocketChannel> _connections = {};
+  final Map<String, StreamSubscription> _subscriptions = {};
+  final Map<String, ClientDetails> _clientDetails = {};
+  final Map<String, String> _clientDevices = {};
+  final Map<String, Map<String, dynamic>> _pendingBinaryRequests = {};
+
+  // 获取连接数
+  int get connectionCount => _connections.length;
+
+  // 获取所有客户端详情
+  Map<String, ClientDetails> get clientDetails =>
+      Map.unmodifiable(_clientDetails);
+
+  // 获取所有客户端设备
+  Map<String, String> get clientDevices => Map.unmodifiable(_clientDevices);
+
+  // 添加连接
+  void addConnection(
+      String clientId,
+      WebSocketChannel channel,
+      StreamSubscription subscription,
+      ClientDetails details,
+      String deviceType) {
+    _connections[clientId] = channel;
+    _subscriptions[clientId] = subscription;
+    _clientDetails[clientId] = details;
+    _clientDevices[clientId] = deviceType;
+  }
+
+  // 获取连接
+  WebSocketChannel? getConnection(String clientId) => _connections[clientId];
+
+  // 获取订阅
+  StreamSubscription? getSubscription(String clientId) =>
+      _subscriptions[clientId];
+
+  // 检查连接是否存在
+  bool hasConnection(String clientId) => _connections.containsKey(clientId);
+
+  // 获取所有连接ID
+  Iterable<String> get connectionIds => _connections.keys;
+
+  // 获取所有连接
+  Map<String, WebSocketChannel> get connections =>
+      Map.unmodifiable(_connections);
+
+  // 移除连接
+  void removeConnection(String clientId, {bool closeConnection = true}) {
+    if (_connections.containsKey(clientId)) {
+      if (closeConnection) {
+        try {
+          _connections[clientId]?.sink.close(1000, '服务器主动断开连接');
+        } catch (e) {
+          print('关闭连接时出错: $e');
+        }
+      }
+      _connections.remove(clientId);
+      _subscriptions[clientId]?.cancel();
+      _subscriptions.remove(clientId);
+      _clientDetails.remove(clientId);
+      _clientDevices.remove(clientId);
+    }
+  }
+
+  // 清空所有连接
+  void clearAllConnections({bool closeConnections = true}) {
+    for (final clientId in _connections.keys) {
+      if (closeConnections) {
+        try {
+          _connections[clientId]?.sink.close(1000, '服务器关闭');
+        } catch (e) {
+          print('关闭连接时出错: $e');
+        }
+      }
+      _subscriptions[clientId]?.cancel();
+    }
+    _connections.clear();
+    _subscriptions.clear();
+    _clientDetails.clear();
+    _clientDevices.clear();
+  }
+
+  // 获取待处理的二进制请求
+  Map<String, dynamic>? getPendingBinaryRequest(String clientId) =>
+      _pendingBinaryRequests[clientId];
+
+  // 设置待处理的二进制请求
+  void setPendingBinaryRequest(String clientId, Map<String, dynamic> request) {
+    _pendingBinaryRequests[clientId] = request;
+  }
+
+  // 移除待处理的二进制请求
+  void removePendingBinaryRequest(String clientId) {
+    _pendingBinaryRequests.remove(clientId);
+  }
+
+  // 检查连接是否活跃
+  bool isConnectionActive(String clientId) {
+    final channel = _connections[clientId];
+    return channel != null && channel.closeCode == null;
+  }
+
+  // 更新客户端备注
+  void setClientRemark(String clientId, String remark) {
+    if (_clientDetails.containsKey(clientId)) {
+      _clientDetails[clientId]!.remark = remark;
+    }
+  }
+
+  // 获取客户端设备类型
+  String? getClientDeviceType(String clientId) => _clientDevices[clientId];
+}
+
 // 基础消息结构
 class WebSocketMessage {
   final String type;
@@ -107,24 +222,21 @@ class ServerService with ChangeNotifier {
   bool _isRunning = false;
   int _port = 8080;
   String? _localIp;
-  final Map<String, WebSocketChannel> _connectedClients = {}; // 使用clientId作为键
-  final Map<String, String> _clientDevices = {}; // 存储客户端设备信息
+  final ConnectionPool _connectionPool = ConnectionPool(); // 使用连接池管理连接
   HttpServer? _server;
 
   bool get isRunning => _isRunning;
   int get port => _port;
   String? get localIp => _localIp;
-  int get connectionCount => _connectedClients.length;
-  Map<String, String> get clientDevices => _clientDevices;
+  int get connectionCount => _connectionPool.connectionCount;
+  Map<String, String> get clientDevices => _connectionPool.clientDevices;
 
   // 新增属性 - 关于处理server_control_page 客户信息相关的
   final List<MessageLog> _messageLogs = [];
-  final Map<String, ClientDetails> _clientDetails = {};
 
   // 新增getter - 关于处理server_control_page 客户信息相关的
   List<MessageLog> get messageLogs => List.unmodifiable(_messageLogs);
-  Map<String, ClientDetails> get clientDetails =>
-      Map.unmodifiable(_clientDetails);
+  Map<String, ClientDetails> get clientDetails => _connectionPool.clientDetails;
 
   late WebApiHandler _webApiHandler;
   // bool _isInitialized = false; // 新增初始化标记
@@ -159,25 +271,19 @@ class ServerService with ChangeNotifier {
 
   // 新增方法：设置客户端备注
   void setClientRemark(String clientId, String remark) {
-    if (_clientDetails.containsKey(clientId)) {
-      _clientDetails[clientId]!.remark = remark;
-      notifyListeners();
-    }
+    _connectionPool.setClientRemark(clientId, remark);
+    notifyListeners();
   }
 
   // 新增方法：断开特定客户端连接
   void disconnectClient(String clientId) {
-    if (_connectedClients.containsKey(clientId)) {
-      final client = _connectedClients[clientId]!;
-      client.sink.close(1000, '服务器主动断开连接');
-      _connectedClients.remove(clientId);
-      _clientDetails.remove(clientId);
+    if (_connectionPool.hasConnection(clientId)) {
+      _connectionPool.removeConnection(clientId);
       print('已断开客户端连接');
       _broadcastConnectionStatus();
       notifyListeners();
     } else {
       print('客户端 $clientId 不存在');
-      _clientDetails.remove(clientId);
       _broadcastConnectionStatus();
       notifyListeners();
     }
@@ -537,17 +643,12 @@ class ServerService with ChangeNotifier {
       do {
         clientId =
             'temp_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1000)}';
-      } while (_connectedClients.containsKey(clientId)); // 检查是否已有该ID
+      } while (_connectionPool.hasConnection(clientId)); // 检查是否已有该ID
     } else {
       // 如果客户端提供了ID，检查是否已有连接，如果有则断开旧连接
-      if (_connectedClients.containsKey(clientId)) {
-        final oldChannel = _connectedClients[clientId]!;
+      if (_connectionPool.hasConnection(clientId)) {
         print('客户端 $clientId 已有连接，断开旧连接');
-        try {
-          oldChannel.sink.close(1000, '新的相同ID连接已建立');
-        } catch (e) {
-          print('关闭旧连接时出错: $e');
-        }
+        _connectionPool.removeConnection(clientId);
       }
     }
 
@@ -555,26 +656,19 @@ class ServerService with ChangeNotifier {
     final userAgent = request.headers['user-agent'] ?? '';
     final deviceType = _getDeviceType(userAgent);
     if (clientId != null) {
-      _clientDetails[clientId] = ClientDetails(deviceType: deviceType);
+      final clientDetails = ClientDetails(deviceType: deviceType);
 
-      // 确认没问题的临时ID，装入对应通信通道 channel
-      _connectedClients[clientId] = channel;
-
-      // 记录连接日志
-      _logMessage(clientId, 'connection', '客户端已连接');
-    }
-
-    // 监听客户端消息
-    if (clientId != null) {
+      // 创建订阅
       final subscription = channel.stream
           .listen((message) => _handleClientMessage(message, channel, clientId),
               onDone: () {
-        // 连接关闭时清理（新方式）
-        final removedClient = _connectedClients.remove(clientId);
-        if (removedClient != null) {
-          _clientDevices.remove(clientId);
+        // 连接关闭时清理
+        if (_connectionPool.hasConnection(clientId!)) {
+          _connectionPool.removeConnection(clientId,
+              closeConnection: false); // 连接已关闭，不需要再次关闭
           _logMessage(clientId, 'connection', '客户端已断开');
-          print('WebSocket连接已关闭: $clientId，剩余连接: ${_connectedClients.length}');
+          print(
+              'WebSocket连接已关闭: $clientId，剩余连接: ${_connectionPool.connectionCount}');
           _broadcastConnectionStatus(); // 通知所有客户端连接状态变化
         }
       }, onError: (error) {
@@ -582,10 +676,12 @@ class ServerService with ChangeNotifier {
         _logMessage(clientId, 'error', error.toString());
       });
 
-      // 处理连接关闭
-      channel.sink.done.then((_) {
-        subscription.cancel();
-      });
+      // 将连接添加到连接池
+      _connectionPool.addConnection(
+          clientId, channel, subscription, clientDetails, deviceType);
+
+      // 记录连接日志
+      _logMessage(clientId, 'connection', '客户端已连接');
     }
   }
 
@@ -616,7 +712,7 @@ class ServerService with ChangeNotifier {
 
       // 记录二进制请求上下文
       if (messageJson['action'] == 'uploadBinaryChunk') {
-        _pendingBinaryRequests[clientId] = messageJson;
+        _connectionPool.setPendingBinaryRequest(clientId, messageJson);
       }
       if (messageJson['action'] != 'uploadBinaryChunk') {
         print('收到客户端【 $clientId 】发来指令: $messageJson');
@@ -646,19 +742,18 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  final Map<String, Map<String, dynamic>> _pendingBinaryRequests = {};
-
   // 处理二进制数据
   void _handleBinaryData(
       WebSocketChannel channel, String clientId, Uint8List data) {
-    if (!_pendingBinaryRequests.containsKey(clientId)) {
+    final request = _connectionPool.getPendingBinaryRequest(clientId);
+    if (request == null) {
       channel.sink.add(json.encode({'success': false, 'error': '未找到对应的二进制请求'}));
       return;
     }
 
-    // 获取对应的请求信息
-    final request = _pendingBinaryRequests.remove(clientId);
-    final requestId = request!['id'];
+    // 移除对应的请求信息
+    _connectionPool.removePendingBinaryRequest(clientId);
+    final requestId = request['id'];
     final params = request['params'];
 
     // 交给API处理器处理二进制块
@@ -710,23 +805,23 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  // 修复广播消息逻辑
   void _broadcastMessage(dynamic message) {
-    print('广播消息到 ${_connectedClients.length} 个客户端');
+    print('广播消息到 ${_connectionPool.connectionCount} 个客户端');
 
     // 给每个在登记的用户广播消息
-    for (final entry in _connectedClients.entries) {
-      final clientId = entry.key;
-      final client = entry.value;
-      try {
-        if (client.closeCode == null) {
-          client.sink.add(message);
-          print('已向客户端 $clientId 发送消息');
-        } else {
-          print('客户端 $clientId 连接已关闭，跳过发送');
+    for (final clientId in _connectionPool.connectionIds) {
+      final client = _connectionPool.getConnection(clientId);
+      if (client != null) {
+        try {
+          if (_connectionPool.isConnectionActive(clientId)) {
+            client.sink.add(message);
+            print('已向客户端 $clientId 发送消息');
+          } else {
+            print('客户端 $clientId 连接已关闭，跳过发送');
+          }
+        } catch (e) {
+          print('向客户端 $clientId 广播消息失败: $e');
         }
-      } catch (e) {
-        print('向客户端 $clientId 广播消息失败: $e');
       }
     }
   }
@@ -740,12 +835,8 @@ class ServerService with ChangeNotifier {
         data: {'command': 'server_shutdown', 'message': '服务器正在关闭'});
     _broadcastMessage(json.encode(shutdownMsg.toJson()));
 
-    // 关闭所有WebSocket连接
-    for (final client in _connectedClients.values) {
-      await client.sink.close(1000, '服务器关闭');
-    }
-    _connectedClients.clear();
-    _clientDevices.clear();
+    // 使用连接池清理所有连接
+    _connectionPool.clearAllConnections();
 
     await _server?.close(force: true);
     _server = null;
@@ -755,42 +846,6 @@ class ServerService with ChangeNotifier {
   }
 
   // 更新客户端ID（从临时ID到正式ID）
-  void _updateClientId(
-      String oldId, String newId, Function(String) setClientId) {
-    print('更新客户端ID: $oldId -> $newId');
-    print('当前连接的客户端: ${_connectedClients.keys.toList()}');
-
-    // 检查新ID是否已存在
-    if (_connectedClients.containsKey(newId)) {
-      print('警告: 客户端ID $newId 已存在，无法更新');
-      return;
-    }
-
-    if (_connectedClients.containsKey(oldId)) {
-      final channel = _connectedClients[oldId]!;
-      _connectedClients.remove(oldId);
-      _connectedClients[newId] = channel;
-
-      // 更新设备信息
-      if (_clientDevices.containsKey(oldId)) {
-        final deviceType = _clientDevices[oldId]!;
-        _clientDevices.remove(oldId);
-        _clientDevices[newId] = deviceType;
-      }
-
-      // 同步更新客户端详情
-      if (_clientDetails.containsKey(oldId)) {
-        final details = _clientDetails[oldId]!;
-        _clientDetails.remove(oldId);
-        _clientDetails[newId] = details;
-      }
-
-      setClientId(newId);
-      print('客户端ID更新: $oldId -> $newId');
-      _broadcastConnectionStatus();
-    }
-  }
-
   // 处理聊天消息
   void _handleChatMessage(WebSocketMessage message) {
     print('收到聊天消息 from ${message.clientId}: ${message.data}');
@@ -841,13 +896,13 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  // 广播连接状态
   void _broadcastConnectionStatus() {
     final status = WebSocketMessage(
       type: MessageType.connectionStatus.toString().split('.').last,
       data: {
-        'count': _connectedClients.length,
-        'clients': _clientDevices.map((id, type) => MapEntry(id, {
+        'count': _connectionPool.connectionCount,
+        'clients': _connectionPool.clientDevices.map((id, type) => MapEntry(
+                id, {
               'deviceType': type,
               'connectedAt': DateTime.now().toIso8601String()
             }))
@@ -872,10 +927,10 @@ class ServerService with ChangeNotifier {
 
   // 发送消息给特定客户端
   void _sendToClient(String clientId, dynamic message) {
-    final client = _connectedClients[clientId];
-    if (client != null && client.closeCode == null) {
+    final channel = _connectionPool.getConnection(clientId);
+    if (channel != null && _connectionPool.isConnectionActive(clientId)) {
       try {
-        client.sink.add(message);
+        channel.sink.add(message);
       } catch (e) {
         print('发送消息给客户端 $clientId 失败: $e');
       }

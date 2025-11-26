@@ -10,7 +10,7 @@ import '../pages/video_play_page.dart';
 import '../../providers/tag_provider.dart';
 import '../../providers/video_provider.dart';
 
-class VideoGrid extends StatelessWidget {
+class VideoGrid extends StatefulWidget {
   final List<Video> videos;
   final bool isMultiSelectMode;
   final Set<String> selectedVideos;
@@ -25,35 +25,78 @@ class VideoGrid extends StatelessWidget {
   });
 
   @override
+  State<VideoGrid> createState() => _VideoGridState();
+}
+
+class _VideoGridState extends State<VideoGrid> {
+  late ScrollController _scrollController;
+  int _loadMoreThreshold = 15; // 当距离底部多少个item时开始加载更多
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // 根据屏幕宽度决定列数
     final screenWidth = MediaQuery.of(context).size.width;
     int crossAxisCount = screenWidth > 800 ? 3 : 2; // 大屏幕3列，小屏幕2列
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.06, // 宽高比
+    return Padding(
+      // 视频卡片与屏外之间的间距
+      padding: const EdgeInsets.all(16), // 添加边距
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // 计算每个item的宽度，用于确定每行显示多少个
+          double itemWidth =
+              (constraints.maxWidth - ((crossAxisCount - 1) * 16)) /
+                  crossAxisCount;
+          double itemHeight = itemWidth * .91; // 使用相同宽高比
+
+          return CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: itemWidth / itemHeight, // 宽高比
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  childCount: widget.videos.length,
+                  addAutomaticKeepAlives: false, // 优化性能
+                  addRepaintBoundaries: false, // 优化性能
+                  addSemanticIndexes: false, // 优化性能
+                  (context, index) {
+                    final video = widget.videos[index];
+                    return _buildVideoCard(context, video);
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
-      itemCount: videos.length,
-      itemBuilder: (context, index) {
-        final video = videos[index];
-        return _buildVideoCard(context, video);
-      },
     );
   }
 
   // 构建视频卡片
   Widget _buildVideoCard(BuildContext context, Video video) {
-    bool isSelected = selectedVideos.contains(video.id);
+    bool isSelected = widget.selectedVideos.contains(video.id);
 
     return GestureDetector(
       onTap: () {
-        if (isMultiSelectMode) {
-          onVideoSelected(video.id);
+        if (widget.isMultiSelectMode) {
+          widget.onVideoSelected(video.id);
         } else {
           Navigator.push(
             context,
@@ -267,7 +310,7 @@ class VideoGrid extends StatelessWidget {
               ),
             ),
             // 选择指示器
-            if (isMultiSelectMode)
+            if (widget.isMultiSelectMode)
               Positioned(
                 top: 8,
                 left: 8,
@@ -310,9 +353,12 @@ class VideoGrid extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              await Provider.of<VideoProvider>(context, listen: false)
-                  .deleteVideo(videoId);
-              Navigator.pop(context);
+              final videoProvider =
+                  Provider.of<VideoProvider>(context, listen: false);
+              await videoProvider.deleteVideo(videoId);
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
             child: const Text('删除', style: TextStyle(color: Colors.red)),
           ),

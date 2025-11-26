@@ -1,14 +1,43 @@
 
 效率性优化：
+main.dart
+ 重复创建优化、逻辑迁移
 1. 统一 Provider 实例，避免MyApp 与 main () 函数重复创建；2. 移除 main () 中缩略图生成逻辑，迁移至专属工具类或服务层；（已能运行）
+
+模型类
+ 序列化支持
 2. Video 类添加 fromJson 和toJson 方法；2. Tag 类添加序列化 / 反序列化方法，并对其它代码中需要使用序列化或反序列化的地方做适配，有修改过代码的地方记得做dart format或者analytics确认文件无误；（已能运行）
 
+Provider
+ 状态管理、逻辑优化
+Repository
+ 数据库操作、功能扩展
 1. VideoProvider 补充错误处理和加载状态管理；（已能运行）
 2.TagProvider 优化标签计数更新逻辑，减少无效刷新；（已能运行）
 3. VideoRepository 优化_updateTagCounts 方法，减少数据库访问次数；（已能运行）
 4.TagRepository 添加批量操作功能，提升批量处理效率；（已能运行）
 
+服务层
+ 连接管理、资源管控
+1. ServerService 引入连接池管理，优化 WebSocket 连接稳定性；（已能运行）
+2. WebApiHandler改进错误处理机制和资源释放逻辑；（已能运行）
 
+UI 组件
+ 性能优化、交互体验
+1. VideoGrid 实现懒加载 + 虚拟滚动，减少内存占用；（已能运行）
+2.VideoPlayPage 优化播放器资源管理，避免内存泄漏；（已能运行）
+
+1. FileUtils 优化缩略图生成缓存策略，减少重复计算；（已能运行）
+2.VideoUploader 完善文件上传错误处理和重试机制（已能运行）
+
+对前端也尝试采用类似的操作（懒加载、优化缩略图的请求、uploader/downloader的配合，减少内存占用以及减少单次的大量请求
+
+
+文件构建完成后记得做好dart format或flutter build bundle --suppress-analytics检查代码是否健全
+
+
+仅作询问，不是要修改代码
+关于web前端与flutter后端的websocket连接状态，是否能在前端的右上角做一个fixed“状态灯”的，显示当前的websocket状态，绿色为连通，黄色为很久没沟通，红色为失联，这样设置合理吗？
 
 针对以下要求做修改：
 index文件是指前端文件在build/web/index.html
@@ -38,3 +67,4 @@ web页面，卡片右上角菜单按钮面积增大（当前图标没问题，�
 当前转码基本改由电脑的python+ffmpeg去处理，特殊情况再由平板做临时处理（已处理）
 替换转码文件unTransCode_ => Soonwin_（已处理）
 调整AppBar按钮顺序 => 服务器页，添加视频功能，标签管理页，替换文件功能，全选功能（已处理）
+添加一个搜索初始化文件夹内未形成对象的视频文件按钮（已处理）

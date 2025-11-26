@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:video_manager_app/main.dart';
 import 'package:file_picker/file_picker.dart'; // 新增导入
+import '../../main.dart';
 import '../../services/server_service.dart';
 
 class ServerControlPage extends StatefulWidget {
@@ -326,7 +326,8 @@ class _ServerControlPageState extends State<ServerControlPage> {
                                     backgroundColor: Colors.green,
                                     duration: const Duration(seconds: 3),
                                   );
-                                  ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(snackBar);
                                 }
                               }
                             } catch (e) {
@@ -337,7 +338,8 @@ class _ServerControlPageState extends State<ServerControlPage> {
                                   backgroundColor: Colors.red,
                                   duration: const Duration(seconds: 3),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(snackBar);
                               }
                             }
                           },
@@ -738,7 +740,8 @@ String _formatDuration(Duration? duration) {
   String twoDigits(int n) => n.toString().padLeft(2, '0');
   String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
   String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-  String threeDigitMilliseconds = (duration.inMilliseconds.remainder(1000) ~/ 100).toString();
+  String threeDigitMilliseconds =
+      (duration.inMilliseconds.remainder(1000) ~/ 100).toString();
 
   return "${twoDigits(duration.inHours)}:${twoDigitMinutes}:${twoDigitSeconds}.${threeDigitMilliseconds}";
 }

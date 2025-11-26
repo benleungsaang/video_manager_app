@@ -26,6 +26,11 @@ import '../../models/transcode_task.dart';
 import '../../providers/transcode_provider.dart';
 import '../widgets/transcode_queue_panel.dart';
 import '../widgets/file_replace_dialog.dart';
+import '../widgets/video_initialization_dialog.dart';
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import '../../utils/storage_utils.dart';
+import '../../utils/file_utils.dart';
 
 class HomePage extends StatefulWidget {
   final String? initialSearchKeyword; // 添加初始搜索关键字参数
@@ -240,7 +245,8 @@ class _HomePageState extends State<HomePage> {
       final videoProvider = Provider.of<VideoProvider>(context, listen: false);
       if (videoProvider.videos.isNotEmpty) {
         String firstVideoPath = videoProvider.videos.first.filePath;
-        currentDirPath = firstVideoPath.substring(0, firstVideoPath.lastIndexOf('/'));
+        currentDirPath =
+            firstVideoPath.substring(0, firstVideoPath.lastIndexOf('/'));
       }
     } catch (e) {
       print('获取当前目录失败: $e');
@@ -249,7 +255,8 @@ class _HomePageState extends State<HomePage> {
     if (currentDirPath.isEmpty) {
       // 如果无法从视频中获取目录，则使用应用文档目录
       try {
-        final directory = await path_provider.getApplicationDocumentsDirectory();
+        final directory =
+            await path_provider.getApplicationDocumentsDirectory();
         currentDirPath = directory.path;
       } catch (e) {
         print('获取应用文档目录失败: $e');
@@ -283,7 +290,8 @@ class _HomePageState extends State<HomePage> {
     final filePairs = <Map<String, String>>[];
     for (final unTransCodeFile in unTransCodeFiles) {
       String unTransCodeFileName = p.basename(unTransCodeFile);
-      String baseName = unTransCodeFileName.substring('unTransCode_'.length); // 获取基础名称
+      String baseName =
+          unTransCodeFileName.substring('unTransCode_'.length); // 获取基础名称
 
       // 寻找对应的Soonwin文件
       String targetSoonwinFileName = 'Soonwin_$baseName';
@@ -327,7 +335,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   // 执行文件替换
-  Future<void> _performFileReplacement(List<Map<String, String>> selectedPairs) async {
+  Future<void> _performFileReplacement(
+      List<Map<String, String>> selectedPairs) async {
     final videoProvider = Provider.of<VideoProvider>(context, listen: false);
     List<String> errors = [];
 
@@ -385,6 +394,155 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('替换结果'),
+        content: Text(resultMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 扫描未登记的视频文件
+  Future<List<String>> _scanUnregisteredVideos() async {
+    try {
+      // 获取视频存储目录
+      final videoDir = StorageUtils.getVideosDirectory();
+      final videoDirPath = Directory(videoDir).path;
+
+      // 获取当前已登记的视频文件路径
+      final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+      final registeredVideoPaths =
+          videoProvider.videos.map((video) => video.filePath).toSet();
+
+      // 扫描视频目录中的所有视频文件
+      final dir = Directory(videoDirPath);
+      if (!await dir.exists()) {
+        return [];
+      }
+
+      final List<String> unregisteredVideos = [];
+      final extensions = [
+        '.mp4',
+        '.avi',
+        '.mov',
+        '.wmv',
+        '.flv',
+        '.mkv',
+        '.webm',
+        '.m4v',
+        '.3gp',
+        '.mpg',
+        '.mpeg'
+      ];
+
+      await for (final entity in dir.list()) {
+        if (entity is File) {
+          final fileName = p.basename(entity.path).toLowerCase();
+          final extension = p.extension(fileName);
+
+          // 检查是否为视频文件且未被登记
+          if (extensions.contains(extension) &&
+              !registeredVideoPaths.contains(entity.path)) {
+            unregisteredVideos.add(entity.path);
+          }
+        }
+      }
+
+      return unregisteredVideos;
+    } catch (e) {
+      print('扫描未登记视频文件失败: $e');
+      return [];
+    }
+  }
+
+  // 初始化视频文件
+  Future<void> _initializeVideos() async {
+    final unregisteredVideos = await _scanUnregisteredVideos();
+
+    if (unregisteredVideos.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('提示'),
+          content: const Text('未找到未登记的视频文件'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // 显示选择对话框
+    showDialog(
+      context: context,
+      builder: (context) => VideoInitializationDialog(
+        unregisteredVideos: unregisteredVideos,
+        onConfirm: (selectedPaths) => _createVideoObjects(selectedPaths),
+        onCancel: () {},
+      ),
+    );
+  }
+
+  // 创建视频对象并保存
+  Future<void> _createVideoObjects(List<String> selectedPaths) async {
+    final videoProvider = Provider.of<VideoProvider>(context, listen: false);
+    List<String> errors = [];
+
+    for (final videoPath in selectedPaths) {
+      try {
+        final file = File(videoPath);
+        if (await file.exists()) {
+          // 获取文件信息
+          final fileName = p.basename(videoPath);
+          final fileSize = await file.length();
+          final title =
+              fileName.substring(0, fileName.lastIndexOf('.')); // 去掉扩展名作为标题
+
+          // 生成缩略图
+          String? thumbnailPath;
+          try {
+            thumbnailPath = await FileUtils.generateVideoThumbnail(videoPath);
+          } catch (e) {
+            print('生成缩略图失败: $e');
+          }
+
+          // 创建视频对象
+          final video = Video(
+            title: title,
+            filePath: videoPath,
+            fileSize: fileSize,
+            remark: '', // 初始备注为空
+            tagIds: [], // 初始标签为空
+            duration: null, // 初始时长为null，后续可以设置
+            thumbnailPath: thumbnailPath,
+          );
+
+          // 保存视频对象
+          await videoProvider.saveVideo(video);
+        }
+      } catch (e) {
+        errors.add('处理文件 $videoPath 时出错: $e');
+      }
+    }
+
+    // 显示结果
+    String resultMessage =
+        '视频初始化完成！成功添加 ${selectedPaths.length - errors.length} 个视频';
+    if (errors.isNotEmpty) {
+      resultMessage += '\n\n错误:\n${errors.join('\n')}';
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('初始化结果'),
         content: Text(resultMessage),
         actions: [
           TextButton(
@@ -482,6 +640,11 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               },
+            ),
+            IconButton(
+              icon: const Icon(Icons.playlist_add, color: Colors.white),
+              onPressed: _initializeVideos,
+              tooltip: '初始化视频',
             ),
             IconButton(
               icon: const Icon(Icons.swap_horiz, color: Colors.white),

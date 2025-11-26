@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async'; // 导入 Completer
 
 import 'package:flutter/foundation.dart';
 
@@ -63,6 +64,7 @@ class WebApiHandler {
       Provider.of<TagProvider>(navigatorKey.currentContext!, listen: false);
 
   final Map<String, UploadingFile> _uploadingFiles = {};
+  final Map<String, Completer> _activeOperations = {}; // 追踪活跃操作，便于资源清理
 
   // 处理Web端的请求
   // 参数: request包含action和params
@@ -75,6 +77,12 @@ class WebApiHandler {
     final String action = request['action'];
     final Map<String, dynamic> params = request['params'] ?? {};
     final String requestId = request['id'];
+
+    // 为当前操作创建Completer，便于资源追踪和清理
+    final operationId =
+        '${DateTime.now().millisecondsSinceEpoch}_${action}_${requestId}';
+    final completer = Completer();
+    _activeOperations[operationId] = completer;
 
     try {
       switch (action) {
@@ -160,13 +168,18 @@ class WebApiHandler {
           if (video != null && video.thumbnailPath != null) {
             // 读取缩略图文件并转换为base64
             final File thumbnailFile = File(video.thumbnailPath!);
-            final List<int> bytes = await thumbnailFile.readAsBytes();
-            final String base64Data = base64Encode(bytes);
-            // 统一格式：将数据放在data字段中
-            return {
-              'success': true,
-              'data': {'base64': base64Data}
-            };
+            try {
+              final List<int> bytes = await thumbnailFile.readAsBytes();
+              final String base64Data = base64Encode(bytes);
+              // 统一格式：将数据放在data字段中
+              return {
+                'success': true,
+                'data': {'base64': base64Data}
+              };
+            } catch (e) {
+              print('读取缩略图失败: $e');
+              return {'success': false, 'error': '无法读取缩略图文件'};
+            }
           } else {
             return {'success': false, 'error': '缩略图不存在'};
           }
@@ -180,15 +193,17 @@ class WebApiHandler {
           };
         case 'updateVideo':
           // 处理视频更新
-          final Map<String, dynamic> videoData = request['params']['video'] ?? {};
+          final Map<String, dynamic> videoData =
+              request['params']['video'] ?? {};
           final String id = videoData['id'];
           final String title = videoData['title'];
           final String? filePath = videoData['filePath'];
           final int? fileSize = videoData['fileSize']; // 假设前端传入文件大小
-          final List<String> tagIds = List<String>.from(videoData['tagIds'] ?? []); // 标签ID列表
+          final List<String> tagIds =
+              List<String>.from(videoData['tagIds'] ?? []); // 标签ID列表
           final String? thumbnailPath = videoData['thumbnailPath'];
           final String uploadTime = videoData['uploadTime'];
-          final int? duration = videoData['duration']; // 假设前端传入视频时长
+          final int? duration = videoData['duration']; // 假设前端传入时长
           final String remark = videoData['remark'] ?? ''; // 备注信息
 
           // 获取现有视频以获取未更新的字段
@@ -230,23 +245,21 @@ class WebApiHandler {
         // 添加取消二进制上传处理
         case 'cancelBinaryUpload':
           final String fileId = params['fileId'];
-          if (_uploadingFiles.containsKey(fileId)) {
-            _uploadingFiles.remove(fileId);
-          } else {
-            // 检查是否有未合并的临时文件
-            final tempDir = StorageUtils.getTempDirectory();
-            final tempFile = File(p.join(tempDir, fileId));
-            if (await tempFile.exists()) {
-              await tempFile.delete();
-            }
-          }
+          _cleanupUploadFile(fileId); // 使用清理方法
           return {'success': true};
         default:
           return {'success': false, 'error': '未知操作: $action'};
       }
-    } catch (e) {
-      // 捕获所有异常并返回错误信息
+    } catch (e, stackTrace) {
+      // 捕获所有异常并返回错误信息，同时记录详细的错误日志
+      print('处理请求时发生错误: $e\n堆栈跟踪: $stackTrace');
       return {'success': false, 'error': e.toString()};
+    } finally {
+      // 确保清理操作完成
+      if (!_activeOperations[operationId]!.isCompleted) {
+        _activeOperations[operationId]!.complete();
+      }
+      _activeOperations.remove(operationId);
     }
   }
 
@@ -287,12 +300,17 @@ class WebApiHandler {
       return {'success': false, 'error': '未初始化上传'};
     }
 
-    // 更新总块数
-    final uploadFile = _uploadingFiles[fileId]!;
-    uploadFile.totalChunks = totalChunks;
+    try {
+      // 更新总块数
+      final uploadFile = _uploadingFiles[fileId]!;
+      uploadFile.totalChunks = totalChunks;
 
-    // 通知客户端可以发送二进制数据
-    return {'status': 'ready'};
+      // 通知客户端可以发送二进制数据
+      return {'status': 'ready'};
+    } catch (e, stackTrace) {
+      print('处理二进制块元数据时发生错误: $e\n堆栈跟踪: $stackTrace');
+      return {'success': false, 'error': '处理二进制块元数据失败'};
+    }
   }
 
   // 处理二进制数据
@@ -303,23 +321,33 @@ class WebApiHandler {
     required Uint8List data,
     required String requestId,
   }) {
-    if (!_uploadingFiles.containsKey(fileId)) {
-      channel.sink.add(
-          json.encode({'id': requestId, 'success': false, 'error': '文件不存在'}));
-      return;
+    try {
+      if (!_uploadingFiles.containsKey(fileId)) {
+        channel.sink.add(
+            json.encode({'id': requestId, 'success': false, 'error': '文件不存在'}));
+        return;
+      }
+
+      final uploadFile = _uploadingFiles[fileId]!;
+      uploadFile.chunks[chunkIndex] = data;
+      uploadFile.receivedSize += data.length;
+
+      // 计算进度
+      final progress =
+          (uploadFile.receivedSize / uploadFile.totalSize * 100).toInt();
+
+      // 返回进度信息
+      channel.sink.add(json
+          .encode({'id': requestId, 'success': true, 'progress': progress}));
+    } catch (e, stackTrace) {
+      print('处理二进制数据时发生错误: $e\n堆栈跟踪: $stackTrace');
+      try {
+        channel.sink.add(json
+            .encode({'id': requestId, 'success': false, 'error': '处理二进制数据失败'}));
+      } catch (sendError) {
+        print('发送错误响应失败: $sendError');
+      }
     }
-
-    final uploadFile = _uploadingFiles[fileId]!;
-    uploadFile.chunks[chunkIndex] = data;
-    uploadFile.receivedSize += data.length;
-
-    // 计算进度
-    final progress =
-        (uploadFile.receivedSize / uploadFile.totalSize * 100).toInt();
-
-    // 返回进度信息
-    channel.sink.add(
-        json.encode({'id': requestId, 'success': true, 'progress': progress}));
   }
 
   // 完成二进制上传
@@ -336,8 +364,26 @@ class WebApiHandler {
     return video.toJson();
   }
 
-  // 处理二进制上传完成
+  // 资源清理方法
+  void _cleanupUploadFile(String fileId) {
+    // 清理上传文件
+    if (_uploadingFiles.containsKey(fileId)) {
+      _uploadingFiles.remove(fileId);
+    } else {
+      // 检查是否有未合并的临时文件
+      try {
+        final tempDir = StorageUtils.getTempDirectory();
+        final tempFile = File(p.join(tempDir, fileId));
+        if (tempFile.existsSync()) {
+          tempFile.deleteSync();
+        }
+      } catch (e) {
+        print('清理临时上传文件时出错: $e');
+      }
+    }
+  }
 
+  // 处理二进制上传完成
   Future<Map<String, dynamic>> _handleCompleteBinaryUpload(
       Map<String, dynamic> params) async {
     final String fileId = params['fileId'];
@@ -352,12 +398,7 @@ class WebApiHandler {
 
     final List<String> tagIds = List<String>.from(params['tagIds'] ?? []);
 
-    // 获取压缩参数，默认为完全压缩
-
-    // final String compressMode = params['compressMode'] ?? 'full';
-
     // 获取标题（如果没有提供则使用文件名，但去掉扩展名）
-
     final String title =
         params['title'] ?? name.replaceFirst(RegExp(r'\.[^.]+$'), '');
 
@@ -368,71 +409,73 @@ class WebApiHandler {
     final UploadingFile uploadingFile = _uploadingFiles[fileId]!;
 
     // 验证完整性
-
     if (uploadingFile.receivedSize != fileSize ||
         uploadingFile.chunks.length != uploadingFile.totalChunks) {
       return {'success': false, 'error': '文件分片不完整'};
     }
 
     // 合并文件
-
     final videosDir = StorageUtils.getVideosDirectory();
 
-    await Directory(videosDir).create(recursive: true);
+    try {
+      await Directory(videosDir).create(recursive: true);
 
-    final videoFilePath = p.join(videosDir,
-        'unTransCode_${DateTime.now().millisecondsSinceEpoch}_$name');
+      final videoFilePath = p.join(videosDir,
+          'unTransCode_${DateTime.now().millisecondsSinceEpoch}_$name');
 
-    final File videoFile = File(videoFilePath);
+      final File videoFile = File(videoFilePath);
 
-    final IOSink sink = videoFile.openWrite();
+      final IOSink sink = videoFile.openWrite();
 
-    // 按顺序写入所有分片
+      // 按顺序写入所有分片
+      for (int i = 0; i < uploadingFile.totalChunks; i++) {
+        if (uploadingFile.chunks[i] != null) {
+          sink.add(uploadingFile.chunks[i]!);
+        }
+      }
 
-    for (int i = 0; i < uploadingFile.totalChunks; i++) {
-      sink.add(uploadingFile.chunks[i]!);
+      await sink.close();
+
+      // 生成缩略图
+      final thumbNailPath =
+          await FileUtils.generateVideoThumbnail(videoFilePath);
+
+      // 创建一个待处理的视频对象，先返回给前端
+      final video = Video(
+        id: 'video_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        remark: remark,
+        filePath: videoFilePath, // 使用临时文件路径
+        duration: duration,
+        fileSize: fileSize, // 使用上传的文件大小
+        uploadTime: DateTime.now(),
+        tagIds: tagIds,
+        thumbnailPath: thumbNailPath, // 暂时没有缩略图，将在后台生成
+      );
+
+      // 保存视频（先保存一个基础版本）
+      await _videoProvider.saveVideo(video);
+
+      // 从上传列表中移除（已完成上传部分）
+      _uploadingFiles.remove(fileId);
+
+      // 立即返回上传完成响应，不等待压缩操作
+      return {'success': true, 'data': _videoToJson(video)};
+    } catch (e, stackTrace) {
+      print('合并上传文件时发生错误: $e\n堆栈跟踪: $stackTrace');
+      // 清理部分写入的文件
+      final videosDir = StorageUtils.getVideosDirectory();
+      final videoFilePath = p.join(videosDir,
+          'unTransCode_${DateTime.now().millisecondsSinceEpoch}_$name');
+      final partialFile = File(videoFilePath);
+      if (await partialFile.exists()) {
+        await partialFile.delete();
+      }
+      return {'success': false, 'error': '合并上传文件失败: $e'};
+    } finally {
+      // 确保清理上传文件数据
+      _uploadingFiles.remove(fileId);
     }
-
-    await sink.close();
-
-    final thumbNailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
-
-    // 创建一个待处理的视频对象，先返回给前端
-    final video = Video(
-      id: 'video_${DateTime.now().millisecondsSinceEpoch}',
-      title: title,
-      remark: remark,
-      filePath: videoFilePath, // 使用临时文件路径
-      duration: duration,
-      fileSize: fileSize, // 使用上传的文件大小
-      uploadTime: DateTime.now(),
-      tagIds: tagIds,
-      thumbnailPath: thumbNailPath, // 暂时没有缩略图，将在后台生成
-    );
-
-    // 保存视频（先保存一个基础版本）
-    await _videoProvider.saveVideo(video);
-
-    // 从上传列表中移除（已完成上传部分）
-    _uploadingFiles.remove(fileId);
-
-    // // 异步执行压缩和后续处理，不阻塞前端响应
-    // _processVideoInBackground(pendingVideo).then((processedVideo) {
-    //   if (processedVideo != null) {
-    //     // 更新数据库中的视频信息
-    //     _videoProvider.saveVideo(processedVideo).then((_) {
-    //       print('视频后台处理完成: ${processedVideo.title}');
-    //     }).catchError((error) {
-    //       print('保存处理后的视频失败: $error');
-    //     });
-    //   }
-    // }).catchError((error) {
-    //   print('视频后台处理失败: $error');
-    //   // 即使后台处理失败，上传的文件仍然保留
-    // });
-
-    // 立即返回上传完成响应，不等待压缩操作
-    return {'success': true, 'data': _videoToJson(video)};
   }
 
   // 异步处理视频压缩和生成缩略图等后台任务
@@ -496,4 +539,23 @@ class WebApiHandler {
   //     return null;
   //   }
   // }
+
+  /// 清理所有活跃操作和上传文件，释放资源
+  Future<void> dispose() async {
+    // 取消所有活跃操作
+    for (final completer in _activeOperations.values) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+    _activeOperations.clear();
+
+    // 清理所有未完成的上传文件
+    final List<String> fileIds = List.from(_uploadingFiles.keys);
+    for (final fileId in fileIds) {
+      _cleanupUploadFile(fileId);
+    }
+
+    print('WebApiHandler 资源已清理');
+  }
 }

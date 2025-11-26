@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>视频管理Web端 1.1</title>
+  <title>视频管理Web端 1.2</title>
   <!-- 引入Tailwind CSS用于快速构建UI -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入Font Awesome图标库 -->
@@ -1698,9 +1698,36 @@
 
       });
 
-      // 取消上传按钮
+      // 取消上传按钮 - 与点击框外区域使用相同的检查逻辑
       elements.cancelUploadBtn.addEventListener('click', () => {
-        elements.confirmModal.classList.remove('hidden');
+        // 如果是上传模式，需要确认
+        if (state.currentUploadFile) {
+          // 上传模式下的确认对话框
+          document.querySelector('#confirm-modal h3').textContent = '确认取消';
+          document.querySelector('#confirm-modal p').textContent = '确定要取消上传吗？已上传的部分将被丢弃。';
+          document.querySelector('#confirm-ok-btn').textContent = '确认取消';
+          elements.confirmModal.classList.remove('hidden');
+        } else if (state.currentEditingVideo) {
+          // 如果是编辑模式，检查是否有修改
+          const hasChanges =
+            state.currentEditingVideo.title !== elements.videoTitle.value.trim() ||
+            (state.currentEditingVideo.remark || '') !== elements.videoRemark.value.trim() ||
+            JSON.stringify(state.currentEditingVideo.tagIds) !== JSON.stringify(state.selectedTagIdsForUpload);
+
+          if (hasChanges) {
+            // 编辑模式下的确认对话框
+            document.querySelector('#confirm-modal h3').textContent = '确认放弃编辑';
+            document.querySelector('#confirm-modal p').textContent = '是否放弃当前编辑内容？';
+            document.querySelector('#confirm-ok-btn').textContent = '放弃编辑';
+            elements.confirmModal.classList.remove('hidden');
+          } else {
+            elements.uploadModal.classList.add('hidden');
+            state.currentEditingVideo = null;
+          }
+        } else {
+          // 非上传非编辑模式，直接关闭
+          elements.uploadModal.classList.add('hidden');
+        }
       });
 
       // 确认取消对话框 - 继续编辑
@@ -1710,15 +1737,23 @@
 
       // 确认取消对话框 - 确认取消
       elements.confirmOkBtn.addEventListener('click', () => {
-        // 标记取消后续上传
-        state.cancelUpload = true
-
-        // 初始化上传浮框内容
-        initUploadModal();
-
-        // 关闭对话框
-        elements.confirmModal.classList.add('hidden');
-        elements.uploadModal.classList.add('hidden');
+        if (state.currentUploadFile) {
+          // 上传模式：取消上传
+          state.cancelUpload = true;
+          // 初始化上传浮框内容
+          initUploadModal();
+          // 关闭对话框
+          elements.confirmModal.classList.add('hidden');
+        } else if (state.currentEditingVideo) {
+          // 编辑模式：放弃编辑，直接关闭
+          elements.uploadModal.classList.add('hidden');
+          state.currentEditingVideo = null;
+          elements.confirmModal.classList.add('hidden');
+        } else {
+          // 非上传非编辑模式，直接关闭
+          elements.uploadModal.classList.add('hidden');
+          elements.confirmModal.classList.add('hidden');
+        }
       });
 
       // 保存视频按钮
