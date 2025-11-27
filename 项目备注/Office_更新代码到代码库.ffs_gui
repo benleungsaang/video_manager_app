@@ -4064,6 +4064,11 @@
             <Item>\build\web\css\</Item>
             <Item>\build\web\fonts\</Item>
             <Item>\build\web\icons\</Item>
+            <Item>\build\flutter_assets\</Item>
+            <Item>*.d</Item>
+            <Item>*\analysis-results.txt</Item>
+            <Item>*\test_cache\</Item>
+            <Item>*\unit_test_assets\</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

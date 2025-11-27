@@ -1,33 +1,17 @@
 import 'dart:io';
 import 'dart:async'; // 导入 Completer
-
 import 'package:flutter/foundation.dart';
-
 import 'package:path/path.dart' as p;
-
-import 'package:path_provider/path_provider.dart';
-
 import 'package:provider/provider.dart';
-
 import 'package:video_manager_app/main.dart';
-
 import 'package:video_manager_app/utils/file_utils.dart';
-
 import 'package:web_socket_channel/web_socket_channel.dart';
-
 import '../providers/tag_provider.dart';
-
 import '../providers/video_provider.dart';
-
 import '../models/tag.dart';
-
 import '../models/video.dart';
-
 import 'dart:convert';
-
 import '../utils/storage_utils.dart'; // 新增导入
-
-// import 'video_compression_service.dart'; // 视频压缩服务
 
 // 二进制分块上传类
 class UploadingFile {
@@ -45,15 +29,6 @@ class UploadingFile {
 }
 
 class WebApiHandler {
-  // 静态获取Provider实例，并不会实时更新
-  // final TagProvider tagProvider;
-  // final VideoProvider videoProvider;
-
-  // WebApiHandler({
-  //   required this.tagProvider,
-  //   required this.videoProvider,
-  // });
-
   // 通过全局动态获取Provider实例
   WebApiHandler();
 
@@ -477,68 +452,6 @@ class WebApiHandler {
       _uploadingFiles.remove(fileId);
     }
   }
-
-  // 异步处理视频压缩和生成缩略图等后台任务
-  // Future<Video?> _processVideoInBackground(Video pendingVideo) async {
-  //   try {
-  //     String finalVideoFilePath = pendingVideo.filePath!;
-
-  // // 根据压缩参数处理视频
-  // if (compressMode == 'full' || compressMode == 'original') {
-  //   // 检查FFmpeg是否可用
-  //   if (await VideoCompressionService.isFFmpegAvailable()) {
-  //     print('开始对视频进行压缩，模式: $compressMode, 路径: $finalVideoFilePath');
-
-  //     final compressedPath = await VideoCompressionService.compressVideo(
-  //       inputPath: finalVideoFilePath,
-  //       compressionMode: compressMode,
-  //     );
-
-  //     if (compressedPath != null) {
-  //       // 压缩成功，使用压缩后的文件
-  //       finalVideoFilePath = compressedPath;
-  //       print('视频压缩完成，新文件路径: $compressedPath');
-  //     } else {
-  //       print('视频压缩失败，使用原始文件');
-  //       // 如果压缩失败，确保原始文件仍然存在
-  //       final originalFile = File(finalVideoFilePath);
-  //       if (!await originalFile.exists()) {
-  //         print('原始视频文件不存在或已被删除');
-  //         return null;
-  //       }
-  //     }
-  //   } else {
-  //     print('FFmpeg不可用，跳过视频压缩');
-  //   }
-  // }
-
-  //     // 生成缩略图
-  //     final thumbNailPath =
-  //         await FileUtils.generateVideoThumbnail(finalVideoFilePath);
-
-  //     // 获取最终文件大小
-  //     final File finalVideoFile = File(finalVideoFilePath);
-  //     final int finalFileSize = await finalVideoFile.length();
-
-  //     // 创建处理完成的视频对象
-  //     final processedVideo = Video(
-  //       id: pendingVideo.id,
-  //       title: pendingVideo.title,
-  //       remark: pendingVideo.remark,
-  //       filePath: finalVideoFilePath,
-  //       duration: pendingVideo.duration,
-  //       fileSize: finalFileSize,
-  //       uploadTime: pendingVideo.uploadTime,
-  //       tagIds: pendingVideo.tagIds,
-  //       thumbnailPath: thumbNailPath,
-  //     );
-
-  //     return processedVideo;
-  //   } catch (e) {
-  //     print('后台处理视频时发生错误: $e');
-  //     return null;
-  //   }
-  // }
 
   /// 清理所有活跃操作和上传文件，释放资源
   Future<void> dispose() async {

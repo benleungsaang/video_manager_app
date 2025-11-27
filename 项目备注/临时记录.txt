@@ -30,7 +30,24 @@ UI 组件
 1. FileUtils 优化缩略图生成缓存策略，减少重复计算；（已能运行）
 2.VideoUploader 完善文件上传错误处理和重试机制（已能运行）
 
-对前端也尝试采用类似的操作（懒加载、优化缩略图的请求、uploader/downloader的配合，减少内存占用以及减少单次的大量请求
+关于前端 build/web/index.html
+对能否做视频列表的懒加载、优化缩略图的请求、uploader/downloader与前端的配合，减少内存占用以及减少单次的大量请求等相关功能做评估（已能运行）
+
+
+前端build/web/index.html
+当前点开单个视频时，还会直接执行getThumbnail获取缩略图的操作，正常应该可以在刚才已缓存的缩略图中获取，缓存中没有缩略图再发出请求（未成功，暂时搁置）
+
+后端lib/pages/home_page
+在“视频管理”后添加当前视频数量的显示，注意搜索后数量会发生变化更新（已能运行）
+
+
+对前端（build/web/index.html）做以下调整
+增加“深色模式/浅色模式”开关，开关的记录保存在浏览器的缓存
+
+
+完成构建后的JS文件用prettier进行检查确认文件是否有效
+
+
 
 
 文件构建完成后记得做好dart format或flutter build bundle --suppress-analytics检查代码是否健全

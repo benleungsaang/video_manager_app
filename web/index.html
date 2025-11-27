@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>视频管理Web端 1.2</title>
+  <title>视频管理Web端 1.0</title>
   <!-- 引入Tailwind CSS用于快速构建UI -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入Font Awesome图标库 -->
@@ -27,6 +27,21 @@
       }
     }
 
+  </script>
+
+  <!-- 配置Tailwind深色模式 -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+          },
+        },
+      }
+    }
   </script>
 
   <!-- 自定义工具类 -->
@@ -85,23 +100,30 @@
   </script>
 </head>
 
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
+  <!-- 深色模式暖色调覆盖层 -->
+  <div id="warm-overlay" class="fixed inset-0 pointer-events-none z-51 hidden dark:block" style="background-color: rgba(255, 153, 0, 0.08); mix-blend-mode: multiply;"></div>
   <!-- 顶部导航栏 -->
-  <header class="bg-white shadow-md">
+  <header class="bg-white shadow-md dark:bg-gray-800 dark:text-white">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-primary">视频管理系统</h1>
+      <h1 class="text-2xl font-bold text-primary dark:text-blue-400">视频管理系统 <span id="video-count" class="text-sm text-gray-500 ml-2 dark:text-gray-400">(加载中...)</span></h1>
 
       <!-- 搜索框 -->
       <div class="flex-1 max-w-md mx-8">
         <div class="relative">
           <input type="text" id="search-input" placeholder="搜索 【 整个数据库 】 视频 - 标题或标签..."
-            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
-          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"></i>
         </div>
       </div>
 
+      <!-- 深色模式切换按钮 -->
+      <button id="theme-toggle" class="mr-4 px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="切换深色模式">
+        <i class="fa fa-moon-o text-gray-700 dark:text-yellow-300"></i>
+      </button>
+
       <!-- 上传视频按钮 -->
-      <button id="upload-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition">
+      <button id="upload-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
         <i class="fa fa-cloud-upload mr-1"></i> 上传视频
       </button>
     </div>
@@ -111,15 +133,9 @@
 
     <!-- 本地视频筛选 -->
     <div class="mb-6">
-      <!-- <div class="flex items-center mb-2">
-          <i class="fa fa-filter text-gray-500 mr-2"></i>
-          <span class="text-gray-600 font-medium">当前视频筛选：</span>
-        </div> -->
       <div class="relative">
         <input type="text" id="filter-input" placeholder="在 【 当前搜索结果 】 中筛选 - 标题或标签..."
-          class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
-        <i class="fa fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-      </div>
+          class="w-full pl-10 pr-4 py-2 my-5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600">
     </div>
 
     <!-- 视频列表区域 -->
@@ -132,26 +148,26 @@
     </div>
   </main>
 
-  <!---------------------- 视频上传浮框 --------------------------->
-  <div id="upload-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50">
-    <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <!---------------------- 视频上传浮框 --------------------------->
+  <div id="upload-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
+    <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col dark:bg-gray-800 dark:text-white">
       <!-- 浮框头部 -->
-      <div class="flex justify-between items-center p-4 border-b">
-        <h3 class="text-xl font-bold">上传视频</h3>
-        <button id="close-upload-modal" class="text-gray-500 hover:text-gray-700 p-2">
+      <div class="flex justify-between items-center p-4 border-b dark:border-gray-700 dark:bg-gray-700">
+        <h3 class="text-xl font-bold dark:text-white">上传视频</h3>
+        <button id="close-upload-modal" class="text-gray-500 hover:text-gray-700 p-2 dark:text-gray-300 dark:hover:text-white">
           <i class="fa fa-times text-xl"></i>
         </button>
       </div>
 
       <!-- 浮框内容 -->
-      <div class="flex-1 overflow-y-auto p-6">
+      <div class="flex-1 overflow-y-auto p-6 dark:bg-gray-800 dark:text-white">
         <!-- 视频预览区域 -->
         <div class="mb-6">
-          <div class="bg-gray-100 rounded-lg overflow-hidden">
+          <div class="bg-gray-100 rounded-lg overflow-hidden dark:bg-gray-700">
             <video id="video-preview" class="w-full aspect-video object-contain" controls crossorigin="anonymous"
               playsinline webkit-playsinline preload="metadata"></video>
           </div>
-          <div class="mt-2 text-sm text-gray-500 flex justify-between">
+          <div class="mt-2 text-sm text-gray-500 flex justify-between dark:text-gray-400">
 
             <span id="video-duration">时长: --:--</span>
 
@@ -159,80 +175,51 @@
 
           </div>
 
-          <!-- 压缩选项 -->
-
-
-
-          <!-- <div id="video-compress-box" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-
-
-            <div class="text-sm font-medium text-gray-700 mb-2">压缩选项</div>
-
-
-            <div class="mt-2 text-xs text-gray-500">
-
-
-              <input type="radio" id="compress-mode-wechat-normal" name="compress-mode" value="full" class="mr-1" disabled="true">
-
-
-              <label for="compress-mode-wechat-normal" class="inline">极度压缩</label>
-
-
-              <input type="radio" id="compress-mode-wechat-original" name="compress-mode" value="original" class="ml-4 mr-1" checked>
-
-
-              <label for="compress-mode-wechat-original" class="inline">原画压缩</label>
-
-
-            </div>
-
-
-          </div> -->
-
           <!-- 视频边编辑边上传，先上传的按钮 -->
 
           <button id="upload-first-btn"
-            class="hidden bg-secondary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+            class="hidden bg-secondary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
 
             先上传视频
 
           </button>
           <!-- 视频边编辑边上传，先上传的按钮 -->
           <button id="download-btn"
-            class="hidden bg-primary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition">
+            class="hidden bg-primary text-white px-6 py-2 rounded-lg hover:bg-secondary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
             下载视频
           </button>
           <!-- 预上传 - 进度条 -->
           <div class="px-6 pb-2 hidden" id="upload-progress-container-top">
-            <div class="text-sm text-gray-600 mb-1">预上传进度</div>
-            <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="text-sm text-gray-600 mb-1 dark:text-gray-300">预上传进度</div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
               <div id="upload-progress-bar-top" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
             </div>
           </div>
         </div>
 
         <!-- 视频信息表单 -->
-        <div class="space-y-4">
+        <div class="space-y-4 dark:text-white">
           <!-- 标题输入 -->
           <div>
-            <label for="video-title" class="block text-sm font-medium text-gray-700 mb-1">标题 <span
+            <label for="video-title" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">标题 <span
                 class="text-red-500">*</span></label>
             <input type="text" id="video-title"
-              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
               placeholder="请输入视频标题">
           </div>
 
           <!-- 标签选择 -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">标签</label>
-            <div id="tag-selection" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto p-2 border rounded-lg">
+            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">标签</label>
+            <div id="tag-selection" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto p-2 border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600">
               <!-- 标签会动态生成 -->
-              <p class="text-gray-500 text-sm w-full text-center">待添加标签...</p>
+              <p class="text-gray-500 text-sm w-full text-center dark:text-gray-400">待添加标签...</p>
             </div>
             <div class="flex items-center">
               <input type="text" id="new-tag-input-modal" placeholder="添加新标签"
-                class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary">
-              <button id="add-tag-btn-modal" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90">
+                class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                placeholder="添加新标签">
+              <button id="add-tag-btn-modal" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700">
                 添加
               </button>
             </div>
@@ -240,27 +227,27 @@
 
           <!-- 备注信息 -->
           <div>
-            <label for="video-remark" class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <label for="video-remark" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">备注</label>
             <textarea id="video-remark" rows="3"
-              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
               placeholder="请输入备注信息（可选）"></textarea>
           </div>
         </div>
       </div>
 
       <!-- 浮框底部 -->
-      <div class="p-4 border-t flex justify-end gap-3">
-        <button id="cancel-upload-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+      <div class="p-4 border-t flex justify-end gap-3 dark:border-gray-700 dark:bg-gray-800">
+        <button id="cancel-upload-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
           取消
         </button>
-        <button id="save-video-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition">
+        <button id="save-video-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
           保存视频
         </button>
       </div>
       <!-- 浮框底部 - 进度条 -->
       <div class="px-6 pb-2 hidden" id="upload-progress-container-bottom">
-        <div class="text-sm text-gray-600 mb-1">上传进度</div>
-        <div class="w-full bg-gray-200 rounded-full h-2.5">
+        <div class="text-sm text-gray-600 mb-1 dark:text-gray-300">上传进度</div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
           <div id="upload-progress-bar-bottom" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
         </div>
       </div>
@@ -322,6 +309,52 @@
 
         return clientId;
 
+      },
+
+      // 请求队列和批处理相关
+      _requestQueue: [],
+      _batchTimeout: null,
+      _maxBatchSize: 10, // 最大批处理请求数
+
+      // 批量发送请求
+      _processRequestBatch() {
+        if (this._requestQueue.length === 0) return;
+
+        // 取出一部分请求进行批处理
+        const batch = this._requestQueue.splice(0, this._maxBatchSize);
+
+        // 创建批量请求
+        const batchRequest = {
+          id: this._generateRequestId(),
+          action: 'batch',
+          params: { requests: batch.map(req => ({
+            id: req.id,
+            action: req.action,
+            params: req.params
+          }))}
+        };
+
+        // 为每个请求设置回调
+        batch.forEach(request => {
+          this._callbacks.set(request.id, request.callback);
+        });
+
+        console.log('发送批量请求:', batchRequest);
+        this._ws.send(JSON.stringify(batchRequest));
+
+        // 如果还有请求在队列中，继续处理
+        if (this._requestQueue.length > 0) {
+          clearTimeout(this._batchTimeout);
+          this._batchTimeout = setTimeout(() => this._processRequestBatch(), 50); // 50ms延迟
+        } else {
+          this._batchTimeout = null;
+        }
+      },
+
+      // 添加请求到队列（暂时禁用批量请求，以兼容后端）
+      _enqueueRequest(action, params = {}) {
+        // 直接发送单个请求，避免后端不支持批量请求的问题
+        return this._sendRequest(action, params);
       },
 
 
@@ -447,6 +480,28 @@
         });
       },
 
+      // 搜索视频的防抖实现
+      searchVideos: function(searchTerm) {
+        // 防抖功能：延迟执行搜索，取消之前的请求
+        if (this._searchDebounceTimer) {
+          clearTimeout(this._searchDebounceTimer);
+        }
+
+        return new Promise((resolve, reject) => {
+          this._searchDebounceTimer = setTimeout(async () => {
+            try {
+              const result = await this._sendRequest('searchVideos', { query: searchTerm });
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            }
+          }, 300); // 300ms 防抖延迟
+        });
+      },
+
+      // 添加搜索防抖定时器变量
+      _searchDebounceTimer: null,
+
       // 标签相关接口
 
       // 载入标签列表
@@ -483,9 +538,25 @@
 
       getThumbnail: function (videoId) { return flutterChannel._sendRequest('getThumbnail', { videoId: videoId }); },
 
-      //  搜索视频
+      //  搜索视频 - 使用防抖
 
-      searchVideos: function (searchTerm) { return flutterChannel._sendRequest('searchVideos', { query: searchTerm }); },
+      searchVideos: function (searchTerm) {
+        // 防抖功能：延迟执行搜索，取消之前的请求
+        if (this._searchDebounceTimer) {
+          clearTimeout(this._searchDebounceTimer);
+        }
+
+        return new Promise((resolve, reject) => {
+          this._searchDebounceTimer = setTimeout(async () => {
+            try {
+              const result = await this._sendRequest('searchVideos', { query: searchTerm });
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            }
+          }, 300); // 300ms 防抖延迟
+        });
+      },
 
       // 更新视频信息
 
@@ -638,6 +709,7 @@
       currentUploadFile: null, // 当前要上传的 文件
       currentFileId: null, // 当前要上传 文件的ID
       cancelUpload: false, // 是否正在执行缓存
+      theme: localStorage.getItem('theme') || 'light', // 主题状态
     }
 
     // DOM元素引用
@@ -671,7 +743,10 @@
       confirmModal: document.getElementById('confirm-modal'),
       confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
       confirmOkBtn: document.getElementById('confirm-ok-btn'),
+      // 深色模式切换按钮
+      themeToggle: document.getElementById('theme-toggle'),
       // 隐藏的文件输入
+      videoCount: document.getElementById('video-count'), // 视频计数显示元素
       fileInput: document.createElement('input')
     }
 
@@ -687,6 +762,9 @@
     async function init() {
       console.log('初始化函数 init() 被调用');
       try {
+        // 初始化主题
+        initTheme();
+
         // 加载视频和标签数据
         await loadTags();
         await loadVideos();
@@ -725,219 +803,299 @@
 
     // 优化：避免重复请求，对相同路径的缩略图进行缓存，减少重复请求
     const thumbnailCache = new Map();
+
+    // 使用 localStorage 持久化缓存的缩略图
+    function saveThumbnailToStorage(videoId, base64Data) {
+      try {
+        const cache = JSON.parse(localStorage.getItem('thumbnailStorage') || '{}');
+        cache[videoId] = {
+          data: base64Data,
+          timestamp: Date.now(),
+          expiry: Date.now() + (24 * 60 * 60 * 1000) // 24小时后过期
+        };
+        localStorage.setItem('thumbnailStorage', JSON.stringify(cache));
+      } catch (e) {
+        console.warn('无法保存缩略图到本地存储:', e);
+      }
+    }
+
+    function getThumbnailFromStorage(videoId) {
+      try {
+        const cache = JSON.parse(localStorage.getItem('thumbnailStorage') || '{}');
+        const item = cache[videoId];
+
+        if (item && item.expiry > Date.now()) {
+          return item.data;
+        } else if (item) {
+          // 删除过期的缩略图
+          delete cache[videoId];
+          localStorage.setItem('thumbnailStorage', JSON.stringify(cache));
+        }
+      } catch (e) {
+        console.warn('无法从本地存储获取缩略图:', e);
+      }
+      return null;
+    }
+
     // 渲染视频缩略图
     async function renderVideoThumbnail(video) {
       if (!video.id) {
         return '<i class="fa fa-film text-4xl text-gray-400"></i>';
       }
 
-      // 检查缓存
+      // 检查内存缓存
       if (thumbnailCache.has(video.id)) {
         return thumbnailCache.get(video.id);
+      }
+
+      // 检查本地存储缓存
+      const cachedBase64 = getThumbnailFromStorage(video.id);
+      if (cachedBase64) {
+        const imgHtml = `<img src="data:image/jpeg;base64,${cachedBase64}"
+                    alt="${video.title}"
+                    class="w-full h-full object-cover loading-lazy">`;
+        thumbnailCache.set(video.id, imgHtml);
+        return imgHtml;
       }
 
       try {
         // 获取Base64格式的缩略图
         const thumbnailData = await flutterChannel.getThumbnail(video.id);
-        // 明确检查base64字段是否存在
-        if (!thumbnailData) {
-          throw new Error('缩略图数据格式错误，缺少base64字段');
+
+        // 检查缩略图数据格式 - 兼容不同格式
+        let base64Data = null;
+        if (typeof thumbnailData === 'string') {
+          // 如果直接返回字符串
+          base64Data = thumbnailData;
+        } else if (thumbnailData && typeof thumbnailData === 'object') {
+          // 如果返回对象，尝试不同字段名
+          base64Data = thumbnailData.base64 || thumbnailData.data || thumbnailData.thumbnail || thumbnailData;
         }
 
-        const imgHtml = `<img src="data:image/jpeg;base64,${thumbnailData.base64}"
+        if (!base64Data) {
+          throw new Error('缩略图数据格式错误，无法获取base64数据');
+        }
+
+        const imgHtml = `<img src="data:image/jpeg;base64,${base64Data}"
                     alt="${video.title}"
-                    class="w-full h-full object-cover">`;
+                    class="w-full h-full object-cover loading-lazy">`;
         thumbnailCache.set(video.id, imgHtml);
+        saveThumbnailToStorage(video.id, base64Data);
         return imgHtml;
+
       } catch (error) {
         console.error(`加载缩略图失败（视频ID: ${video.id}）:`, error);
         return '<i class="fa fa-film text-4xl text-gray-400"></i>';
       }
     }
 
-    // 渲染视频网格
 
+
+    // 实现缩略图懒加载
+    function initThumbnailLazyLoading() {
+      // 使用 Intersection Observer 来实现更高效的懒加载
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const videoCard = entry.target;
+              const videoId = videoCard.dataset.videoId;
+              if (videoId) {
+                // 可以在这里对即将进入视图的视频进行预加载
+                // 但当前我们使用的是现有的缩略图函数
+              }
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          rootMargin: '100px' // 提前100px开始加载
+        });
+
+        // 观察所有视频卡片
+        document.querySelectorAll('[data-video-id]').forEach(card => {
+          observer.observe(card);
+        });
+      }
+    }
+
+    // 全局变量用于懒加载
+    let currentFilteredVideos = [];
+    let currentVideoIndex = 0;
+    const videosPerPage = 20; // 每次加载的视频数量
+    let isAllVideosLoaded = false;
+    let isScrollLoading = false; // 防止重复加载
+
+    // 渲染视频网格（更新为支持懒加载）
     async function renderVideoGrid() {
+      // 重置懒加载状态
+      currentVideoIndex = 0;
+      isAllVideosLoaded = false;
+      isScrollLoading = false;
 
       // 1. 应用标签筛选
-
       let filteredVideos = state.videos;
 
       if (state.selectedTagIds.length > 0) {
-
         filteredVideos = state.videos.filter(video =>
-
           state.selectedTagIds.every(tagId => video.tagIds.includes(tagId))
-
         );
-
       }
-
-
 
       // 2. 应用本地筛选（使用localeCompare避免中文问题）
-
       const filterTerm = elements.filterInput.value.trim();
-
       if (filterTerm) {
-
-
-
         const keywords = filterTerm.split(/\s+/).filter(k => k).map(k => k.toLowerCase());
-
-
-
         filteredVideos = filteredVideos.filter(video => {
-
           return keywords.every(keyword => {
-
             // 标题
-
             const matchTitle = video.title.toLocaleString().includes(keyword);
-
             // 标签
-
             const matchTag = video.tagIds.some(tagId => {
-
               const tag = state.tags.find(t => t.id === tagId);
-
               return tag && tag.name.toLowerCase().includes(keyword);
-
             });
-
             // 备注
-
             const matchRemark = video?.remark // 判断是否有remark
-
               ? video.remark.toLowerCase().includes(keyword) // 有的话常规筛选
-
               : false;
 
-
-
             return matchTitle || matchTag || matchRemark;
-
           })
-
         }) // filteredVideos
-
       } // if
 
-
+      currentFilteredVideos = filteredVideos;
 
       // 3. 无匹配结果时的显示
-
-      if (filteredVideos.length === 0) {
-
+      if (currentFilteredVideos.length === 0) {
         elements.videoGrid.innerHTML = `
-
           <div class="text-center text-gray-500 py-12">
-
             <i class="fa fa-search text-4xl mb-4"></i>
-
             <p>未找到匹配的视频</p>
-
           </div>
-
         `;
-
+        // 移除滚动监听器，因为没有视频需要懒加载
+        window.removeEventListener('scroll', handleScroll);
         return;
-
       }
 
+      // 清空现有内容并加载第一批视频
+      elements.videoGrid.innerHTML = '';
+      await loadMoreVideos();
 
+      // 绑定滚动事件以实现懒加载
+      setupLazyLoading();
 
+      // 更新视频计数显示
+      if (currentFilteredVideos === state.videos) {
+        // 显示总数（未筛选状态）
+        updateVideoCount(currentFilteredVideos.length, false);
+      } else {
+        // 显示筛选后的数量
+        updateVideoCount(currentFilteredVideos.length, true);
+      }
+    }
 
+    // 设置懒加载滚动监听
+    function setupLazyLoading() {
+      // 移除之前的滚动监听器，避免重复绑定
+      window.removeEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll);
+    }
 
-      const videoCards = await Promise.all(filteredVideos.map(async (video) => {
+    // 滚动事件处理函数
+    function handleScroll() {
+      // 检查是否已滚动到页面底部附近
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      if (scrollTop + clientHeight >= scrollHeight - 500) { // 500px 触发提前加载
+        if (!isAllVideosLoaded && !isScrollLoading) {
+          loadMoreVideos();
+        }
+      }
+    }
 
+    // 加载更多视频
+    async function loadMoreVideos() {
+      if (isScrollLoading || isAllVideosLoaded) return;
+
+      isScrollLoading = true;
+
+      // 获取当前批次的视频
+      const start = currentVideoIndex;
+      const end = Math.min(currentVideoIndex + videosPerPage, currentFilteredVideos.length);
+      const batchVideos = currentFilteredVideos.slice(start, end);
+
+      // 如果没有更多视频，标记为全部加载完成
+      if (batchVideos.length === 0) {
+        isAllVideosLoaded = true;
+        isScrollLoading = false;
+        return;
+      }
+
+      // 生成并添加视频卡片
+      const videoCards = await Promise.all(batchVideos.map(async (video) => {
         const thumbnailHtml = await renderVideoThumbnail(video);
-
+        // 构建悬停提示文本，包含title和remark（如果存在）
+        const tooltipText = video.remark ? `${video.title}\n${video.remark}` : video.title;
         return `
-
-      <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition cursor-pointer" data-video-id="${video.id}">
-
-        <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition">
-
-          <div class="relative aspect-video bg-gray-100">
-
+      <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition cursor-pointer dark:bg-gray-800 dark:text-white" data-video-id="${video.id}" title="${tooltipText}">
+        <div class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition dark:bg-gray-800 dark:text-white">
+          <div class="relative aspect-video bg-gray-100 dark:bg-gray-700">
             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-
               ${formatFileSize(video.fileSize)}
-
             </div>
-
               ${thumbnailHtml}
-
             <!-- ↓ ↓ ↓ 视频卡片右上角 - 功能菜单 ↓ ↓ ↓ -->
-
             <div class="absolute top-2 right-2">
-
               <button class="menu-btn delete-menu-btn bg-black/50 text-white p-1 rounded-full" data-video-id="${video.id}">
-
                 <i class="fa fa-ellipsis-v"></i>
-
               </button>
-
               <!-- 删除菜单 -->
-
-              <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10">
-
+              <div class="delete-menu hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10 dark:bg-gray-700 dark:text-white">
                 <button class="menu-item delete-video-btn text-red-500 hover:bg-gray-100 px-2 py-1 text-sm" data-video-id="${video.id}">
-
                   <i class="fa fa-trash mr-1 text-xl"></i>
-
                 </button>
-
               </div>
-
             </div>
-
             <!-- ↑ ↑ ↑ 视频卡片右上角 - 功能菜单 ↑ ↑ ↑ -->
-
             <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-
               ${formatDuration(video.duration)}
             </div>
-
           </div>
-
           <div class="p-4">
-
-            <h3 class="font-semibold text-gray-800 mb-1 truncate">${video.title}</h3>
-
-            <div class="text-xs text-gray-500 mb-1">
-
+            <h3 class="font-semibold text-gray-800 mb-1 truncate dark:text-gray-200" alt="${video.title}">${video.title}</h3>
+            <div class="text-xs text-gray-500 mb-1 dark:text-gray-400">
               ${formatDate(video.uploadTime)}
-
             </div>
-
             <div class="flex flex-wrap gap-1 mb-2">
-
               ${video.tagIds.map(tagId => {
-
           const tag = state.tags.find(t => t.id === tagId);
-
-          return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${tag.name}</span>`
-
+          return tag ? `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full dark:bg-blue-900 dark:text-blue-100">${tag.name}</span>`
             :
-
-            `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">当前未有标签</span>`;
-
+            `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full dark:bg-blue-900 dark:text-blue-100">当前未有标签</span>`;
         }).join('')}
-
             </div>
-
           </div>
-
         </div>
-
       </div>
+      `;
+      }));
 
-      `}));
+      // 添加新加载的视频到页面
+      elements.videoGrid.insertAdjacentHTML('beforeend', videoCards.join(''));
 
-      elements.videoGrid.innerHTML = videoCards.join('');
+      // 更新索引
+      currentVideoIndex = end;
 
+      // 检查是否已加载所有视频
+      if (currentVideoIndex >= currentFilteredVideos.length) {
+        isAllVideosLoaded = true;
+      }
+
+      isScrollLoading = false;
+
+      // 初始化新添加的视频卡片的懒加载
+      initThumbnailLazyLoading();
     }
 
     // 渲染标签选择区域
@@ -1488,8 +1646,46 @@
       elements.videoPreview.load(); // 重新加载资源
     }
 
+    // 切换深色模式
+    function toggleTheme() {
+      if (state.theme === 'light') {
+        state.theme = 'dark';
+        document.documentElement.classList.add('dark');
+      } else {
+        state.theme = 'light';
+        document.documentElement.classList.remove('dark');
+      }
+      // 更新图标
+      updateThemeIcon();
+      // 保存用户偏好到localStorage
+      localStorage.setItem('theme', state.theme);
+    }
+
+    // 更新主题图标
+    function updateThemeIcon() {
+      const iconElement = elements.themeToggle.querySelector('i');
+      if (state.theme === 'dark') {
+        iconElement.className = 'fa fa-sun-o text-yellow-300';
+      } else {
+        iconElement.className = 'fa fa-moon-o text-gray-700 dark:text-gray-300';
+      }
+    }
+
+    // 初始化主题
+    function initTheme() {
+      if (state.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcon();
+    }
+
     // 绑定所有事件处理程序
     function bindEvents() {
+      // 深色模式切换按钮事件
+      elements.themeToggle.addEventListener('click', toggleTheme);
+
       // 视频卡片点击事件
       elements.videoGrid.addEventListener('click', async (e) => {
         const deleteMenuBtn = e.target.closest('.delete-menu-btn');
@@ -1590,6 +1786,10 @@
                   <p>搜索失败，请重试</p>
                 </div>
               `;
+              // 恢复计数显示为原始数量
+              if (state.videos) {
+                updateVideoCount(state.videos.length, false);
+              }
             }
           } else {
             // 搜索框为空时恢复原始视频列表
@@ -1597,6 +1797,9 @@
               state.videos = state.originalVideos;
               state.originalVideos = null;
               renderVideoGrid();
+            } else if (state.videos) {
+              // 如果没有原始视频列表，至少更新计数
+              updateVideoCount(state.videos.length, false);
             }
           }
         }
@@ -1883,6 +2086,19 @@
       return date.toLocaleString();
     }
 
+    // 工具函数：更新视频计数显示
+    function updateVideoCount(count, isFiltered = false) {
+      if (elements.videoCount) {
+        if (isFiltered) {
+          elements.videoCount.textContent = `(显示 ${count} 个视频)`;
+          elements.videoCount.className = 'text-sm text-green-500 ml-2'; // 绿色表示筛选结果
+        } else {
+          elements.videoCount.textContent = `(共 ${count} 个视频)`;
+          elements.videoCount.className = 'text-sm text-gray-500 ml-2'; // 灰色表示总数
+        }
+      }
+    }
+
     // 工具函数：显示操作成功提示框
     function showToast(message) {
       const toast = document.getElementById('toast');
@@ -2120,6 +2336,5 @@
       }
     }
   </script>
-</body>
-
+  </body>
 </html>

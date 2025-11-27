@@ -560,7 +560,12 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: _isMultiSelectMode
             ? Text('已选择 ${_selectedVideos.length} 项')
-            : const Text('视频管理'),
+            : Consumer<VideoProvider>(
+                builder: (context, videoProvider, child) {
+                  final videoCount = videoProvider.videos.length;
+                  return Text('视频管理 ($videoCount)');
+                },
+              ),
         backgroundColor: Colors.blue[800],
         actions: [
           if (_isMultiSelectMode) ...[
