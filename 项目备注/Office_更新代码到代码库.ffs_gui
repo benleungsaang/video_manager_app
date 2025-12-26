@@ -4069,6 +4069,7 @@
             <Item>*\analysis-results.txt</Item>
             <Item>*\test_cache\</Item>
             <Item>*\unit_test_assets\</Item>
+            <Item>\build\web\main.dart.js</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>

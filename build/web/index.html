@@ -1247,6 +1247,7 @@
         return;
       }
       if (state.currentEditingVideo) {
+        state.currentEditingVideo.title = elements.videoTitle.value.trim(),
         state.currentEditingVideo.tagIds = state.selectedTagIdsForUpload,
           state.currentEditingVideo.remark = elements.videoRemark.value.trim()
         await flutterChannel.updateVideo(state.currentEditingVideo)
@@ -1482,37 +1483,55 @@
       }
     }
 
-    // 初始化视频详细内容
-    function initUploadModal() {
-      // 清除视频预览
-      elements.videoPreview.src = '';
-      if (elements.videoPreview.src) {
-        URL.revokeObjectURL(elements.videoPreview.src);
-      }
-      // 隐藏预上传按钮
-      elements.uploadFirstBtn.classList.add('hidden');
-      // 隐藏预上传进度条
-      elements.progressBarTop.style.width = '0%';
-      elements.progressContainerTop.classList.add('hidden');
-      // 清空下方输入框
-      elements.videoTitle.value = '';
-      elements.newTagInputModal.value = '';
-      elements.videoRemark.value = '';
-      // 隐藏底部上传进度条
-      elements.progressBarTop.style.width = '0%';
-      elements.progressContainerBottom.classList.add('hidden');
-      // 恢复保存按钮状态
-      elements.saveVideoBtn.disabled = false
-      // 重置 state 关于操作上传文件的状态
-      state.currentEditingVideo = null;
-      state.selectedTagIdsForUpload = [];
-      state.pendingUploads = new Map(), // 存储已上传但未合并的文件ID
-        state.currentUploadFile = null;
-      state.currentFileId = null;
-      state.cancelUpload = false, // 是否正在执行缓存
-        elements.uploadModal.classList.add('hidden')
-    }
+          // 初始化视频详细内容
+          function initUploadModal() {
+            // 添加日志以便调试
+            console.log('initUploadModal: 开始重置模态框');
 
+            // 先移除错误监听器，避免设置空src时触发错误
+            if (elements.videoPreview && elements.videoPreview._errorHandler) {
+              console.log('initUploadModal: 移除错误监听器');
+              elements.videoPreview.removeEventListener('error', elements.videoPreview._errorHandler);
+              elements.videoPreview._errorHandler = null;
+            }
+
+            // 停止视频播放并清除源
+            if (elements.videoPreview) {
+              console.log('initUploadModal: 停止视频播放，当前src:', elements.videoPreview.src);
+              elements.videoPreview.pause();
+              elements.videoPreview.src = '';
+              elements.videoPreview.load(); // 加载空源以确保停止播放
+              console.log('initUploadModal: 已清除视频源');
+            }
+
+            if (elements.videoPreview && elements.videoPreview.src) {
+              URL.revokeObjectURL(elements.videoPreview.src);
+            }
+            // 隐藏预上传按钮
+            elements.uploadFirstBtn.classList.add('hidden');
+            // 隐藏预上传进度条
+            elements.progressBarTop.style.width = '0%';
+            elements.progressContainerTop.classList.add('hidden');
+            // 清空下方输入框
+            elements.videoTitle.value = '';
+            elements.newTagInputModal.value = '';
+            elements.videoRemark.value = '';
+            // 隐藏底部上传进度条
+            elements.progressBarTop.style.width = '0%';
+            elements.progressContainerBottom.classList.add('hidden');
+            // 恢复保存按钮状态
+            elements.saveVideoBtn.disabled = false
+            // 重置 state 关于操作上传文件的状态
+            state.currentEditingVideo = null;
+            state.selectedTagIdsForUpload = [];
+            state.pendingUploads = new Map(), // 存储已上传但未合并的文件ID
+              state.currentUploadFile = null;
+            state.currentFileId = null;
+            state.cancelUpload = false, // 是否正在执行缓存
+              elements.uploadModal.classList.add('hidden')
+
+            console.log('initUploadModal: 模态框重置完成');
+          }
 
 
     // 添加打开视频详情的函数
@@ -1568,6 +1587,11 @@
         // 根据文件扩展名设置不同的处理方式
         const fileExtension = (video.filePath || '').split('.').pop().toLowerCase();
 
+        // 先移除可能存在的错误监听器，避免重复绑定
+        if (elements.videoPreview._errorHandler) {
+          elements.videoPreview.removeEventListener('error', elements.videoPreview._errorHandler);
+        }
+
         // 设置视频源和属性以提高兼容性
         elements.videoPreview.src = videoUrl;
         elements.videoPreview.type = fileExtension === 'mov' ? 'video/quicktime' : `video/${fileExtension}`;
@@ -1606,13 +1630,11 @@
 
 
 
-        // 添加错误处理
-        elements.videoPreview.addEventListener('error', handleVideoError);
+        // 暂时移除错误处理，以便暴露根本问题
+        // elements.videoPreview.addEventListener('error', handleVideoError);
 
         // 保存错误处理函数引用以便后续移除
-        if (!elements.videoPreview._errorHandler) {
-          elements.videoPreview._errorHandler = handleVideoError;
-        }
+        // elements.videoPreview._errorHandler = handleVideoError;
 
 
 
@@ -1638,12 +1660,21 @@
     // 视频播放错误处理函数
     function handleVideoError(e) {
       // 检查视频源是否为空，如果是则不执行重新加载
-      if (!elements.videoPreview.src || elements.videoPreview.src === '') {
-        return; // 如果src为空，不执行任何操作
+      if (!elements.videoPreview || !elements.videoPreview.src || elements.videoPreview.src === '') {
+        return; // 如果videoPreview元素不存在或src为空，不执行任何操作
       }
+
       console.error('视频播放错误:', e.target.error);
-      // 尝试用不同方式加载视频
-      elements.videoPreview.load(); // 重新加载资源
+
+      // 避免无限错误循环，只在特定错误类型时尝试重新加载
+      if (e.target.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+        // 如果是源不支持错误，不应该尝试重新加载
+        console.warn('视频源不支持，无法播放');
+        return;
+      }
+
+      // 在某些情况下，尝试重新加载可能会导致无限循环
+      // 因此只执行一次错误处理，不尝试自动恢复
     }
 
     // 切换深色模式

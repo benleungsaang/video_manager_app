@@ -63,6 +63,8 @@
             <Item>\canvaskit\skwasm_heavy.js.symbols</Item>
             <Item>\canvaskit\skwasm_heavy.wasm</Item>
             <Item>\canvaskit\chromium\</Item>
+            <Item>\main.dart.js</Item>
+            <Item>\version.json</Item>
         </Exclude>
         <SizeMin Unit="None">0</SizeMin>
         <SizeMax Unit="None">0</SizeMax>
