@@ -557,6 +557,8 @@
       
             // 获取视频大小
       
+            getVideoSize: function (videoId) { return flutterChannel._sendRequest('getVideoSize', { videoId: videoId }); },
+      
       // 删除视频
 
       deleteVideo: function (videoId) { return flutterChannel._sendRequest('deleteVideo', { id: videoId }); },
@@ -1262,7 +1264,7 @@
         state.currentEditingVideo.tagIds = state.selectedTagIdsForUpload,
           state.currentEditingVideo.remark = elements.videoRemark.value.trim()
         await flutterChannel.updateVideo(state.currentEditingVideo)
-        await loadVideos();
+        await loadVideos(5); // 只加载最近的5个视频
         initUploadModal() // 这会重置所有状态，包括currentEditingVideo
         showToast('视频信息更新成功');
         return;
@@ -1318,7 +1320,7 @@
           elements.videoRemark.value.trim(),
           titleWithoutExt  // 使用不带后缀的标题
         ).then(result => {
-          loadVideos();
+          loadVideos(5); // 只加载最近的5个视频
           console.log('视频上传完成:', result);
           showToast('视频上传成功');
         }).catch(error => {
@@ -1327,7 +1329,7 @@
         });
 
         // 刷新列表并重置状态（不等待转换完成）
-        await loadVideos();
+        await loadVideos(5); // 只加载最近的5个视频
         state.selectedTagIdsForUpload = [];
         state.currentEditingVideo = null; // 重置编辑状态
         elements.uploadModal.classList.add('hidden');
@@ -1757,7 +1759,7 @@
             try {
               await flutterChannel.deleteVideo(videoId);
               showToast('视频已删除');
-              await loadVideos(); // 重新加载视频列表
+              await loadVideos(5); // 重新加载最近的5个视频
             } catch (error) {
               console.error('删除视频失败:', error);
               alert('删除失败: ' + (error.message || '未知错误'));
