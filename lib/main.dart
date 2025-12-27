@@ -8,6 +8,7 @@ import 'services/thumbnail_service.dart';
 import 'providers/video_provider.dart';
 import 'providers/tag_provider.dart';
 import 'providers/transcode_provider.dart';
+import 'providers/price_calculator_provider.dart';
 import 'ui/pages/home_page.dart';
 import 'utils/file_utils.dart'; // 引入文件工具类
 import 'utils/storage_utils.dart'; // 引入存储工具类
@@ -24,6 +25,7 @@ void main() async {
   final videoProvider = VideoProvider()..loadVideos();
   final transcodeProvider = TranscodeProvider();
   final serverService = ServerService();
+  final priceCalculatorProvider = PriceCalculatorProvider()..initializeData();
 
   // 初始化缩略图服务并生成缺失的缩略图
   final thumbnailService = ThumbnailService(videoProvider);
@@ -39,6 +41,7 @@ void main() async {
         ChangeNotifierProvider.value(value: tagProvider), // 使用已创建的实例
         ChangeNotifierProvider.value(value: transcodeProvider), // 使用已创建的实例
         ChangeNotifierProvider.value(value: serverService), // 使用已初始化的实例
+        ChangeNotifierProvider.value(value: priceCalculatorProvider), // 使用已创建的实例
       ],
       child: MyApp(),
     ),

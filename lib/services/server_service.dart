@@ -477,10 +477,7 @@ class ServerService with ChangeNotifier {
     // WebSocket连接处理
     router.get('/ws', (Request request) {
       print('检测到 WebSocket 请求 ${request.url} ${request.params}');
-      // print('请求头: ${request.headers}');
-      // print('User-Agent: ${request.headers['user-agent']}');
       return webSocketHandler((WebSocketChannel channel) {
-        print('WebSocket通道创建，开始处理连接...');
         _handleWebSocketConnection(channel, request);
       })(request);
     });
@@ -648,25 +645,10 @@ class ServerService with ChangeNotifier {
             'temp_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1000)}';
       } while (_connectionPool.hasConnection(clientId)); // 检查是否已有该ID
     } else {
-      // 如果客户端提供了ID，检查是否已有连接
+      // 如果客户端提供了ID，检查是否已有连接，如果有则断开旧连接
       if (_connectionPool.hasConnection(clientId)) {
-        // 检查是否是同一个设备的连接尝试（例如页面刷新）
-        // 避免在短时间内频繁断开连接
-        final userAgent = request.headers['user-agent'] ?? '';
-        final isSafari = userAgent.contains('Safari') &&
-            !userAgent.contains('Chrome') &&
-            userAgent.contains('iPhone');
-
-        if (isSafari) {
-          // 对于Safari，添加一个短暂延迟来避免连接冲突
-          print('Safari客户端 $clientId 重新连接，延迟处理...');
-          // 先不立即断开，让新连接有机会建立
-          _connectionPool.removeConnection(clientId);
-        } else {
-          // 对于其他浏览器，正常断开旧连接
-          print('客户端 $clientId 已有连接，断开旧连接');
-          _connectionPool.removeConnection(clientId);
-        }
+        print('客户端 $clientId 已有连接，断开旧连接');
+        _connectionPool.removeConnection(clientId);
       }
     }
 
@@ -681,25 +663,17 @@ class ServerService with ChangeNotifier {
           .listen((message) => _handleClientMessage(message, channel, clientId),
               onDone: () {
         // 连接关闭时清理
-        if (clientId != null && _connectionPool.hasConnection(clientId)) {
+        if (_connectionPool.hasConnection(clientId!)) {
           _connectionPool.removeConnection(clientId,
               closeConnection: false); // 连接已关闭，不需要再次关闭
           _logMessage(clientId, 'connection', '客户端已断开');
           print(
               'WebSocket连接已关闭: $clientId，剩余连接: ${_connectionPool.connectionCount}');
           _broadcastConnectionStatus(); // 通知所有客户端连接状态变化
-        } else if (clientId != null) {
-          // 即使连接池中没有该连接，也要记录断开事件
-          _logMessage(clientId, 'connection', '客户端已断开（连接池中未找到）');
-          print(
-              'WebSocket连接已关闭: $clientId，但连接池中未找到该连接，剩余连接: ${_connectionPool.connectionCount}');
-          _broadcastConnectionStatus(); // 通知所有客户端连接状态变化
         }
       }, onError: (error) {
         print('WebSocket错误: $error');
-        if (clientId != null) {
-          _logMessage(clientId, 'error', error.toString());
-        }
+        _logMessage(clientId, 'error', error.toString());
       });
 
       // 将连接添加到连接池

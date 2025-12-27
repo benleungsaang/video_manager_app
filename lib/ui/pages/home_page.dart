@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 
 import 'package:video_manager_app/ui/pages/server_control_page.dart';
+import 'package:video_manager_app/ui/pages/price_calculator_page.dart';
 
 import 'package:video_manager_app/utils/file_utils.dart';
 
@@ -605,6 +606,18 @@ class _HomePageState extends State<HomePage> {
               tooltip: '退出多选',
             ),
           ] else ...[
+            IconButton(
+              icon: const Icon(Icons.calculate, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PriceCalculatorPage(),
+                  ),
+                );
+              },
+              tooltip: '价格计算器',
+            ),
             IconButton(
               icon: const Icon(Icons.cloud, color: Colors.white),
               onPressed: () {
