@@ -785,7 +785,7 @@ class ServerService with ChangeNotifier {
 
       return createStaticHandler(
         webAssetsDir.path,
-        defaultDocument: 'index.html',
+        defaultDocument: 'entry.html',
         listDirectories: false,
       )(request);
     };

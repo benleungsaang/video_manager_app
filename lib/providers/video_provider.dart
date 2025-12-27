@@ -12,9 +12,17 @@ class VideoProvider with ChangeNotifier {
   // double _networkUploadProgress = 0.0;
   // bool _isNetworkUploading = false;
 
-  // 获取视频列表
-  List<Video> get videos => _videos;
-
+    // 获取视频列表
+    List<Video> get videos => _videos;
+  
+    // 获取最近上传的视频
+    List<Video> getRecentVideos(int limit) {
+      return _videos
+          .where((video) => video.uploadTime != null)
+          .toList()
+        ..sort((a, b) => b.uploadTime.compareTo(a.uploadTime))
+        ..removeRange(limit, _videos.length > limit ? _videos.length : limit);
+    }
   // 加载状态
   bool get isLoading => _isLoading;
 

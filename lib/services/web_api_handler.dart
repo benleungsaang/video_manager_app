@@ -8,6 +8,7 @@ import 'package:video_manager_app/utils/file_utils.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../providers/tag_provider.dart';
 import '../providers/video_provider.dart';
+import '../repositories/video_repository.dart'; // 添加VideoRepository导入
 import '../models/tag.dart';
 import '../models/video.dart';
 import 'dart:convert';
@@ -37,6 +38,9 @@ class WebApiHandler {
       Provider.of<VideoProvider>(navigatorKey.currentContext!, listen: false);
   TagProvider get _tagProvider =>
       Provider.of<TagProvider>(navigatorKey.currentContext!, listen: false);
+
+  // 添加一个单独的Repository实例用于搜索等操作，避免影响VideoProvider状态
+  final VideoRepository _repository = VideoRepository();
 
   final Map<String, UploadingFile> _uploadingFiles = {};
   final Map<String, Completer> _activeOperations = {}; // 追踪活跃操作，便于资源清理
@@ -109,16 +113,22 @@ class WebApiHandler {
             return {'success': false, 'error': '视频文件不存在'};
           }
 
-        // 视频相关接口
-        // 获取视频列表
-        case 'getVideos':
-          // 获取所有视频并转换为JSON
-          return {
-            'success': true,
-            'data': _videoProvider.videos.map(_videoToJson).toList()
-          };
-        // 添加获取视频播放URL的处理
-        case 'getVideoUrl':
+                // 视频相关接口
+                // 获取视频列表
+                case 'getVideos':
+                  // 获取所有视频并转换为JSON
+                  return {
+                    'success': true,
+                    'data': _videoProvider.videos.map(_videoToJson).toList()
+                  };
+                        // 获取最近上传的视频
+                        case 'getRecentVideos':
+                          final int limit = params['limit'] ?? 5;
+                          final List<Video> recentVideos = _videoProvider.getRecentVideos(limit);
+                          return {
+                            'success': true,
+                            'data': recentVideos.map(_videoToJson).toList()
+                          };        case 'getVideoUrl':
           final String videoId = params['videoId'];
           final Video? video = _videoProvider.getVideoById(videoId);
           if (video != null && video.filePath != null) {
@@ -161,10 +171,10 @@ class WebApiHandler {
         // 搜索视频
         case 'searchVideos':
           final String query = params['query'] ?? '';
-          _videoProvider.searchVideos(query);
+          final List<Video> searchResults = await _repository.searchVideosAsync(query);
           return {
             'success': true,
-            'data': _videoProvider.videos.map(_videoToJson).toList()
+            'data': searchResults.map(_videoToJson).toList()
           };
         case 'updateVideo':
           // 处理视频更新

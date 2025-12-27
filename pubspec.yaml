@@ -81,7 +81,8 @@ dependencies:
   # webview_flutter: ^4.13.0
   shelf_static: ^1.1.3
 
-  # 视频压缩相关依赖
+  # 视频压缩相关依赖
+
   video_compress: ^3.1.4
   ffmpeg_kit_flutter_new: 4.1.0
 
@@ -115,11 +116,9 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - build/web/
-    # - build/web/assets/
     - build/web/css/
     - build/web/fonts/
-    # - build/web/canvaskit/
-    # - build/web/icons/
+    - build/web/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
