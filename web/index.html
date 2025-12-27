@@ -368,16 +368,35 @@
 
         }
 
-
-
+        // 检测是否为Safari浏览器
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
         return new Promise((resolve, reject) => {
           const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
           const clientId = this._getClientId();
           const wsUrl = `${wsProtocol}//${window.location.host}/ws?clientId=${clientId}`;
+          
+          // 为Safari增加连接超时处理
+          let connectionTimeout;
+          if (isSafari) {
+            connectionTimeout = setTimeout(() => {
+              if (this._ws && this._ws.readyState !== WebSocket.OPEN) {
+                console.log('WebSocket连接超时，正在关闭...');
+                this._ws.close();
+                this._ws = null;
+                reject(new Error('WebSocket连接超时'));
+              }
+            }, 15000); // 15秒超时
+          }
+
           this._ws = new WebSocket(wsUrl);
           this._ws.onopen = () => {
-
+            // 清除超时定时器
+            if (connectionTimeout) {
+              clearTimeout(connectionTimeout);
+            }
             console.log('WebSocket连接已建立，客户端ID:', clientId);
+            console.log('浏览器类型:', isSafari ? 'Safari' : '非Safari');
 
             // 监听服务端消息
 
@@ -387,21 +406,29 @@
 
           };
           this._ws.onerror = (error) => {
-
+            // 清除超时定时器
+            if (connectionTimeout) {
+              clearTimeout(connectionTimeout);
+            }
             console.error('WebSocket连接错误:', error);
 
             reject(error);
 
           };
-          this._ws.onclose = () => {
-
-            console.log('WebSocket连接已关闭，尝试重连...');
-
+          this._ws.onclose = (event) => {
+            // 清除超时定时器
+            if (connectionTimeout) {
+              clearTimeout(connectionTimeout);
+            }
+            console.log('WebSocket连接已关闭，代码:', event.code, '原因:', event.reason);
             this._ws = null;
 
+            // 增加重连间隔时间，避免频繁重连
+            const retryDelay = isSafari ? 5000 : 3000; // Safari使用更长的重连间隔
+            console.log('尝试重连，延迟:', retryDelay, 'ms');
+            
             // 3秒后尝试重连
-
-            setTimeout(() => this._initWebSocket(), 3000);
+            setTimeout(() => this._initWebSocket(), retryDelay);
 
           };
 
@@ -766,23 +793,85 @@
     document.body.appendChild(elements.fileInput);
 
 
-    // 初始化函数
+        // 初始化函数
 
-    async function init() {
-      console.log('初始化函数 init() 被调用');
-            try {
-              // 初始化主题
-              initTheme();
-      
-              // 加载视频和标签数据
-              await loadTags();
-              await loadVideos(5); // 只加载最近的5个视频以提高初始化效率
-      
-              // 绑定事件监听器
-              bindEvents();
-            } catch (error) {
-              console.log('初始化失败:', error);
-            }    }
+
+    
+
+
+        async function init() {
+
+
+          console.log('初始化函数 init() 被调用');
+
+
+          try {
+
+
+            // 初始化主题
+
+
+            initTheme();
+
+
+    
+
+
+            // 检测是否为Safari浏览器
+
+
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+
+            
+
+
+            if (isSafari) {
+
+
+              // 对于Safari，增加一个小延迟以确保WebSocket连接稳定
+
+
+              console.log('检测到Safari浏览器，等待连接稳定...');
+
+
+              await new Promise(resolve => setTimeout(resolve, 500)); // 500ms延迟
+
+
+            }
+
+
+    
+
+
+            // 加载视频和标签数据
+
+
+            await loadTags();
+
+
+            await loadVideos(5); // 只加载最近的5个视频以提高初始化效率
+
+
+    
+
+
+            // 绑定事件监听器
+
+
+            bindEvents();
+
+
+          } catch (error) {
+
+
+            console.log('初始化失败:', error);
+
+
+          }
+
+
+        }
 
         // 加载视频列表
         async function loadVideos(limit = null) {
