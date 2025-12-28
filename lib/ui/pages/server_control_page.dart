@@ -59,16 +59,9 @@ class _ServerControlPageState extends State<ServerControlPage> {
 
   // 通过clientId获取客户端显示名称（备注名优先，无备注则显示缩写ID）
   String _getClientDisplayName(String clientId, ServerService serverService) {
-    // 1. 从客户端详情中获取备注名
-    final clientDetail = serverService.clientDetails[clientId];
-    final remark = clientDetail?.remark;
-
-    // 2. 有备注则显示“备注名(缩写ID)”，无备注则显示缩写ID
-    if (remark != null && remark.isNotEmpty) {
-      return '$remark(${_truncateClientId(clientId)})';
-    } else {
-      return _truncateClientId(clientId);
-    }
+    // clientDetails已移除，因为不再使用WebSocket
+    // 直接返回缩写ID
+    return _truncateClientId(clientId);
   }
 
   @override
@@ -83,15 +76,7 @@ class _ServerControlPageState extends State<ServerControlPage> {
         builder: (context, serverService, child) {
           _portController.text = serverService.port.toString();
 
-          // 初始化新客户端的备注控制器
-
-          for (var clientId in serverService.clientDetails.keys) {
-            if (!_clientRemarkControllers.containsKey(clientId)) {
-              _clientRemarkControllers[clientId] = TextEditingController(
-                text: serverService.clientDetails[clientId]?.remark,
-              );
-            }
-          }
+          // 初始化新客户端的备注控制器 - clientDetails已移除，因为不再使用WebSocket
 
           return Row(
             children: [
@@ -387,7 +372,7 @@ class _ServerControlPageState extends State<ServerControlPage> {
                               style: TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(width: 8),
-                          Text('(${serverService.clientDetails.length})',
+                          Text('(HTTP API)',
                               style: const TextStyle(fontSize: 16)),
                         ],
                       ),
@@ -403,20 +388,9 @@ class _ServerControlPageState extends State<ServerControlPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: serverService.isRunning &&
-                                  serverService.clientDetails.isNotEmpty
+                                  false // clientDetails已移除，因为不再使用WebSocket
                               ? ListView(
-                                  children: serverService.clientDetails.entries
-                                      .map((entry) {
-                                    final clientId = entry.key;
-
-                                    final details = entry.value;
-
-                                    return Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: _buildClientCard(
-                                          clientId, details, serverService),
-                                    );
-                                  }).toList(),
+                                                                    children: [], // clientDetails.entries已移除，因为不再使用WebSocket
                                 )
                               : serverService.isRunning
                                   ? const Center(
@@ -450,18 +424,18 @@ class _ServerControlPageState extends State<ServerControlPage> {
                             border: Border.all(color: Colors.grey[300]!),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: serverService.messageLogs.isEmpty
+                          child: true // messageLogs已移除，因为不再使用WebSocket
                               ? const Center(
                                   child: Text('暂无消息日志',
                                       style: TextStyle(fontSize: 16)))
                               : ListView.builder(
                                   reverse: true, // 新消息在底部
 
-                                  itemCount: serverService.messageLogs.length,
+                                  itemCount: 0, // messageLogs已移除，因为不再使用WebSocket
 
                                   itemBuilder: (context, index) {
-                                    final log =
-                                        serverService.messageLogs[index];
+                                    // messageLogs已移除，因为不再使用WebSocket
+                                    final log = "No logs (HTTP API)";
 
                                     return _buildLogItem(log, serverService);
                                   },
@@ -482,11 +456,9 @@ class _ServerControlPageState extends State<ServerControlPage> {
   // 构建客户端卡片
 
   Widget _buildClientCard(
-      String clientId, ClientDetails details, ServerService serverService) {
-    final hasRemark = details.remark != null && details.remark!.isNotEmpty;
-
-    final displayName =
-        hasRemark ? details.remark! : _truncateClientId(clientId);
+      String clientId, String details, ServerService serverService) {
+    // details参数现在是String类型，因为ClientDetails类已移除
+    final displayName = _truncateClientId(clientId);
 
     return Card(
       elevation: 2,
@@ -494,165 +466,69 @@ class _ServerControlPageState extends State<ServerControlPage> {
       child: ExpansionTile(
         title: Text(displayName,
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('连接时间: ${details.connectedAt}'),
+        subtitle: const Text('HTTP Client'),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _getRemarkController(clientId, details.remark),
-                    decoration: const InputDecoration(
-                      labelText: '设置备注',
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    final remark =
-                        _getRemarkController(clientId, details.remark).text;
-
-                    serverService.setClientRemark(clientId, remark);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  child:
-                      const Text('保存', style: TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    serverService.disconnectClient(clientId);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  child:
-                      const Text('断开', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
+          const Padding(
+            padding: EdgeInsets.all(12.0),
+            child: Text('使用HTTP API进行通信'),
           ),
         ],
       ),
     );
   }
 
-  // 构建格式化的日志条目
-  Widget _buildLogItem(MessageLog log, ServerService serverService) {
-    Color color;
-    switch (log.type) {
-      case 'command':
-        color = Colors.blue;
-        break;
-      case 'error':
-        color = Colors.red;
-        break;
-      case 'connection':
-        color = Colors.green;
-        break;
-      default:
-        color = Colors.black87;
-    }
-    // 获取客户端显示名称（备注名优先）
-
-    String clientDisplayName = '未知客户端';
-
-    if (log.clientId != null) {
-      final clientDetail = serverService.clientDetails[log.clientId!];
-
-      if (clientDetail != null &&
-          clientDetail.remark != null &&
-          clientDetail.remark!.isNotEmpty) {
-        clientDisplayName = clientDetail.remark!; // 显示备注名
-      } else {
-        clientDisplayName =
-            log.clientId!.substring(log.clientId!.length - 4); // 显示ID尾数
-      }
-    }
-
-    // 解析 JSON 中的 action 和 params（核心简化逻辑）
-    final Map<String, dynamic> parsedData = _parseLogData(log.data);
-    final String action = parsedData['action'] ?? '未知操作';
-    final dynamic params = parsedData['params'] ?? '无参数';
-    final String simplifiedParams = _simplifyParams(params);
-
-    // 日志展开/收起状态管理
-    final ValueNotifier<bool> isExpanded = ValueNotifier(false);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 简化日志行（时间 + 备注名 + action + 简略params）
-          InkWell(
-            onTap: () => isExpanded.value = !isExpanded.value,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  // 构建格式化的日志条目 - 简化版本，因为不再使用WebSocket
+  Widget _buildLogItem(String log, ServerService serverService) {
+    // MessageLog和clientDetails已移除，因为不再使用WebSocket
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Expanded(
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Text(
-                    '${log.timestamp} | $clientDisplayName | $action | $simplifiedParams',
+                    'HTTP',
                     style: TextStyle(
-                      color: color,
+                      color: Colors.blue,
                       fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
-                    softWrap: true,
                   ),
                 ),
-                // 展开/收起图标
-                ValueListenableBuilder<bool>(
-                  valueListenable: isExpanded,
-                  builder: (context, expanded, child) {
-                    return Icon(
-                      expanded
-                          ? (Icons.keyboard_double_arrow_up)
-                          : (Icons.keyboard_double_arrow_down),
-                      size: 16,
-                      color: Colors.grey[500],
-                    );
-                  },
+                SizedBox(width: 8),
+                Text(
+                  'HTTP API',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  DateTime.now().toString().substring(0, 19),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
                 ),
               ],
             ),
-          ),
-          // 可选：展开显示完整 JSON（默认隐藏）
-          ValueListenableBuilder<bool>(
-            valueListenable: isExpanded,
-            builder: (context, expanded, child) {
-              if (!expanded) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(top: 8, left: 4),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: Text(
-                    _formatJson(log.data),
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                    softWrap: true,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+            SizedBox(height: 4),
+            Text(
+              log,
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }

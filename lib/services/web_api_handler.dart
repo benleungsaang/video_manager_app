@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:video_manager_app/main.dart';
 import 'package:video_manager_app/utils/file_utils.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+
 import '../providers/tag_provider.dart';
 import '../providers/video_provider.dart';
 import '../repositories/video_repository.dart'; // 添加VideoRepository导入
@@ -49,7 +49,6 @@ class WebApiHandler {
   // 参数: request包含action和params
   // 返回: 包含success、data或error的Map
   Future<Map<String, dynamic>> handleRequest(
-    WebSocketChannel channel,
     Map<String, dynamic> request,
   ) async {
     // 解析请求类型和参数
@@ -221,9 +220,9 @@ class WebApiHandler {
         // 处理二进制块元数据
         case 'initBinaryUpload':
           return await _handleInitBinaryUpload(params);
-        // 【 逐份接收 】分块上传的二进制数据
+        // 【 逐份接收 】分块上传的二进制数据 - 现在使用HTTP API，此部分已废弃
         case 'uploadBinaryChunk':
-          return await _handleUploadBinaryChunk(channel, params, requestId);
+          return {'success': false, 'error': '使用HTTP API进行文件上传'};
         // 【 合并 】 分块上传的进制数据
         case 'completeBinaryUpload':
           return await _handleCompleteBinaryUpload(params);
@@ -272,68 +271,9 @@ class WebApiHandler {
     return {'success': true};
   }
 
-  // 处理二进制块元数据
-  Future<Map<String, dynamic>> _handleUploadBinaryChunk(
-      WebSocketChannel channel,
-      Map<String, dynamic> params,
-      String requestId) async {
-    final String fileId = params['fileId'];
-    final int chunkIndex = params['chunkIndex'];
-    final int totalChunks = params['totalChunks'];
 
-    if (!_uploadingFiles.containsKey(fileId)) {
-      return {'success': false, 'error': '未初始化上传'};
-    }
 
-    try {
-      // 更新总块数
-      final uploadFile = _uploadingFiles[fileId]!;
-      uploadFile.totalChunks = totalChunks;
-
-      // 通知客户端可以发送二进制数据
-      return {'status': 'ready'};
-    } catch (e, stackTrace) {
-      print('处理二进制块元数据时发生错误: $e\n堆栈跟踪: $stackTrace');
-      return {'success': false, 'error': '处理二进制块元数据失败'};
-    }
-  }
-
-  // 处理二进制数据
-  void handleBinaryData({
-    required WebSocketChannel channel,
-    required String fileId,
-    required int chunkIndex,
-    required Uint8List data,
-    required String requestId,
-  }) {
-    try {
-      if (!_uploadingFiles.containsKey(fileId)) {
-        channel.sink.add(
-            json.encode({'id': requestId, 'success': false, 'error': '文件不存在'}));
-        return;
-      }
-
-      final uploadFile = _uploadingFiles[fileId]!;
-      uploadFile.chunks[chunkIndex] = data;
-      uploadFile.receivedSize += data.length;
-
-      // 计算进度
-      final progress =
-          (uploadFile.receivedSize / uploadFile.totalSize * 100).toInt();
-
-      // 返回进度信息
-      channel.sink.add(json
-          .encode({'id': requestId, 'success': true, 'progress': progress}));
-    } catch (e, stackTrace) {
-      print('处理二进制数据时发生错误: $e\n堆栈跟踪: $stackTrace');
-      try {
-        channel.sink.add(json
-            .encode({'id': requestId, 'success': false, 'error': '处理二进制数据失败'}));
-      } catch (sendError) {
-        print('发送错误响应失败: $sendError');
-      }
-    }
-  }
+  // 处理二进制数据 - 现在通过HTTP API处理，此方法已废弃
 
   // 完成二进制上传
 
@@ -463,6 +403,179 @@ class WebApiHandler {
     }
   }
 
+  // HTTP API端点需要的方法
+  
+  // 获取所有视频
+  Future<List<dynamic>> getAllVideos() async {
+    return _videoProvider.videos.map(_videoToJson).toList();
+  }
+  
+  // 获取最近上传的视频
+  Future<List<dynamic>> getRecentVideos(int limit) async {
+    final List<Video> recentVideos = _videoProvider.getRecentVideos(limit);
+    return recentVideos.map(_videoToJson).toList();
+  }
+  
+  // 创建视频
+  Future<dynamic> createVideo(Map<String, dynamic> params) async {
+    // 这里处理视频创建逻辑，通常是上传文件后创建视频记录
+    // 简单实现：创建一个基础视频对象
+    String? thumbnailPath = params['thumbnailPath'] as String?;
+    
+    final video = Video(
+      id: params['id'] as String? ?? 'video_${DateTime.now().millisecondsSinceEpoch}',
+      title: params['title'] as String? ?? params['fileName'] as String? ?? '未命名视频',
+      filePath: params['filePath'] as String? ?? '',  // 确保filePath不为null
+      fileSize: params['fileSize'] as int? ?? 0,     // 确保fileSize不为null
+      remark: params['remark'] as String? ?? '',
+      duration: params['duration'] as int? ?? 0,
+      uploadTime: DateTime.now(),
+      tagIds: List<String>.from(params['tagIds'] as List<dynamic>? ?? <dynamic>[]),
+      thumbnailPath: thumbnailPath,
+    );
+    
+    // 如果filePath存在且缩略图路径未提供，则生成缩略图
+    final String? filePath = params['filePath'] as String?;
+    if (filePath != null && filePath.isNotEmpty && thumbnailPath == null) {
+      try {
+        thumbnailPath = await FileUtils.generateVideoThumbnail(filePath);
+        // 创建新的视频对象，包含生成的缩略图路径
+        final updatedVideo = Video(
+          id: video.id,
+          title: video.title,
+          filePath: video.filePath,
+          fileSize: video.fileSize,
+          remark: video.remark,
+          duration: video.duration,
+          uploadTime: video.uploadTime,
+          tagIds: video.tagIds,
+          thumbnailPath: thumbnailPath,
+        );
+        await _videoProvider.saveVideo(updatedVideo);
+        return _videoToJson(updatedVideo);
+      } catch (e) {
+        print('生成缩略图失败: $e');
+        // 即使缩略图生成失败，也要保存视频记录
+        await _videoProvider.saveVideo(video);
+        return _videoToJson(video);
+      }
+    } else {
+      await _videoProvider.saveVideo(video);
+      return _videoToJson(video);
+    }
+  }
+  
+  // 更新视频
+  Future<dynamic> updateVideo(String id, Map<String, dynamic> params) async {
+    final existingVideo = _videoProvider.getVideoById(id);
+    if (existingVideo == null) {
+      throw Exception('视频不存在');
+    }
+
+    final updatedVideo = Video(
+      id: id,
+      title: params['title'] as String? ?? existingVideo.title,
+      remark: params['remark'] as String? ?? existingVideo.remark,
+      filePath: params['filePath'] as String? ?? existingVideo.filePath,
+      duration: params['duration'] as int? ?? existingVideo.duration,
+      fileSize: params['fileSize'] as int? ?? existingVideo.fileSize,
+      uploadTime: params['uploadTime'] != null ? DateTime.parse(params['uploadTime'] as String) : existingVideo.uploadTime,
+      tagIds: params['tagIds'] != null ? List<String>.from(params['tagIds'] as List<dynamic>) : existingVideo.tagIds,
+      thumbnailPath: params['thumbnailPath'] as String? ?? existingVideo.thumbnailPath,
+      transcode: existingVideo.transcode,
+    );
+
+    await _videoProvider.saveVideo(updatedVideo);
+    return _videoToJson(updatedVideo);
+  }
+  
+  // 删除视频
+  Future<void> deleteVideo(String id) async {
+    await _videoProvider.deleteVideo(id);
+  }
+  
+  // 获取所有标签
+  Future<List<dynamic>> getAllTags() async {
+    return _tagProvider.tags.map(_tagToJson).toList();
+  }
+  
+  // 创建标签
+  Future<dynamic> createTag(String name) async {
+    final tag = await _tagProvider.createTag(name, initialVideoCount: 0);
+    if (tag != null) {
+      return _tagToJson(tag);
+    } else {
+      throw Exception('标签已存在');
+    }
+  }
+  
+  // 删除标签
+  Future<void> deleteTag(String id) async {
+    await _tagProvider.deleteTag(id);
+  }
+  
+  // 搜索视频
+  Future<List<dynamic>> searchVideos(String query) async {
+    final searchResults = await _repository.searchVideosAsync(query);
+    return searchResults.map(_videoToJson).toList();
+  }
+  
+  // 获取缩略图
+  Future<Map<String, String>?> getThumbnail(String id) async {
+    final video = _videoProvider.getVideoById(id);
+    if (video == null) {
+      return null;
+    }
+    
+    // 如果已有缩略图路径，直接返回
+    if (video.thumbnailPath != null) {
+      final File thumbnailFile = File(video.thumbnailPath!);
+      try {
+        final List<int> bytes = await thumbnailFile.readAsBytes();
+        final String base64Data = base64Encode(bytes);
+        return {'base64': base64Data};
+      } catch (e) {
+        print('读取缩略图失败: $e');
+        // 如果缩略图文件不存在，尝试重新生成
+        if (await thumbnailFile.exists()) {
+          return null;
+        }
+      }
+    }
+    
+    // 如果没有缩略图路径或者缩略图文件不存在，尝试生成缩略图
+    if (video.filePath != null && video.filePath.isNotEmpty) {
+      try {
+        final thumbnailPath = await FileUtils.generateVideoThumbnail(video.filePath!);
+        if (thumbnailPath != null) {
+          // 更新视频记录中的缩略图路径
+          final updatedVideo = Video(
+            id: video.id,
+            title: video.title,
+            filePath: video.filePath,
+            fileSize: video.fileSize,
+            remark: video.remark,
+            duration: video.duration,
+            uploadTime: video.uploadTime,
+            tagIds: video.tagIds,
+            thumbnailPath: thumbnailPath,
+          );
+          await _videoProvider.saveVideo(updatedVideo);
+          
+          // 读取并返回新生成的缩略图
+          final thumbnailFile = File(thumbnailPath);
+          final List<int> bytes = await thumbnailFile.readAsBytes();
+          final String base64Data = base64Encode(bytes);
+          return {'base64': base64Data};
+        }
+      } catch (e) {
+        print('生成缩略图失败: $e');
+      }
+    }
+    
+    return null;
+  }
+  
   /// 清理所有活跃操作和上传文件，释放资源
   Future<void> dispose() async {
     // 取消所有活跃操作

@@ -2,28 +2,31 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:convert' as convert;
+import 'dart:convert' show base64;
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
-import 'package:shelf_web_socket/shelf_web_socket.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shelf_static/shelf_static.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'web_api_handler.dart';
 
 import '../utils/storage_utils.dart'; // 新增导入
-
+import '../utils/file_utils.dart'; // 新增导入
 import 'database_export_service.dart'; // 新增导入
-
 import '../repositories/video_repository.dart'; // 新增导入
-
 import '../repositories/tag_repository.dart'; // 新增导入
+import '../models/machine_part.dart'; // 新增导入
+import '../models/part.dart'; // 新增导入
+import '../models/temp_fee.dart'; // 新增导入
+import '../models/temp_factor.dart'; // 新增导入
 
 // import '../providers/tag_provider.dart';
 
@@ -35,208 +38,22 @@ import '../repositories/tag_repository.dart'; // 新增导入
 
 // import 'package:video_manager_app/models/video.dart';
 
-// 消息类型枚举
-enum MessageType {
-  chat, // 聊天消息
-  command, // 命令消息
-  connectionStatus, // 连接状态消息
-  error, // 错误消息
-  acknowledge // 确认消息
-}
 
-// 消息日志类
-class MessageLog {
-  final String? clientId;
-  final String type;
-  final dynamic data;
-  final String timestamp;
-
-  MessageLog({
-    this.clientId,
-    required this.type,
-    required this.data,
-    String? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now().toString().substring(0, 19);
-}
-
-// 客户端详情类
-class ClientDetails {
-  final String deviceType;
-  final String connectedAt;
-  String? remark;
-
-  ClientDetails({
-    required this.deviceType,
-    String? connectedAt,
-    this.remark,
-  }) : connectedAt = connectedAt ?? DateTime.now().toString().substring(0, 19);
-}
-
-// 连接池管理类
-class ConnectionPool {
-  final Map<String, WebSocketChannel> _connections = {};
-  final Map<String, StreamSubscription> _subscriptions = {};
-  final Map<String, ClientDetails> _clientDetails = {};
-  final Map<String, String> _clientDevices = {};
-  final Map<String, Map<String, dynamic>> _pendingBinaryRequests = {};
-
-  // 获取连接数
-  int get connectionCount => _connections.length;
-
-  // 获取所有客户端详情
-  Map<String, ClientDetails> get clientDetails =>
-      Map.unmodifiable(_clientDetails);
-
-  // 获取所有客户端设备
-  Map<String, String> get clientDevices => Map.unmodifiable(_clientDevices);
-
-  // 添加连接
-  void addConnection(
-      String clientId,
-      WebSocketChannel channel,
-      StreamSubscription subscription,
-      ClientDetails details,
-      String deviceType) {
-    _connections[clientId] = channel;
-    _subscriptions[clientId] = subscription;
-    _clientDetails[clientId] = details;
-    _clientDevices[clientId] = deviceType;
-  }
-
-  // 获取连接
-  WebSocketChannel? getConnection(String clientId) => _connections[clientId];
-
-  // 获取订阅
-  StreamSubscription? getSubscription(String clientId) =>
-      _subscriptions[clientId];
-
-  // 检查连接是否存在
-  bool hasConnection(String clientId) => _connections.containsKey(clientId);
-
-  // 获取所有连接ID
-  Iterable<String> get connectionIds => _connections.keys;
-
-  // 获取所有连接
-  Map<String, WebSocketChannel> get connections =>
-      Map.unmodifiable(_connections);
-
-  // 移除连接
-  void removeConnection(String clientId, {bool closeConnection = true}) {
-    if (_connections.containsKey(clientId)) {
-      if (closeConnection) {
-        try {
-          _connections[clientId]?.sink.close(1000, '服务器主动断开连接');
-        } catch (e) {
-          print('关闭连接时出错: $e');
-        }
-      }
-      _connections.remove(clientId);
-      _subscriptions[clientId]?.cancel();
-      _subscriptions.remove(clientId);
-      _clientDetails.remove(clientId);
-      _clientDevices.remove(clientId);
-    }
-  }
-
-  // 清空所有连接
-  void clearAllConnections({bool closeConnections = true}) {
-    for (final clientId in _connections.keys) {
-      if (closeConnections) {
-        try {
-          _connections[clientId]?.sink.close(1000, '服务器关闭');
-        } catch (e) {
-          print('关闭连接时出错: $e');
-        }
-      }
-      _subscriptions[clientId]?.cancel();
-    }
-    _connections.clear();
-    _subscriptions.clear();
-    _clientDetails.clear();
-    _clientDevices.clear();
-  }
-
-  // 获取待处理的二进制请求
-  Map<String, dynamic>? getPendingBinaryRequest(String clientId) =>
-      _pendingBinaryRequests[clientId];
-
-  // 设置待处理的二进制请求
-  void setPendingBinaryRequest(String clientId, Map<String, dynamic> request) {
-    _pendingBinaryRequests[clientId] = request;
-  }
-
-  // 移除待处理的二进制请求
-  void removePendingBinaryRequest(String clientId) {
-    _pendingBinaryRequests.remove(clientId);
-  }
-
-  // 检查连接是否活跃
-  bool isConnectionActive(String clientId) {
-    final channel = _connections[clientId];
-    return channel != null && channel.closeCode == null;
-  }
-
-  // 更新客户端备注
-  void setClientRemark(String clientId, String remark) {
-    if (_clientDetails.containsKey(clientId)) {
-      _clientDetails[clientId]!.remark = remark;
-    }
-  }
-
-  // 获取客户端设备类型
-  String? getClientDeviceType(String clientId) => _clientDevices[clientId];
-}
-
-// 基础消息结构
-class WebSocketMessage {
-  final String type;
-  final String? clientId;
-  final dynamic data;
-  final String? timestamp;
-
-  WebSocketMessage({
-    required this.type,
-    this.clientId,
-    this.data,
-    String? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now().toIso8601String();
-
-  Map<String, dynamic> toJson() => {
-        'type': type,
-        'clientId': clientId,
-        'data': data,
-        'timestamp': timestamp,
-      };
-
-  factory WebSocketMessage.fromJson(Map<String, dynamic> json) {
-    return WebSocketMessage(
-      type: json['type'] as String,
-      clientId: json['clientId'] as String?,
-      data: json['data'],
-      timestamp: json['timestamp'] as String?,
-    );
-  }
-}
 
 class ServerService with ChangeNotifier {
   bool _isRunning = false;
   int _port = 8080;
   String? _localIp;
-  final ConnectionPool _connectionPool = ConnectionPool(); // 使用连接池管理连接
   HttpServer? _server;
 
   bool get isRunning => _isRunning;
   int get port => _port;
   String? get localIp => _localIp;
-  int get connectionCount => _connectionPool.connectionCount;
-  Map<String, String> get clientDevices => _connectionPool.clientDevices;
+  // 移除WebSocket连接相关属性，因为不再使用WebSocket
+  int get connectionCount => 0; // 现在不追踪WebSocket连接
+  Map<String, String> get clientDevices => {}; // 现在不追踪WebSocket连接
 
-  // 新增属性 - 关于处理server_control_page 客户信息相关的
-  final List<MessageLog> _messageLogs = [];
-
-  // 新增getter - 关于处理server_control_page 客户信息相关的
-  List<MessageLog> get messageLogs => List.unmodifiable(_messageLogs);
-  Map<String, ClientDetails> get clientDetails => _connectionPool.clientDetails;
+  // 移除WebSocket相关的消息日志和客户端详情
 
   late WebApiHandler _webApiHandler;
   // bool _isInitialized = false; // 新增初始化标记
@@ -253,41 +70,7 @@ class ServerService with ChangeNotifier {
   // VideoProvider get _videoProvider =>
   //     Provider.of<VideoProvider>(navigatorKey.currentContext!, listen: false);
 
-  // 新增方法：记录消息日志
-  void _logMessage(String? clientId, String type, dynamic data) {
-    if (clientId == null) return; // 如果clientId为空，则不记录日志
-
-    _messageLogs.add(MessageLog(
-      clientId: clientId,
-      type: type,
-      data: data,
-    ));
-    // 限制日志数量，避免内存溢出
-    if (_messageLogs.length > 100) {
-      _messageLogs.removeAt(0);
-    }
-    notifyListeners();
-  }
-
-  // 新增方法：设置客户端备注
-  void setClientRemark(String clientId, String remark) {
-    _connectionPool.setClientRemark(clientId, remark);
-    notifyListeners();
-  }
-
-  // 新增方法：断开特定客户端连接
-  void disconnectClient(String clientId) {
-    if (_connectionPool.hasConnection(clientId)) {
-      _connectionPool.removeConnection(clientId);
-      print('已断开客户端连接');
-      _broadcastConnectionStatus();
-      notifyListeners();
-    } else {
-      print('客户端 $clientId 不存在');
-      _broadcastConnectionStatus();
-      notifyListeners();
-    }
-  }
+  // 移除WebSocket相关的客户端管理方法
 
   Future<void> _getLocalIp() async {
     final info = NetworkInfo();
@@ -474,14 +257,62 @@ class ServerService with ChangeNotifier {
   Router _createRouter() {
     final router = Router();
 
-    // WebSocket连接处理
-    router.get('/ws', (Request request) {
-      print('检测到 WebSocket 请求 ${request.url} ${request.params}');
-      return webSocketHandler((WebSocketChannel channel) {
-        _handleWebSocketConnection(channel, request);
-      })(request);
-    });
+    // HTTP API端点 - 视频相关
+    router.get('/api/videos', _handleGetVideos);
+    router.get('/api/videos/<limit>', _handleGetRecentVideos);
+    router.get('/api/videos/<id>', _handleGetVideo);
+    router.post('/api/videos', _handleCreateVideo);
+    router.put('/api/videos/<id>', _handleUpdateVideo);
+    router.delete('/api/videos/<id>', _handleDeleteVideo);
+    
+    // HTTP API端点 - 标签相关
+    router.get('/api/tags', _handleGetTags);
+    router.post('/api/tags', _handleCreateTag);
+    router.delete('/api/tags/<id>', _handleDeleteTag);
+    
+    // HTTP API端点 - 文件上传
+    router.post('/api/upload', _handleFileUpload);
+    router.delete('/api/upload/<fileId>', _handleCancelUpload);
+    
+    // HTTP API端点 - 搜索
+    router.get('/api/search', _handleSearch);
+    
+    // HTTP API端点 - 缩略图
+    router.get('/api/thumbnails/<id>', _handleGetThumbnail);
+    
+    // HTTP API端点 - 价格计算器相关
+    router.get('/api/machine-parts', _handleGetMachineParts);
+    router.post('/api/machine-parts', _handleCreateMachinePart);
+    router.put('/api/machine-parts/<id>', _handleUpdateMachinePart);
+    router.delete('/api/machine-parts/<id>', _handleDeleteMachinePart);
+    
+    // HTTP API端点 - 视频信息
+    router.get('/api/videos/<id>/url', _handleGetVideoUrl);
+    router.get('/api/videos/<id>/size', _handleGetVideoSize);
 
+    // HTTP API端点 - 机器部件相关（价格计算器）
+    router.get('/api/machine-parts', _handleGetMachineParts);
+    router.post('/api/machine-parts', _handleCreateMachinePart);
+    router.put('/api/machine-parts/<id>', _handleUpdateMachinePart);
+    router.delete('/api/machine-parts/<id>', _handleDeleteMachinePart);
+    
+    // HTTP API端点 - 部件相关（价格计算器）
+    router.get('/api/parts', _handleGetParts);
+    router.post('/api/parts', _handleCreatePart);
+    router.put('/api/parts/<id>', _handleUpdatePart);
+    router.delete('/api/parts/<id>', _handleDeletePart);
+    
+    // HTTP API端点 - 统计信息（价格计算器）
+    router.get('/api/parts-stats', _handleGetPartsStats);
+    
+    // HTTP API端点 - 常用项目相关（价格计算器）
+    router.get('/api/top-used/parts', _handleGetTopUsedParts);
+    router.get('/api/top-used/fees', _handleGetTopUsedFees);
+    router.get('/api/top-used/factors', _handleGetTopUsedFactors);
+    
+    // HTTP API端点 - 数据更新检查（价格计算器）
+    router.get('/api/check-data-update', _handleCheckDataUpdate);
+    
     // // 文件上传接口
     router.post('/upload', _handleFileUpload);
 
@@ -563,9 +394,9 @@ class ServerService with ChangeNotifier {
           // 提取结束字节（若未指定，保持默认到文件末尾）
           if (match.group(2) != null && match.group(2)!.isNotEmpty) {
             end = int.parse(match.group(2)!);
-          }
-        }
-      }
+                      }
+                    }
+                  }
 
 // 校验 Range 合法性（避免无效范围请求）
       if (start > end || start >= fileLength) {
@@ -629,141 +460,7 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  // 提取WebSocket处理为独立方法
-  // 处理WebSocket连接
-  void _handleWebSocketConnection(WebSocketChannel channel, Request request) {
-    print('开始处理WebSocket连接');
 
-    // 从请求参数获取客户端ID（如果有的话）
-    String? clientId = request.url.queryParameters['clientId'];
-
-    // 如果没有提供客户端ID，则生成一个临时ID
-    if (clientId == null || clientId.isEmpty) {
-      // 改进临时ID生成，确保唯一性
-      do {
-        clientId =
-            'temp_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1000)}';
-      } while (_connectionPool.hasConnection(clientId)); // 检查是否已有该ID
-    } else {
-      // 如果客户端提供了ID，检查是否已有连接，如果有则断开旧连接
-      if (_connectionPool.hasConnection(clientId)) {
-        print('客户端 $clientId 已有连接，断开旧连接');
-        _connectionPool.removeConnection(clientId);
-      }
-    }
-
-    // 记录客户端详情
-    final userAgent = request.headers['user-agent'] ?? '';
-    final deviceType = _getDeviceType(userAgent);
-    if (clientId != null) {
-      final clientDetails = ClientDetails(deviceType: deviceType);
-
-      // 创建订阅
-      final subscription = channel.stream
-          .listen((message) => _handleClientMessage(message, channel, clientId),
-              onDone: () {
-        // 连接关闭时清理
-        if (_connectionPool.hasConnection(clientId!)) {
-          _connectionPool.removeConnection(clientId,
-              closeConnection: false); // 连接已关闭，不需要再次关闭
-          _logMessage(clientId, 'connection', '客户端已断开');
-          print(
-              'WebSocket连接已关闭: $clientId，剩余连接: ${_connectionPool.connectionCount}');
-          _broadcastConnectionStatus(); // 通知所有客户端连接状态变化
-        }
-      }, onError: (error) {
-        print('WebSocket错误: $error');
-        _logMessage(clientId, 'error', error.toString());
-      });
-
-      // 将连接添加到连接池
-      _connectionPool.addConnection(
-          clientId, channel, subscription, clientDetails, deviceType);
-
-      // 记录连接日志
-      _logMessage(clientId, 'connection', '客户端已连接');
-    }
-  }
-
-  // 处理客户端消息
-  void _handleClientMessage(
-      dynamic message, WebSocketChannel channel, String? clientId) {
-    if (clientId == null) {
-      print('错误：客户端ID为空');
-      return;
-    }
-
-    try {
-      // 处理二进制数据
-      if (message is Uint8List) {
-        _handleBinaryData(channel, clientId, message);
-        return;
-      }
-
-      // 解析消息
-      Map<String, dynamic> messageJson;
-      if (message is String) {
-        messageJson = json.decode(message);
-      } else if (message is List<int>) {
-        messageJson = json.decode(utf8.decode(message));
-      } else {
-        throw FormatException('不支持的消息格式');
-      }
-
-      // 记录二进制请求上下文
-      if (messageJson['action'] == 'uploadBinaryChunk') {
-        _connectionPool.setPendingBinaryRequest(clientId, messageJson);
-      }
-      if (messageJson['action'] != 'uploadBinaryChunk') {
-        print('收到客户端【 $clientId 】发来指令: $messageJson');
-      }
-      // 记录消息日志
-      _logMessage(clientId, messageJson['action'] ?? 'unknown', messageJson);
-
-      // 调用WebApiHandler处理请求
-      _webApiHandler.handleRequest(channel, messageJson).then((response) {
-        // 给响应添加请求ID，以便客户端匹配请求和响应
-        final responseWithId = {'id': messageJson['id'], ...response};
-        // 发送响应给客户端
-        channel.sink.add(json.encode(responseWithId));
-      }).catchError((error) {
-        // 处理异步错误
-        channel.sink.add(json.encode({
-          'id': messageJson['id'],
-          'success': false,
-          'error': error.toString()
-        }));
-      });
-    } catch (e) {
-      print('消息处理错误: $e');
-      _logMessage(clientId, 'error', e.toString());
-      // 发送错误响应
-      channel.sink.add(json.encode({'success': false, 'error': e.toString()}));
-    }
-  }
-
-  // 处理二进制数据
-  void _handleBinaryData(
-      WebSocketChannel channel, String clientId, Uint8List data) {
-    final request = _connectionPool.getPendingBinaryRequest(clientId);
-    if (request == null) {
-      channel.sink.add(json.encode({'success': false, 'error': '未找到对应的二进制请求'}));
-      return;
-    }
-
-    // 移除对应的请求信息
-    _connectionPool.removePendingBinaryRequest(clientId);
-    final requestId = request['id'];
-    final params = request['params'];
-
-    // 交给API处理器处理二进制块
-    _webApiHandler.handleBinaryData(
-        channel: channel,
-        fileId: params['fileId'],
-        chunkIndex: params['chunkIndex'],
-        data: data,
-        requestId: requestId);
-  }
 
   // 提取静态资源处理器
   Handler _createStaticHandler() {
@@ -791,13 +488,138 @@ class ServerService with ChangeNotifier {
     };
   }
 
+  // 文件上传管理器 - 用于处理分块上传
+  final Map<String, Map<String, dynamic>> _pendingUploads = {};
+
   // 优化文件上传处理
   Future<Response> _handleFileUpload(Request request) async {
     try {
-      // 这里可以添加实际的文件上传处理逻辑
-      return Response.ok(json.encode({'status': '上传成功'}),
-          headers: {'Content-Type': 'application/json'});
+      final contentType = request.headers['content-type'];
+      if (contentType == null) {
+        return Response.badRequest(
+          body: json.encode({'error': '缺少Content-Type'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // 检查是否为分块上传请求
+      final userAgent = request.headers['user-agent'] ?? '';
+      final isChunkedUpload = contentType.contains('application/json'); // 假设分块元数据是JSON
+      final isMultipart = contentType.contains('multipart/form-data');
+
+      if (isMultipart) {
+        // 检查是否为分块数据上传（包含chunk字段）
+        final multipartBoundary = RegExp(r'boundary=([^,;]+)').firstMatch(contentType);
+        if (multipartBoundary != null) {
+          // 从请求中读取原始数据
+          final bodyBytes = await request.read().toList();
+          final flattenedBytes = <int>[];
+          for (final byteList in bodyBytes) {
+            flattenedBytes.addAll(byteList);
+          }
+          final body = Uint8List.fromList(flattenedBytes);
+
+          // 解析multipart数据
+          final boundary = multipartBoundary.group(1)!;
+          final boundaryBytes = utf8.encode('\r\n--$boundary');
+          
+          // 解析multipart数据
+          final parts = <Map<String, dynamic>>[];
+          var start = 0;
+          // 跳过开头的boundary
+          final firstBoundary = utf8.encode('--$boundary');
+          var pos = _findBytes(body, firstBoundary, start);
+          if (pos == -1) {
+            return Response.badRequest(
+              body: json.encode({'error': '无效的multipart格式'}),
+              headers: {'Content-Type': 'application/json'},
+            );
+          }
+          pos += firstBoundary.length;
+
+          while (pos < body.length - 2) {
+            // 查找下一部分的开始
+            final nextBoundary = _findBytes(body, boundaryBytes, pos);
+            if (nextBoundary == -1) {
+              // 最后一部分
+              final partData = body.sublist(pos, body.length - 2); // -2 for \r\n
+              parts.add(_parseMultipartPart(partData));
+              break;
+            }
+
+            final partData = body.sublist(pos, nextBoundary);
+            parts.add(_parseMultipartPart(partData));
+            pos = nextBoundary + boundaryBytes.length;
+            
+            // 如果遇到结束标记
+            if (pos < body.length && body[pos] == 45 && pos + 1 < body.length && body[pos + 1] == 45) {
+              // '--' 结束标记
+              break;
+            }
+          }
+
+          // 检查是否是分块上传请求
+          bool isChunkUpload = false;
+          String? fileId;
+          int? chunkIndex;
+          
+          for (final part in parts) {
+            final headers = part['headers'] as Map<String, String>;
+            final contentDisposition = headers['content-disposition'];
+            if (contentDisposition != null) {
+              final nameMatch = RegExp(r'name="([^"]+)"').firstMatch(contentDisposition);
+              if (nameMatch != null) {
+                final fieldName = nameMatch.group(1)!;
+                if (fieldName == 'chunk') {
+                  isChunkUpload = true;
+                } else if (fieldName == 'fileId') {
+                  fileId = utf8.decode(part['content'] as Uint8List);
+                } else if (fieldName == 'chunkIndex') {
+                  chunkIndex = int.tryParse(utf8.decode(part['content'] as Uint8List));
+                }
+              }
+            }
+          }
+
+          if (isChunkUpload && fileId != null && chunkIndex != null) {
+            // 处理分块上传
+            return await _handleUploadChunkMultipart(parts, fileId, chunkIndex);
+          }
+        }
+        
+        // 处理完整文件上传
+        return await _handleMultipartUpload(request);
+      } else if (isChunkedUpload) {
+        // 处理分块上传请求
+        final body = await request.readAsString();
+        final requestData = json.decode(body);
+
+        if (requestData['action'] == 'initUpload') {
+          // 初始化分块上传
+          return await _handleInitUpload(requestData);
+        } else if (requestData['action'] == 'uploadChunk') {
+          // 上传分块 - 从JSON中读取base64数据
+          return await _handleUploadChunkJson(requestData);
+        } else if (requestData['action'] == 'completeUpload') {
+          // 完成分块上传
+          return await _handleCompleteUpload(requestData);
+        } else if (requestData['action'] == 'cancelUpload') {
+          // 取消上传
+          return await _handleCancelUpload(requestData);
+        }
+      } else {
+        return Response.badRequest(
+          body: json.encode({'error': '不支持的Content-Type'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      return Response.badRequest(
+        body: json.encode({'error': '无效的请求'}),
+        headers: {'Content-Type': 'application/json'},
+      );
     } catch (e) {
+      print('文件上传失败: $e');
       return Response.badRequest(
         body: json.encode({'error': '上传失败: ${e.toString()}'}),
         headers: {'Content-Type': 'application/json'},
@@ -805,38 +627,497 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  void _broadcastMessage(dynamic message) {
-    print('广播消息到 ${_connectionPool.connectionCount} 个客户端');
+  // 从multipart/form-data格式处理分块上传
+  Future<Response> _handleUploadChunkMultipart(List<Map<String, dynamic>> parts, String fileId, int chunkIndex) async {
+    try {
+      Uint8List? chunkData;
 
-    // 给每个在登记的用户广播消息
-    for (final clientId in _connectionPool.connectionIds) {
-      final client = _connectionPool.getConnection(clientId);
-      if (client != null) {
-        try {
-          if (_connectionPool.isConnectionActive(clientId)) {
-            client.sink.add(message);
-            print('已向客户端 $clientId 发送消息');
-          } else {
-            print('客户端 $clientId 连接已关闭，跳过发送');
+      for (final part in parts) {
+        final headers = part['headers'] as Map<String, String>;
+        final content = part['content'] as Uint8List;
+        
+        // 检查Content-Disposition头部
+        final contentDisposition = headers['content-disposition'];
+        if (contentDisposition != null) {
+          final nameMatch = RegExp(r'name="([^"]+)"').firstMatch(contentDisposition);
+          if (nameMatch != null) {
+            final fieldName = nameMatch.group(1)!;
+            
+            if (fieldName == 'chunk') {
+              chunkData = content; // 二进制分块数据
+            }
           }
-        } catch (e) {
-          print('向客户端 $clientId 广播消息失败: $e');
+        }
+      }
+
+      if (chunkData == null) {
+        return Response.badRequest(
+          body: json.encode({'error': '缺少分块数据'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      if (!_pendingUploads.containsKey(fileId)) {
+        return Response.badRequest(
+          body: json.encode({'error': '上传会话不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final uploadInfo = _pendingUploads[fileId]!;
+      final chunkFile = File(p.join(uploadInfo['uploadDir'], 'chunk_$chunkIndex'));
+      await chunkFile.writeAsBytes(chunkData);
+
+      // 更新已接收大小
+      uploadInfo['receivedChunks'][chunkIndex] = chunkData;
+      uploadInfo['receivedSize'] += chunkData.length;
+
+      final progress = (uploadInfo['receivedSize'] / uploadInfo['totalSize'] * 100).round();
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'progress': progress,
+          'message': '分块上传成功'
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('上传分块失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'error': '上传分块失败: ${e.toString()}'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 处理完整文件上传 (multipart/form-data)
+  Future<Response> _handleMultipartUpload(Request request) async {
+    final contentType = request.headers['content-type']!;
+    
+    // 从请求中读取原始数据
+    final bodyBytes = await request.read().toList();
+    final flattenedBytes = <int>[];
+    for (final byteList in bodyBytes) {
+      flattenedBytes.addAll(byteList);
+    }
+    final body = Uint8List.fromList(flattenedBytes);
+
+    // 手动解析multipart数据
+    final boundaryMatch = RegExp(r'boundary=([^,;]+)').firstMatch(contentType);
+    if (boundaryMatch == null) {
+      return Response.badRequest(
+        body: json.encode({'error': '无法解析boundary'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    final boundary = boundaryMatch.group(1)!;
+    final boundaryBytes = utf8.encode('\r\n--$boundary');
+    
+    // 解析multipart数据
+    final parts = <Map<String, dynamic>>[];
+    var start = 0;
+    // 跳过开头的boundary
+    final firstBoundary = utf8.encode('--$boundary');
+    var pos = _findBytes(body, firstBoundary, start);
+    if (pos == -1) {
+      return Response.badRequest(
+        body: json.encode({'error': '无效的multipart格式'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    pos += firstBoundary.length;
+
+    while (pos < body.length - 2) {
+      // 查找下一部分的开始
+      final nextBoundary = _findBytes(body, boundaryBytes, pos);
+      if (nextBoundary == -1) {
+        // 最后一部分
+        final partData = body.sublist(pos, body.length - 2); // -2 for \r\n
+        parts.add(_parseMultipartPart(partData));
+        break;
+      }
+
+      final partData = body.sublist(pos, nextBoundary);
+      parts.add(_parseMultipartPart(partData));
+      pos = nextBoundary + boundaryBytes.length;
+      
+      // 如果遇到结束标记
+      if (pos < body.length && body[pos] == 45 && pos + 1 < body.length && body[pos + 1] == 45) {
+        // '--' 结束标记
+        break;
+      }
+    }
+
+    // 处理解析出的各部分
+    String? videoFileName;
+    Uint8List? videoFileData;
+    String title = '未命名视频';
+    String remark = '';
+    int duration = 0;
+    List<String> tagIds = [];
+
+    for (final part in parts) {
+      final headers = part['headers'] as Map<String, String>;
+      final content = part['content'] as Uint8List;
+      
+      // 检查Content-Disposition头部
+      final contentDisposition = headers['content-disposition'];
+      if (contentDisposition != null) {
+        final nameMatch = RegExp(r'name="([^"]+)"').firstMatch(contentDisposition);
+        if (nameMatch != null) {
+          final fieldName = nameMatch.group(1)!;
+          
+          if (fieldName == 'video') {
+            // 这是视频文件
+            final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
+            videoFileName = filenameMatch?.group(1) ?? 'unnamed_video';
+            videoFileData = content;
+          } else if (fieldName == 'title') {
+            title = utf8.decode(content);
+          } else if (fieldName == 'remark') {
+            remark = utf8.decode(content);
+          } else if (fieldName == 'duration') {
+            duration = int.tryParse(utf8.decode(content)) ?? 0;
+          } else if (fieldName.startsWith('tagIds')) {
+            tagIds.add(utf8.decode(content));
+          }
         }
       }
     }
+
+    if (videoFileData == null) {
+      return Response.badRequest(
+        body: json.encode({'error': '未找到视频文件'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+
+    // 保存视频到本地存储
+    final videosDir = StorageUtils.getVideosDirectory();
+    await Directory(videosDir).create(recursive: true);
+    
+    final videoFileNameClean = 'unTransCode_${DateTime.now().millisecondsSinceEpoch}_${videoFileName ?? 'unnamed_video'}';
+    final videoFilePath = p.join(videosDir, videoFileNameClean);
+    
+    // 写入文件
+    final file = File(videoFilePath);
+    await file.writeAsBytes(videoFileData);
+    
+    // 生成缩略图
+    final thumbnailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
+    
+    // 准备参数用于创建视频记录
+    title = title.isNotEmpty ? title : (videoFileName?.split('.').first ?? '未命名视频');
+    
+    // 使用WebApiHandler创建视频记录
+    final videoData = {
+      'id': 'video_${DateTime.now().millisecondsSinceEpoch}',
+      'title': title,
+      'remark': remark,
+      'filePath': videoFilePath,
+      'fileSize': await file.length(),
+      'duration': duration,
+      'tagIds': tagIds,
+      'thumbnailPath': thumbnailPath,
+      'uploadTime': DateTime.now().toIso8601String(),
+    };
+    
+    final video = await _webApiHandler.createVideo(videoData);
+    
+    return Response.ok(
+      json.encode({
+        'success': true, 
+        'data': video
+      }),
+      headers: {'Content-Type': 'application/json'},
+    );
   }
+
+  // 从JSON中处理分块上传（base64格式）
+  Future<Response> _handleUploadChunkJson(Map<String, dynamic> data) async {
+    try {
+      final fileId = data['fileId'] as String;
+      final chunkIndex = data['chunkIndex'] as int;
+      final chunkData = base64.decode(data['chunkData'] as String);
+
+      if (!_pendingUploads.containsKey(fileId)) {
+        return Response.badRequest(
+          body: json.encode({'error': '上传会话不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final uploadInfo = _pendingUploads[fileId]!;
+      final chunkFile = File(p.join(uploadInfo['uploadDir'], 'chunk_$chunkIndex'));
+      await chunkFile.writeAsBytes(chunkData);
+
+      // 更新已接收大小
+      uploadInfo['receivedChunks'][chunkIndex] = chunkData;
+      uploadInfo['receivedSize'] += chunkData.length;
+
+      final progress = (uploadInfo['receivedSize'] / uploadInfo['totalSize'] * 100).round();
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'progress': progress,
+          'message': '分块上传成功'
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('上传分块失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'error': '上传分块失败: ${e.toString()}'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 完成分块上传
+  Future<Response> _handleCompleteUpload(Map<String, dynamic> data) async {
+    String? uploadDirPath; // 用于在异常处理中清理临时文件
+    
+    try {
+      final fileId = data['fileId'] as String;
+      final title = data['title'] as String? ?? '未命名视频';
+      final remark = data['remark'] as String? ?? '';
+      final duration = data['duration'] as int? ?? 0;
+      final tagIds = List<String>.from(data['tagIds'] ?? <String>[]);
+      final fileSize = data['fileSize'] as int? ?? 0;
+
+      if (!_pendingUploads.containsKey(fileId)) {
+        return Response.badRequest(
+          body: json.encode({'error': '上传会话不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final uploadInfo = _pendingUploads[fileId]!;
+      uploadDirPath = uploadInfo['uploadDir'] as String?;
+      
+      if (uploadDirPath == null) {
+        return Response.internalServerError(
+          body: json.encode({'error': '上传目录路径未设置'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      
+      final uploadDir = Directory(uploadDirPath);
+
+      // 验证所有分块是否都已上传
+      final totalChunks = uploadInfo['totalChunks'] as int;
+      for (int i = 0; i < totalChunks; i++) {
+        final chunkFile = File(p.join(uploadDir.path, 'chunk_$i'));
+        if (!await chunkFile.exists()) {
+          return Response.badRequest(
+            body: json.encode({'error': '分块文件缺失: chunk_$i'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
+      }
+
+      // 合并分块文件
+      final videosDir = StorageUtils.getVideosDirectory();
+      await Directory(videosDir).create(recursive: true);
+      
+      final videoFileNameClean = 'unTransCode_${DateTime.now().millisecondsSinceEpoch}_${uploadInfo['fileName']}';
+      final videoFilePath = p.join(videosDir, videoFileNameClean);
+      
+      final outputFile = File(videoFilePath);
+      final sink = outputFile.openWrite();
+
+      for (int i = 0; i < totalChunks; i++) {
+        final chunkFile = File(p.join(uploadDir.path, 'chunk_$i'));
+        final chunkData = await chunkFile.readAsBytes();
+        sink.add(chunkData);
+        
+        // 删除已合并的分块文件
+        await chunkFile.delete();
+      }
+
+      await sink.close();
+
+      // 生成缩略图 - 只有在完整视频文件准备好后才生成
+      final thumbnailPath = await FileUtils.generateVideoThumbnail(videoFilePath);
+
+      // 使用WebApiHandler创建视频记录
+      final videoData = {
+        'id': 'video_${DateTime.now().millisecondsSinceEpoch}',
+        'title': title,
+        'remark': remark,
+        'filePath': videoFilePath,
+        'fileSize': await outputFile.length(),
+        'duration': duration,
+        'tagIds': tagIds,
+        'thumbnailPath': thumbnailPath,
+        'uploadTime': DateTime.now().toIso8601String(),
+      };
+
+      final video = await _webApiHandler.createVideo(videoData);
+
+      // 清理临时目录
+      if (await uploadDir.exists()) {
+        await uploadDir.delete(recursive: true);
+      }
+      _pendingUploads.remove(fileId);
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'data': video,
+          'message': '文件上传完成'
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      // 在异常情况下清理临时文件
+      if (uploadDirPath != null) {
+        try {
+          final uploadDir = Directory(uploadDirPath);
+          if (await uploadDir.exists()) {
+            await uploadDir.delete(recursive: true);
+          }
+        } catch (cleanupError) {
+          print('清理临时文件失败: $cleanupError');
+        }
+      }
+      
+      // 从内存中移除上传记录
+      final fileId = data['fileId'] as String?;
+      if (fileId != null && _pendingUploads.containsKey(fileId)) {
+        _pendingUploads.remove(fileId);
+      }
+      
+      print('完成上传失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'error': '完成上传失败: ${e.toString()}'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 初始化分块上传
+  Future<Response> _handleInitUpload(Map<String, dynamic> data) async {
+    try {
+      final fileId = data['fileId'] as String;
+      final fileName = data['fileName'] as String;
+      final totalSize = data['totalSize'] as int;
+      final totalChunks = data['totalChunks'] as int;
+      final userAgent = data['userAgent'] as String? ?? '';
+
+      // 根据浏览器类型和文件大小确定块大小
+      final chunkSize = _getOptimalChunkSize(totalSize, userAgent);
+      
+      // 创建临时上传目录
+      final tempDir = StorageUtils.getTempDirectory();
+      final uploadDir = Directory(p.join(tempDir, 'uploads', fileId));
+      await uploadDir.create(recursive: true);
+
+      // 记录上传信息
+      _pendingUploads[fileId] = {
+        'fileName': fileName,
+        'totalSize': totalSize,
+        'totalChunks': totalChunks,
+        'receivedChunks': <int, Uint8List>{},
+        'uploadDir': uploadDir.path,
+        'receivedSize': 0,
+        'chunkSize': chunkSize,
+      };
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'chunkSize': chunkSize,
+          'message': '上传初始化成功'
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'error': '初始化上传失败: ${e.toString()}'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+
+
+  // 辅助方法：查找字节数组中的子序列
+  int _findBytes(Uint8List data, List<int> pattern, int startIndex) {
+    for (int i = startIndex; i <= data.length - pattern.length; i++) {
+      bool found = true;
+      for (int j = 0; j < pattern.length; j++) {
+        if (data[i + j] != pattern[j]) {
+          found = false;
+          break;
+        }
+      }
+      if (found) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // 辅助方法：解析multipart部分
+  Map<String, dynamic> _parseMultipartPart(Uint8List data) {
+    // 查找头部和内容的分界（\r\n\r\n）
+    int headerEnd = -1;
+    for (int i = 0; i < data.length - 3; i++) {
+      if (data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 13 && data[i + 3] == 10) {
+        headerEnd = i + 4;
+        break;
+      }
+    }
+
+    final headers = <String, String>{};
+    Uint8List content;
+
+    if (headerEnd != -1) {
+      // 解析头部
+      final headerData = utf8.decode(data.sublist(0, headerEnd - 2)); // -2 to remove \r\n
+      final headerLines = headerData.split('\r\n');
+      
+      for (final line in headerLines) {
+        if (line.contains(':')) {
+          final parts = line.split(':');
+          headers[parts[0].trim().toLowerCase()] = parts.sublist(1).join(':').trim();
+        }
+      }
+      
+      content = data.sublist(headerEnd);
+    } else {
+      content = data;
+    }
+
+    // 移除内容前后的\r\n
+    int start = 0;
+    while (start < content.length && (content[start] == 13 || content[start] == 10)) {
+      start++;
+    }
+    
+    int end = content.length;
+    while (end > start && (content[end - 1] == 13 || content[end - 1] == 10)) {
+      end--;
+    }
+
+    return {
+      'headers': headers,
+      'content': content.sublist(start, end),
+    };
+  }
+
+
 
   Future<void> stopServer() async {
     if (!_isRunning) return;
 
-    // 发送服务器关闭消息
-    final shutdownMsg = WebSocketMessage(
-        type: MessageType.command.toString().split('.').last,
-        data: {'command': 'server_shutdown', 'message': '服务器正在关闭'});
-    _broadcastMessage(json.encode(shutdownMsg.toJson()));
+    // 发送服务器关闭消息 - 现在使用HTTP API，无需广播
 
-    // 使用连接池清理所有连接
-    _connectionPool.clearAllConnections();
+    // 使用连接池清理所有连接 - 现在已移除WebSocket连接池
 
     await _server?.close(force: true);
     _server = null;
@@ -845,71 +1126,9 @@ class ServerService with ChangeNotifier {
     notifyListeners();
   }
 
-  // 更新客户端ID（从临时ID到正式ID）
-  // 处理聊天消息
-  void _handleChatMessage(WebSocketMessage message) {
-    print('收到聊天消息 from ${message.clientId}: ${message.data}');
-    // 广播聊天消息给所有客户端
-    _broadcastMessage(json.encode(message.toJson()));
-  }
 
-  // 处理命令消息
-  void _handleCommandMessage(WebSocketMessage message) {
-    print('收到命令消息 from ${message.clientId}: ${message.data}');
 
-    // 处理特定命令
-    if (message.data is Map) {
-      final commandData = message.data as Map;
-      final command = commandData['command'] as String?;
 
-      switch (command) {
-        case 'ping':
-          // 回复pong
-          if (message.clientId != null) {
-            final response = WebSocketMessage(
-                type: MessageType.acknowledge.toString().split('.').last,
-                clientId: message.clientId,
-                data: {
-                  'command': 'pong',
-                  'timestamp': DateTime.now().toIso8601String()
-                });
-            _sendToClient(message.clientId!, json.encode(response.toJson()));
-          }
-          break;
-        case 'broadcast':
-          // 客户端请求广播消息
-          _broadcastMessage(json.encode(message.toJson()));
-          break;
-        default:
-          // 未知命令，广播出去
-          _broadcastMessage(json.encode(message.toJson()));
-      }
-    } else {
-      // 格式不正确的命令消息
-      if (message.clientId != null) {
-        final errorMsg = WebSocketMessage(
-            type: MessageType.error.toString().split('.').last,
-            clientId: message.clientId,
-            data: {'message': '无效的命令格式'});
-        _sendToClient(message.clientId!, json.encode(errorMsg.toJson()));
-      }
-    }
-  }
-
-  void _broadcastConnectionStatus() {
-    final status = WebSocketMessage(
-      type: MessageType.connectionStatus.toString().split('.').last,
-      data: {
-        'count': _connectionPool.connectionCount,
-        'clients': _connectionPool.clientDevices.map((id, type) => MapEntry(
-                id, {
-              'deviceType': type,
-              'connectedAt': DateTime.now().toIso8601String()
-            }))
-      },
-    );
-    _broadcastMessage(json.encode(status.toJson()));
-  }
 
   // 广播消息给所有连接的客户端
   // void _broadcastMessage(dynamic message) {
@@ -925,19 +1144,7 @@ class ServerService with ChangeNotifier {
   //   }
   // }
 
-  // 发送消息给特定客户端
-  void _sendToClient(String clientId, dynamic message) {
-    final channel = _connectionPool.getConnection(clientId);
-    if (channel != null && _connectionPool.isConnectionActive(clientId)) {
-      try {
-        channel.sink.add(message);
-      } catch (e) {
-        print('发送消息给客户端 $clientId 失败: $e');
-      }
-    } else {
-      print('客户端 $clientId 不存在或已关闭');
-    }
-  }
+
 
   // 从User-Agent判断设备类型
   String _getDeviceType(String? userAgent) {
@@ -1035,4 +1242,807 @@ class ServerService with ChangeNotifier {
         return 'application/octet-stream'; // 默认类型
     }
   }
-}
+  
+  // HTTP API端点处理方法
+  
+  // 获取所有视频
+  Future<Response> _handleGetVideos(Request request) async {
+    try {
+      final videos = await _webApiHandler.getAllVideos();
+      return Response.ok(
+        json.encode({'success': true, 'data': videos}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取最近上传的视频
+  Future<Response> _handleGetRecentVideos(Request request, String limit) async {
+    try {
+      final limitNum = int.tryParse(limit) ?? 5;
+      final videos = await _webApiHandler.getRecentVideos(limitNum);
+      return Response.ok(
+        json.encode({'success': true, 'data': videos}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取单个视频
+  Future<Response> _handleGetVideo(Request request, String id) async {
+    try {
+      final video = await _webApiHandler.getVideoById(id);
+      if (video != null) {
+        return Response.ok(
+          json.encode({'success': true, 'data': video}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        return Response.notFound(
+          json.encode({'success': false, 'error': '视频不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 创建视频
+  Future<Response> _handleCreateVideo(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+      
+      final video = await _webApiHandler.createVideo(params);
+      
+      return Response.ok(
+        json.encode({'success': true, 'data': video}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 更新视频
+  Future<Response> _handleUpdateVideo(Request request, String id) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+      
+      final updatedVideo = await _webApiHandler.updateVideo(id, params);
+      
+      return Response.ok(
+        json.encode({'success': true, 'data': updatedVideo}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 删除视频
+  Future<Response> _handleDeleteVideo(Request request, String id) async {
+    try {
+      await _webApiHandler.deleteVideo(id);
+      
+      return Response.ok(
+        json.encode({'success': true}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取所有标签
+  Future<Response> _handleGetTags(Request request) async {
+    try {
+      final tags = await _webApiHandler.getAllTags();
+      return Response.ok(
+        json.encode({'success': true, 'data': tags}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 创建标签
+  Future<Response> _handleCreateTag(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+      
+      final tag = await _webApiHandler.createTag(params['name']);
+      
+      return Response.ok(
+        json.encode({'success': true, 'data': tag}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 删除标签
+  Future<Response> _handleDeleteTag(Request request, String id) async {
+    try {
+      await _webApiHandler.deleteTag(id);
+      
+      return Response.ok(
+        json.encode({'success': true}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 搜索视频
+  Future<Response> _handleSearch(Request request) async {
+    try {
+      final query = request.url.queryParameters['q'] ?? '';
+      final results = await _webApiHandler.searchVideos(query);
+      return Response.ok(
+        json.encode({'success': true, 'data': results}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取缩略图
+  Future<Response> _handleGetThumbnail(Request request, String id) async {
+    try {
+      final thumbnail = await _webApiHandler.getThumbnail(id);
+      if (thumbnail != null) {
+        return Response.ok(
+          json.encode({'success': true, 'data': thumbnail}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        return Response.notFound(
+          json.encode({'success': false, 'error': '缩略图不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取视频URL
+  Future<Response> _handleGetVideoUrl(Request request, String id) async {
+    try {
+      final video = _webApiHandler.getVideoById(id);
+      if (video != null && video.filePath != null) {
+        return Response.ok(
+          json.encode({'success': true, 'data': {'videoUrl': video.filePath}}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        return Response.notFound(
+          json.encode({'success': false, 'error': '视频文件不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取视频大小
+  Future<Response> _handleGetVideoSize(Request request, String id) async {
+    try {
+      final video = _webApiHandler.getVideoById(id);
+      if (video != null) {
+        return Response.ok(
+          json.encode({'success': true, 'data': {'videoSize': video.fileSize}}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } else {
+        return Response.notFound(
+          json.encode({'success': false, 'error': '视频不存在'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 根据浏览器类型和文件大小确定最优分块大小
+  int _getOptimalChunkSize(int totalSize, String userAgent) {
+    // 对于Safari浏览器使用更小的块
+    if (userAgent.toLowerCase().contains('safari') && !userAgent.toLowerCase().contains('chrome')) {
+      if (totalSize > 100 * 1024 * 1024) { // > 100MB
+        return 2 * 1024 * 1024; // 2MB
+      } else if (totalSize > 10 * 1024 * 1024) { // > 10MB
+        return 1 * 1024 * 1024; // 1MB
+      } else {
+        return 512 * 1024; // 512KB
+      }
+    } else {
+      // 对于其他浏览器（如Chrome）
+      if (totalSize > 500 * 1024 * 1024) { // > 500MB
+        return 10 * 1024 * 1024; // 10MB
+      } else if (totalSize > 100 * 1024 * 1024) { // > 100MB
+        return 5 * 1024 * 1024; // 5MB
+      } else if (totalSize > 10 * 1024 * 1024) { // > 10MB
+        return 2 * 1024 * 1024; // 2MB
+      } else {
+        return 1024 * 1024; // 1MB
+      }
+    }
+  }
+  
+  // 处理取消上传请求（HTTP API）
+  Future<Response> _handleCancelUpload(Map<String, dynamic> data) async {
+    try {
+      final fileId = data['fileId'] as String;
+
+      if (_pendingUploads.containsKey(fileId)) {
+        final uploadInfo = _pendingUploads[fileId]!;
+        final uploadDir = Directory(uploadInfo['uploadDir']);
+
+        // 删除临时目录及所有分块文件
+        if (await uploadDir.exists()) {
+          await uploadDir.delete(recursive: true);
+        }
+        _pendingUploads.remove(fileId);
+      }
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '上传已取消'
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'error': '取消上传失败: ${e.toString()}'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 价格计算器相关API端点处理方法
+  
+  // 获取所有机器部件
+  Future<Response> _handleGetMachineParts(Request request) async {
+    try {
+      // 从Hive数据库中获取机器部件数据
+      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+      final machineParts = machinePartsBox.values.toList();
+      
+      // 将MachinePart对象转换为Map格式
+      final parts = <Map<String, dynamic>>[];
+      for (final part in machineParts) {
+        // 首先获取基本属性
+        final partMap = <String, dynamic>{
+          'Model': part.model,
+          'OriginalModel': part.originalModel,
+          'OriginalPrice': part.originalPrice,
+          'ShowPrice': part.showPrice,
+          'image': part.image,
+          'addedCount': part.addedCount,
+        };
+        
+        // 添加otherProperties中的所有属性
+        part.otherProperties.forEach((key, value) {
+          partMap[key] = value;
+        });
+        
+        parts.add(partMap);
+      }
+      
+      return Response.ok(
+        json.encode({'success': true, 'data': parts}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('获取机器部件失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 创建机器部件
+  Future<Response> _handleCreateMachinePart(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+      
+      // 这里应该调用_priceCalculatorProvider.saveMachinePart()
+      // 临时返回成功
+      return Response.ok(
+        json.encode({'success': true, 'data': params}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 更新机器部件
+  Future<Response> _handleUpdateMachinePart(Request request, String id) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+      
+      // 这里应该调用_priceCalculatorProvider.updateMachinePart()
+      // 临时返回成功
+      return Response.ok(
+        json.encode({'success': true, 'data': params}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 删除机器部件
+  Future<Response> _handleDeleteMachinePart(Request request, String id) async {
+    try {
+      // 这里应该调用_priceCalculatorProvider.deleteMachinePart()
+      // 临时返回成功
+      
+      return Response.ok(
+        json.encode({'success': true}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取部件统计信息
+  Future<Response> _handleGetPartsStats(Request request) async {
+    try {
+      // 从Hive数据库中获取机器部件和部件的数量
+      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+      final partsBox = Hive.box<Part>('temp_parts');
+      
+      final machinePartsCount = machinePartsBox.length;
+      final partsCount = partsBox.length;
+
+      return Response.ok(
+        json.encode({
+          'success': true, 
+          'data': {
+            'machinePartsCount': machinePartsCount,
+            'partsCount': partsCount,
+          }
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('获取部件统计失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 检查数据是否有更新
+  Future<Response> _handleCheckDataUpdate(Request request) async {
+    try {
+      // 获取查询参数（客户端上次更新时间）
+      final queryParams = request.url.queryParameters;
+      final lastUpdateStr = queryParams['lastUpdate'];
+      
+      // 获取Hive数据库的最后修改时间（这里简化处理，实际可能需要更复杂的时间跟踪）
+      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+      final partsBox = Hive.box<Part>('temp_parts');
+      
+      // 由于Hive box没有直接的最后修改时间，我们返回当前时间作为最后修改时间
+      // 在实际应用中，您可能需要维护一个单独的最后修改时间戳
+      final lastMachinePartsUpdate = DateTime.now().millisecondsSinceEpoch;
+      final lastPartsUpdate = DateTime.now().millisecondsSinceEpoch;
+      
+      bool hasUpdates = false;
+      if (lastUpdateStr != null) {
+        final lastUpdate = int.tryParse(lastUpdateStr) ?? 0;
+        hasUpdates = lastMachinePartsUpdate > lastUpdate || lastPartsUpdate > lastUpdate;
+      } else {
+        hasUpdates = true; // 如果没有提供上次更新时间，则认为有更新
+      }
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'hasUpdates': hasUpdates,
+          'lastMachinePartsUpdate': lastMachinePartsUpdate,
+          'lastPartsUpdate': lastPartsUpdate,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('检查数据更新失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 获取所有部件
+  Future<Response> _handleGetParts(Request request) async {
+    try {
+      // 从Hive数据库中获取部件数据
+      final partsBox = Hive.box<Part>('temp_parts');
+      final partsData = partsBox.values.toList();
+      
+      // 将Part对象转换为Map格式
+      final parts = <Map<String, dynamic>>[];
+      for (final part in partsData) {
+        parts.add({
+          'id': part.id,
+          'model': part.model,
+          'name': part.name,
+          'defaultPrice': part.defaultPrice,
+          'usageCount': part.usageCount,
+        });
+      }
+
+      return Response.ok(
+        json.encode({'success': true, 'data': parts}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('获取部件失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 创建部件
+  Future<Response> _handleCreatePart(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+
+      // 这里应该调用_priceCalculatorProvider.savePart()
+      // 临时返回成功
+      return Response.ok(
+        json.encode({'success': true, 'data': params}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+  // 更新部件
+  Future<Response> _handleUpdatePart(Request request, String id) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+
+      // 这里应该调用_priceCalculatorProvider.updatePart()
+      // 临时返回成功
+      return Response.ok(
+        json.encode({'success': true, 'data': params}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+  
+    // 删除部件
+    Future<Response> _handleDeletePart(Request request, String id) async {
+      try {
+        // 这里应该调用_priceCalculatorProvider.deletePart()
+        // 临时返回成功
+        
+        return Response.ok(
+          json.encode({'success': true}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } catch (e) {
+        return Response.internalServerError(
+          body: json.encode({'success': false, 'error': e.toString()}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    }
+    
+    // 获取最常用的部件
+    Future<Response> _handleGetTopUsedParts(Request request) async {
+      try {
+        final box = Hive.box<Part>('temp_parts');
+        final parts = box.values.toList();
+        
+        // 按使用次数排序并取前5个
+        parts.sort((a, b) => b.usageCount.compareTo(a.usageCount));
+        final topParts = parts.take(5).toList();
+        
+        final partsData = <Map<String, dynamic>>[];
+        for (final part in topParts) {
+          final partMap = <String, dynamic>{};
+          partMap['id'] = part.id;
+          partMap['model'] = part.model;
+          partMap['name'] = part.name;
+          partMap['defaultPrice'] = part.defaultPrice;
+          partMap['usageCount'] = part.usageCount;
+          partsData.add(partMap);
+        }
+  
+        return Response.ok(
+          json.encode({'success': true, 'data': partsData}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } catch (e) {
+        print('获取最常用部件失败: $e');
+        return Response.internalServerError(
+          body: json.encode({'success': false, 'error': e.toString()}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+    }
+    
+          // 获取最常用的费用
+    
+          Future<Response> _handleGetTopUsedFees(Request request) async {
+    
+            try {
+    
+              // 从Hive数据库中获取临时费用数据
+    
+              final box = Hive.box<TempFee>('temp_fees');
+    
+              final fees = box.values.toList();
+    
+              
+    
+              // 按使用次数排序并取前5个
+    
+              fees.sort((a, b) => b.usageCount.compareTo(a.usageCount));
+    
+              final topFees = fees.take(5).toList();
+    
+              
+    
+              final feesData = <Map<String, dynamic>>[];
+    
+              for (final fee in topFees) {
+    
+                final feeMap = <String, dynamic>{};
+    
+                feeMap['id'] = fee.id;
+    
+                feeMap['name'] = fee.name;
+    
+                feeMap['defaultAmount'] = fee.defaultAmount;
+    
+                feeMap['usageCount'] = fee.usageCount;
+    
+                feesData.add(feeMap);
+    
+              }
+    
+        
+    
+              return Response.ok(
+    
+                json.encode({'success': true, 'data': feesData}),
+    
+                headers: {'Content-Type': 'application/json'},
+    
+              );
+    
+            } catch (e) {
+    
+              print('获取最常用费用失败: $e');
+    
+              return Response.internalServerError(
+    
+                body: json.encode({'success': false, 'error': e.toString()}),
+    
+                headers: {'Content-Type': 'application/json'},
+    
+              );
+    
+            }
+    
+          }
+    
+        
+    
+          // 获取最常用的系数
+    
+        
+    
+          Future<Response> _handleGetTopUsedFactors(Request request) async {
+    
+        
+    
+            try {
+    
+        
+    
+              // 从Hive数据库中获取临时系数数据
+    
+        
+    
+              final box = Hive.box<TempFactor>('temp_factors');
+    
+        
+    
+              final factors = box.values.toList();
+    
+        
+    
+              
+    
+        
+    
+              // 按使用次数排序并取前5个
+    
+        
+    
+              factors.sort((a, b) => b.usageCount.compareTo(a.usageCount));
+    
+        
+    
+              final topFactors = factors.take(5).toList();
+    
+        
+    
+              
+    
+        
+    
+              final factorsData = <Map<String, dynamic>>[];
+    
+        
+    
+              for (final factor in topFactors) {
+    
+        
+    
+                final factorMap = <String, dynamic>{};
+    
+        
+    
+                factorMap['id'] = factor.id;
+    
+        
+    
+                factorMap['name'] = factor.name;
+    
+        
+    
+                factorMap['defaultValue'] = factor.defaultValue;
+    
+        
+    
+                factorMap['usageCount'] = factor.usageCount;
+    
+        
+    
+                factorsData.add(factorMap);
+    
+        
+    
+              }
+    
+        
+    
+        
+    
+        
+    
+              return Response.ok(
+    
+        
+    
+                json.encode({'success': true, 'data': factorsData}),
+    
+        
+    
+                headers: {'Content-Type': 'application/json'},
+    
+        
+    
+              );
+    
+        
+    
+            } catch (e) {
+    
+        
+    
+              print('获取最常用系数失败: $e');
+    
+        
+    
+              return Response.internalServerError(
+    
+        
+    
+                body: json.encode({'success': false, 'error': e.toString()}),
+    
+        
+    
+                headers: {'Content-Type': 'application/json'},
+    
+        
+    
+              );
+    
+        
+    
+            }
+    
+        
+    
+          }  }

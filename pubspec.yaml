@@ -72,8 +72,7 @@ dependencies:
   # 新增HTTP服务器相关依赖
   dhttpd: ^4.1.0
   shelf: ^1.4.2
-  shelf_web_socket: ^2.0.1
-  web_socket_channel: ^3.0.3
+
   shelf_cors_headers: ^0.1.5
   shelf_router: ^1.1.4
   network_info_plus: ^7.0.0 # 获取本地IP地址

@@ -60,7 +60,34 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('价格计算器'),
+        title: Consumer<PriceCalculatorProvider>(
+          builder: (context, provider, child) {
+            // 计算机器和部件数量
+            int machineCount = provider.baseData.length; // MachinePart的数量
+            int partCount = provider.tempParts.length; // Part的数量（临时部件）
+            
+            return Row(
+              children: [
+                const Text('价格计算器'),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '机器: $machineCount, 部件: $partCount',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
@@ -287,9 +314,25 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '搜索结果',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '搜索结果',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Consumer<PriceCalculatorProvider>(
+                  builder: (context, provider, child) {
+                    final items = _searchController.text.isEmpty
+                        ? provider.baseData.take(5).toList() // 显示热门商品
+                        : provider.filteredData;
+                    return Text(
+                      '(${items.length} 项)',
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    );
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             if (items.isEmpty)

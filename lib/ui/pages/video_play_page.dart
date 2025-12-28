@@ -78,9 +78,14 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
           _titleController.text = _existingVideo!.title;
           _remarkController.text = _existingVideo!.remark; // 设置备注
           _selectedTagIds = List.from(_existingVideo!.tagIds);
-          _sourceFile = File(_existingVideo!.filePath);
+          // 检查filePath是否有效
+          if (_existingVideo!.filePath != null && _existingVideo!.filePath.isNotEmpty) {
+            _sourceFile = File(_existingVideo!.filePath);
+            await _playerUtils.initialize(_sourceFile!);
+          } else {
+            throw Exception("视频文件路径无效或不存在");
+          }
           _isSaved = true;
-          await _playerUtils.initialize(_sourceFile!);
         } else {
           throw Exception("视频不存在");
         }
@@ -252,7 +257,7 @@ class _VideoPlayPageState extends State<VideoPlayPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '文件大小: ${FileUtils.formatFileSize(_sourceFile!.lengthSync())}',
+                                '文件大小: ${_sourceFile != null ? FileUtils.formatFileSize(_sourceFile!.lengthSync()) : '文件路径无效'}',
                                 style: TextStyle(
                                     color: Colors.grey[600], fontSize: 18),
                               ),

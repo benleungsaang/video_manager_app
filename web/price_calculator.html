@@ -1,0 +1,3134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器及零部件价格计算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .floating-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+        .floating-btn:hover {
+            background-color: #1976D2;
+        }
+        .floating-cart {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7; /* 半透明显示 */
+        }
+        .floating-cart:hover {
+            background-color: #45a049;
+            opacity: 1; /* hover时完全不透明 */
+        }
+        .floating-quote-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+        .floating-quote-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+            opacity: 0.7; /* 半透明显示 */
+        }
+        .floating-quote-btn:hover {
+            opacity: 1; /* hover时完全不透明 */
+        }
+        .floating-quote-btn.unit-price-btn {
+            background-color: #2196F3;
+        }
+        .floating-quote-btn.cart-btn {
+            background-color: #FF9800;
+        }
+        .floating-quote-btn.home-btn {
+            background-color: #9E9E9E;
+        }
+        .floating-quote-btn:hover {
+            opacity: 0.9;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .section-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #444;
+        }
+        .hidden-section {
+            display: none;
+        }
+        .item-row:hover {
+            background-color: #f0f8ff !important;
+            border-color: #87ceeb !important;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            font-family: monospace;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.secondary:hover {
+            background-color: #1976D2;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #d32f2f;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        #summaryTable input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+        .item-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        .item-row input {
+            margin-right: 10px;
+        }
+        .item-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .total-section {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: right;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* 移动端适配优化 */
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+                font-size: 14px;
+            }
+            
+            .container {
+                padding: 15px;
+                margin: 0;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 20px;
+            }
+            
+            .section {
+                margin-bottom: 20px;
+                padding: 15px;
+            }
+            
+            .section-title {
+                font-size: 1.1em;
+                margin-bottom: 10px;
+            }
+            
+            /* 优化表格在移动端的显示 */
+            table {
+                font-size: 0.9em;
+            }
+            
+            th, td {
+                padding: 6px;
+                text-align: left;
+            }
+            
+            /* 表格在移动端横向滚动 */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* 优化按钮大小 */
+            button {
+                padding: 8px 12px;
+                font-size: 0.9em;
+                margin-right: 5px;
+                margin-bottom: 5px;
+            }
+            
+            /* 优化表单元素 */
+            input[type="text"], 
+            input[type="number"], 
+            select, 
+            textarea {
+                padding: 6px;
+                font-size: 1em;
+            }
+            
+            textarea {
+                font-size: 0.9em;
+            }
+            
+            /* 优化浮动按钮在移动端的大小和位置 */
+            .floating-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+                top: 10px;
+                left: 10px;
+            }
+            
+            .floating-cart {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            #clearCartBtn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                bottom: 20px;
+                right: 80px;
+            }
+            
+            /* 优化模态框在移动端的显示 */
+            #detailModal .modal-content,
+            #cartModal .modal-content {
+                width: 95%;
+                max-width: 95%;
+                margin: 5vh auto;
+                padding: 15px;
+            }
+            
+            #tempFeeForm .modal-content,
+            #tempFactorForm .modal-content,
+            #addPartForm .modal-content {
+                width: 95%;
+                max-width: 95%;
+                margin: 15% auto;
+                padding: 15px;
+            }
+            
+            /* 优化购物车表格 */
+            #cartModal .modal-content {
+                max-height: 85vh;
+                overflow-y: auto;
+            }
+            
+            /* 优化搜索结果项 */
+            .item-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .item-row img {
+                width: 60px;
+                height: 60px;
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .item-row > div {
+                width: 100%;
+            }
+            
+            .item-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+            
+            /* 优化项目行显示 */
+            .item-row {
+                flex-direction: row;
+                align-items: center;
+            }
+            
+            .item-row img {
+                width: 50px;
+                height: 50px;
+                margin-right: 10px;
+                margin-bottom: 0;
+            }
+            
+            /* 优化详情模态框 */
+            #detailContent img {
+                width: 100px;
+                height: 100px;
+            }
+            
+            #detailContent h3 {
+                font-size: 1.2em;
+            }
+        }
+        
+        /* 针对更小屏幕的优化 */
+        @media screen and (max-width: 480px) {
+            body {
+                padding: 5px;
+                font-size: 13px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.3em;
+            }
+            
+            .section {
+                padding: 10px;
+            }
+            
+            table {
+                font-size: 0.8em;
+            }
+            
+            th, td {
+                padding: 4px;
+            }
+            
+            button {
+                padding: 6px 10px;
+                font-size: 0.85em;
+            }
+            
+            input[type="text"], 
+            input[type="number"], 
+            select, 
+            textarea {
+                padding: 5px;
+                font-size: 0.95em;
+            }
+            
+            .floating-cart {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+                bottom: 15px;
+                right: 15px;
+            }
+            
+            #clearCartBtn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+                bottom: 15px;
+                right: 70px;
+            }
+            
+            /* 进一步优化表格显示 */
+            .mobile-table {
+                display: block;
+            }
+            
+            .mobile-table thead {
+                display: none;
+            }
+            
+            .mobile-table tbody,
+            .mobile-table tr,
+            .mobile-table td {
+                display: block;
+            }
+            
+            .mobile-table tr {
+                margin-bottom: 10px;
+                border: 1px solid #ddd;
+                padding: 5px;
+            }
+            
+            .mobile-table td {
+                border: none;
+                position: relative;
+                padding: 4px 4px 4px 40%;
+                text-align: left;
+            }
+            
+            .mobile-table td:before {
+                content: attr(data-label) ": ";
+                position: absolute;
+                left: 6px;
+                width: 35%;
+                font-weight: bold;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>机器及零部件价格计算器 <span id="statsDisplay" style="font-size: 0.7em; color: #666; font-weight: normal;"></span></h1>
+        <div id="dataStatus"></div>
+        <!-- 上传数据按钮 -->
+        <button class="floating-btn" id="uploadBtn" onclick="showUploadModal()" title="上传数据" style="top: 20px; right: 20px; left: auto;">
+            <span>📤</span>
+        </button>
+
+        <!-- 搜索和选择部分 -->
+        <div class="section">
+            <div class="form-group">
+                <label for="searchInput">搜索机器或零部件:</label>
+                <input type="text" id="searchInput" placeholder="输入型号或名称进行搜索..." disabled>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <!-- 已选择项目列表 -->
+        <div class="section hidden-section">
+            <div class="section-title">3. 已选择的项目</div>
+            <table id="selectedItemsTable">
+                <thead>
+                    <tr>
+                        <th>类型</th>
+                        <th>型号/名称</th>
+                        <th>数量</th>
+                        <th>基础价格</th>
+                        <th>实际价格</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="selectedItemsBody">
+                    <!-- 项目行将动态添加到这里 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 临时费用和系数 -->
+        <div class="section hidden-section">
+            <div class="section-title">4. 添加临时费用和系数</div>
+            <div class="form-group">
+                <label for="tempFeeName">临时费用名称:</label>
+                <input type="text" id="tempFeeName" placeholder="如: 包装费, 附加费等">
+            </div>
+            <div class="form-group">
+                <label for="tempFeeAmount">费用金额:</label>
+                <input type="number" id="tempFeeAmount" placeholder="输入金额" min="0" step="0.01">
+            </div>
+            <button onclick="addTempFee()">添加临时费用</button>
+
+            <div style="margin-top: 20px;">
+                <div class="form-group">
+                    <label for="tempFactorName">系数名称:</label>
+                    <input type="text" id="tempFactorName" placeholder="如: 利润率, 税费等">
+                </div>
+                <div class="form-group">
+                    <label for="tempFactorValue">系数值:</label>
+                    <input type="number" id="tempFactorValue" placeholder="输入系数 (如1.1表示10%的增加)" min="0" step="0.01">
+                </div>
+                <button onclick="addTempFactor()">添加系数</button>
+            </div>
+        </div>
+
+        <!-- 临时费用和系数列表 -->
+        <div class="section hidden-section">
+            <div class="section-title">5. 已添加的临时费用和系数</div>
+            <table id="tempItemsTable">
+                <thead>
+                    <tr>
+                        <th>类型</th>
+                        <th>名称</th>
+                        <th>值</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tempItemsBody">
+                    <!-- 临时项目行将动态添加到这里 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="section hidden-section">
+            <div class="section-title">6. 操作</div>
+            <button onclick="showCart()" class="secondary">🛒 查看购物车 (<span id="cartItemCount">0</span> 项)</button>
+        </div>
+
+        <!-- 价格汇总（购物车内容） -->
+        <div class="section hidden-section">
+            <div class="section-title">7. 购物车内容</div>
+            <div id="cartSummary">
+                <!-- 购物车内容将动态显示 -->
+                <p style="text-align: center; color: #666;">购物车为空，请添加商品</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情模态框 -->
+    <div id="detailModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" onclick="closeDetailModal()">
+        <div class="modal-content" style="background-color: white; margin: 5vh auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; position: relative; max-height: 90vh; overflow: hidden;" onclick="event.stopPropagation()">
+            <span class="close" onclick="closeDetailModal()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 id="detailTitle" style="margin-top: 0;">产品详情</h2>
+            <div id="detailContent">
+                <!-- 详情内容将动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 购物车模态框 -->
+    <div id="cartModal" class="modal" style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" onclick="closeCartModal()">
+        <div class="modal-content" style="background-color: white; margin: 2% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 1000px; position: relative; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+            <span class="close" onclick="closeCartModal()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h2 style="margin-top: 0;">购物车</h2>
+            <div id="cartContent">
+                <!-- 购物车内容将动态填充 -->
+            </div>
+            <div id="cartActions" style="margin-top: 20px; text-align: right;">
+                <button id="modalClearCartBtn" onclick="clearCartConfirmation()" style="background-color: #f44336; color: white;">🗑️ 清空购物车</button>
+                <button class="secondary" onclick="showAddPartForm()" style="background-color: #4CAF50; color: white;">⚙️ 添加部件</button>
+                <button class="secondary" onclick="showTempFeeForm()" style="background-color: #2196F3; color: white;">💰 添加临时费用</button>
+                <button class="secondary" onclick="showTempFactorForm()" style="background-color: #FF9800; color: white;">📊 添加系数</button>
+                <button class="secondary" onclick="generateQuote()" style="background-color: #FF5722; color: white;">📋 生成报价单</button>
+                <button onclick="closeCartModal()" style="background-color: #607D8B; color: white;">❌ 关闭</button>
+            </div>
+        </div>
+    </div>
+
+                <!-- 临时费用表单 -->
+                <div id="tempFeeForm" class="modal" style="display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" onclick="closeTempFeeForm()">
+                    <div class="modal-content" style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; position: relative;" onclick="event.stopPropagation()">
+                        <span class="close" onclick="closeTempFeeForm()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+                        <h3>添加临时费用</h3>
+
+                        <div class="section">
+                            <div class="form-group">
+                                <label for="tempFeeSearch">费用搜索:</label>
+                                <input type="text" id="tempFeeSearch" placeholder="输入费用名称搜索..." oninput="tempFeeSearchInput(this.value)">
+                            </div>
+                            <div id="tempFeeSearchResults" style="margin-bottom: 15px; max-height: 100px; overflow-y: auto; overflow-x: auto; white-space: nowrap; display: block; min-height: 25px;">
+                                <!-- 搜索结果将动态显示，预留位置 -->
+                            </div>
+                            <div class="form-group">
+                                <label>常用费用:</label>
+                                <div id="topUsedFeesContainer" style="margin-bottom: 10px;">
+                                    <!-- 常用费用将动态加载 -->
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="tempFeeNameCart">费用名称:</label>
+                                <input type="text" id="tempFeeNameCart" placeholder="如: 包装费, 运输费等">
+                            </div>
+                            <div class="form-group">
+                                <label for="tempFeeAmountCart">费用金额:</label>
+                                <input type="number" id="tempFeeAmountCart" placeholder="输入金额" min="0" step="0.01">
+                            </div>
+                            <button onclick="addTempFeeToCart()" style="background-color: #4CAF50; color: white;">添加费用</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 系数表单 -->
+                <div id="tempFactorForm" class="modal" style="display: none; position: fixed; z-index: 1003; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" onclick="closeTempFactorForm()">
+                    <div class="modal-content" style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; position: relative;" onclick="event.stopPropagation()">
+                        <span class="close" onclick="closeTempFactorForm()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+                        <h3>添加系数</h3>
+
+                        <div class="section">
+                            <div class="form-group">
+                                <label for="tempFactorSearch">系数搜索:</label>
+                                <input type="text" id="tempFactorSearch" placeholder="输入系数名称搜索..." oninput="tempFactorSearchInput(this.value)">
+                            </div>
+                            <div id="tempFactorSearchResults" style="margin-bottom: 15px; max-height: 100px; overflow-y: auto; overflow-x: auto; white-space: nowrap; display: block; min-height: 25px;">
+                                <!-- 搜索结果将动态显示，预留位置 -->
+                            </div>
+                            <div class="form-group">
+                                <label>常用系数:</label>
+                                <div id="topUsedFactorsContainer" style="margin-bottom: 10px;">
+                                    <!-- 常用系数将动态加载 -->
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="tempFactorNameCart">系数名称:</label>
+                                <input type="text" id="tempFactorNameCart" placeholder="如: 利润率, 税费等">
+                            </div>
+                            <div class="form-group">
+                                <label for="tempFactorValueCart">系数值:</label>
+                                <input type="number" id="tempFactorValueCart" placeholder="输入系数 (如1.1表示10%的增加)" min="0" step="0.01">
+                            </div>
+                            <button onclick="addTempFactorToCart()" style="background-color: #FF9800; color: white;">添加系数</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 添加部件表单 -->
+                <div id="addPartForm" class="modal" style="display: none; position: fixed; z-index: 1004; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" onclick="closeAddPartForm()">
+                    <div class="modal-content" style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; position: relative;" onclick="event.stopPropagation()">
+                        <span class="close" onclick="closeAddPartForm()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+                        <h3>添加部件</h3>
+
+                        <div class="section">
+                            <div class="form-group">
+                                <label for="partSearch">部件搜索:</label>
+                                <input type="text" id="partSearch" placeholder="输入部件名称或型号搜索..." oninput="partSearchInput(this.value)">
+                            </div>
+                            <div id="partSearchResults" style="margin-bottom: 15px; max-height: 100px; overflow-y: auto; overflow-x: auto; white-space: nowrap; display: block; min-height: 25px;">
+                                <!-- 搜索结果将动态显示，预留位置 -->
+                            </div>
+                            <div id="topUsedParts" style="margin-bottom: 20px;">
+                                <h4>常用部件:</h4>
+                                <div id="topUsedItems"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="partModel">部件型号:</label>
+                                <input type="text" id="partModel" placeholder="输入部件型号">
+                            </div>
+                            <div class="form-group">
+                                <label for="partPrice">部件单价:</label>
+                                <input type="number" id="partPrice" placeholder="输入部件单价" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="partQuantity">数量:</label>
+                                <input type="number" id="partQuantity" placeholder="输入数量" min="1" value="1">
+                            </div>
+                            <button onclick="addPartToCart()" style="background-color: #4CAF50; color: white;">添加部件</button>
+                        </div>
+                    </div>
+                </div>
+
+    <!-- 报价单页面 -->
+    <div id="quotePage" class="container" style="display: none; max-width: 100%; margin: 0; padding: 20px; background-color: white;">
+        <div id="quoteContent">
+            <!-- 报价单内容将动态填充 -->
+        </div>
+        <!-- 报价单浮动按钮 -->
+        <div class="floating-quote-buttons">
+            <button class="floating-quote-btn unit-price-btn" onclick="toggleShowUnitPrice()" title="切换是否显示单价">💰</button>
+            <button class="floating-quote-btn cart-btn" onclick="backToCart()" title="返回购物车">🛒</button>
+            <button class="floating-quote-btn home-btn" onclick="backToMain()" title="返回主页">🏠</button>
+        </div>
+    </div>
+
+    <!-- 上传数据模态框 -->
+    <div id="uploadModal" class="modal" style="display: none; position: fixed; z-index: 1005; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);" onclick="closeUploadModal()">
+        <div class="modal-content" style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 500px; position: relative;" onclick="event.stopPropagation()">
+            <span class="close" onclick="closeUploadModal()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            <h3>上传数据</h3>
+            <div class="section">
+                <div class="form-group">
+                    <label for="uploadFile">选择文件:</label>
+                    <input type="file" id="uploadFile" accept=".json,.csv,.xlsx,.xls" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <button onclick="uploadFile()" style="background-color: #4CAF50; color: white;">上传</button>
+                <button onclick="closeUploadModal()" style="background-color: #607D8B; color: white;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // HTTP API通信模块
+        const apiClient = {
+          // 通用请求函数
+          async request(endpoint, options = {}) {
+            const url = `/api${endpoint}`;
+            const config = {
+              headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+              },
+              ...options
+            };
+
+            try {
+              const response = await fetch(url, config);
+              
+              if (!response.ok) {
+                // 尝试解析错误响应，但如果失败则使用状态文本
+                try {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                } catch (parseError) {
+                  // 如果响应不是JSON，直接使用状态文本
+                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+              }
+              
+              const data = await response.json();
+              return data;
+            } catch (error) {
+              console.error(`API请求失败 ${url}:`, error);
+              throw error;
+            }
+          },
+          
+          // 获取机器部件
+          getMachineParts: async function () {
+            const response = await this.request('/machine-parts');
+            return response.data;
+          },
+          
+          // 获取部件
+          getParts: async function () {
+            const response = await this.request('/parts');
+            return response.data;
+          },
+          
+          // 获取机器部件数量
+          getMachinePartsCount: async function () {
+            const response = await this.request('/machine-parts/count');
+            return response.count || response.data || 0;
+          },
+          
+          // 获取部件数量
+          getPartsCount: async function () {
+            try {
+              const response = await this.request('/parts/count');
+              return response.count || response.data || 0;
+            } catch (error) {
+              // 如果count API不存在，回退到获取所有数据然后计数
+              console.warn('使用回退方式获取部件数量:', error.message);
+              const items = await this.getParts();
+              return items.length || 0;
+            }
+          },
+          
+          // 获取部件统计信息
+          getPartsStats: async function () {
+            const response = await this.request('/parts-stats');
+            return response;
+          },
+          
+          // 获取最常用的部件
+          getTopUsedParts: async function () {
+            const response = await this.request('/top-used/parts');
+            return response.data || [];
+          },
+          
+          // 获取最常用的费用
+          getTopUsedFees: async function () {
+            const response = await this.request('/top-used/fees');
+            return response.data || [];
+          },
+          
+          // 获取最常用的系数
+          getTopUsedFactors: async function () {
+            const response = await this.request('/top-used/factors');
+            return response.data || [];
+          },
+          
+          // 检查数据是否有更新
+          checkDataUpdate: async function (lastUpdate) {
+            const params = lastUpdate ? `?lastUpdate=${lastUpdate}` : '';
+            const response = await this.request('/check-data-update' + params);
+            return response;
+          },
+          
+          // 创建机器部件
+          createMachinePart: async function (part) {
+            const response = await this.request('/machine-parts', {
+              method: 'POST',
+              body: JSON.stringify(part)
+            });
+            return response.data;
+          },
+          
+          // 创建部件
+          createPart: async function (part) {
+            const response = await this.request('/parts', {
+              method: 'POST',
+              body: JSON.stringify(part)
+            });
+            return response.data;
+          },
+          
+          // 更新机器部件
+          updateMachinePart: async function (id, part) {
+            const response = await this.request(`/machine-parts/${id}`, {
+              method: 'PUT',
+              body: JSON.stringify(part)
+            });
+            return response.data;
+          },
+          
+          // 更新部件
+          updatePart: async function (id, part) {
+            const response = await this.request(`/parts/${id}`, {
+              method: 'PUT',
+              body: JSON.stringify(part)
+            });
+            return response.data;
+          },
+          
+          // 删除机器部件
+          deleteMachinePart: async function (id) {
+            const response = await this.request(`/machine-parts/${id}`, {
+              method: 'DELETE'
+            });
+            return response;
+          }
+        };
+
+        // 全局变量
+        let baseData = []; // 存储基础数据
+        let selectedItems = []; // 存储已选择的项目
+        let tempItems = []; // 存储临时费用和系数
+        let cartItems = []; // 存储购物车项目
+        let currentView = 'main'; // 当前显示的视图：main, cart, quote
+
+        // 更新标题旁的统计数据
+        function updateStatsDisplay() {
+            // 获取机器数量（MachinePart的数量）
+            const machineCount = (baseData && baseData.length) ? baseData.length : 0;
+            
+            // 获取部件数量（Part的数量）
+            const partCount = (window.partsData && window.partsData.length) ? window.partsData.length : 0;
+            
+            document.getElementById('statsDisplay').innerHTML = 
+                `(<span title="机器数量">机器: ${machineCount}</span>, <span title="部件数量">部件: ${partCount}</span>)`;
+        }
+
+        // 显示热门商品（被添加次数最多的前5个）
+        function showPopularItems() {
+                    // 筛选出机器类别（根据Category字段判断）
+                    const machineItems = baseData.filter(item => 
+                        item.Category && 
+                        (item.Category.toLowerCase().includes('machine') || 
+                         item.Category.toLowerCase().includes('机器') ||
+                         item.Category.toLowerCase().includes('整机'))
+                    );
+                    
+                    // 按被添加次数排序，取前5个
+                    const popularItems = [...machineItems]
+                        .sort((a, b) => (b.addedCount || 0) - (a.addedCount || 0))
+                        .slice(0, 5);
+            
+                    let html = '<h3>热门机器（被添加次数最多）:</h3>';
+                    if (popularItems.length === 0) {
+                        html += '<p>暂无数据</p>';
+                    } else {
+                        popularItems.forEach(item => {
+                            html += `
+                                <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                    <img src="${item.image}" alt="${item.Model}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23ccc\' stroke-width=\'2\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><path d=\'M12 8v4m0 4h.01\'/></svg>'; this.style.backgroundColor='#f5f5f5';">
+                                    <div style="flex: 1;">
+                                        <div><strong>${item.Model}</strong></div>
+                                        <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(item.ShowPrice)}</span></div>
+                                        <div style="color: #999; font-size: 0.8em;">被添加 ${(item.addedCount || 0)} 次</div>
+                                    </div>
+                                    <button class="secondary" onclick="event.stopPropagation(); addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="添加到购物车">🛒</button>
+                                </div>
+                            `;
+                        });
+                    }
+            
+                    document.getElementById('searchResults').innerHTML = html;        }
+
+        // 全局变量用于存储缓存数据和时间戳
+        let cachedBaseData = null;
+        let cachedTopParts = null;
+        let cachedTopFees = null;
+        let cachedTopFactors = null;
+        let lastUpdateTime = null;
+        
+        // 加载基础数据（带缓存和更新检查）
+        async function loadData() {
+            try {
+                // 首先检查数据是否有更新
+                const updateCheck = await apiClient.checkDataUpdate(lastUpdateTime);
+                
+                if (updateCheck.hasUpdates) {
+                    // 有更新，从服务器加载完整数据
+                    console.log('检测到数据更新，加载完整数据...');
+                    baseData = await apiClient.getMachineParts();
+                    lastUpdateTime = updateCheck.lastMachinePartsUpdate;
+                    
+                    // 同时获取最常用项目
+                    try {
+                        cachedTopParts = await apiClient.getTopUsedParts();
+                        cachedTopFees = await apiClient.getTopUsedFees();
+                        cachedTopFactors = await apiClient.getTopUsedFactors();
+                    } catch (e) {
+                        console.error('获取最常用项目失败:', e);
+                        // 如果获取最常用项目失败，使用空数组
+                        cachedTopParts = [];
+                        cachedTopFees = [];
+                        cachedTopFactors = [];
+                    }
+                    
+                    // 缓存数据
+                    cachedBaseData = baseData;
+                    
+                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">成功加载 ${baseData.length} 条数据</div>`;
+                } else {
+                    // 没有更新，使用缓存数据
+                    console.log('使用缓存数据');
+                    baseData = cachedBaseData || await apiClient.getMachineParts(); // 如果缓存为空则仍需加载
+                    lastUpdateTime = updateCheck.lastMachinePartsUpdate;
+                    
+                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">使用缓存数据 (${baseData.length} 条)</div>`;
+                }
+                
+                // 更新搜索框状态 - 始终启用搜索
+                const searchInput = document.getElementById('searchInput');
+                searchInput.disabled = false;
+                searchInput.placeholder = '输入型号或名称进行搜索...';
+                
+                // 显示热门商品（被添加次数最多的前5个）
+                showPopularItems();
+                
+                // 更新标题旁的统计数据
+                updateStatsDisplay();
+            } catch (error) {
+                // 如果从服务器获取失败，尝试从缓存加载
+                if (cachedBaseData) {
+                    console.log('使用缓存数据（服务器加载失败）');
+                    baseData = cachedBaseData;
+                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">使用缓存数据 (${baseData.length} 条)</div>`;
+                    
+                    // 更新搜索框状态
+                    const searchInput = document.getElementById('searchInput');
+                    searchInput.disabled = false;
+                    searchInput.placeholder = '输入型号或名称进行搜索...';
+                    
+                    // 显示热门商品
+                    showPopularItems();
+                    
+                    // 更新标题旁的统计数据
+                    updateStatsDisplay();
+                } else {
+                    document.getElementById('dataStatus').innerHTML = `<div class="status-message error">从服务器加载数据失败: ${error.message}</div>`;
+                }
+            }
+        }
+
+        // 防抖变量
+        let searchTimeout = null;
+
+        // 搜索功能 - 只在回车时进行搜索
+        document.getElementById('searchInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // 防抖搜索函数 - 现在使用缓存数据进行本地搜索
+        function performSearch() {
+            // 清除之前的防抖定时器
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // 设置新的防抖定时器
+            searchTimeout = setTimeout(() => {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const resultsDiv = document.getElementById('searchResults');
+
+                if (!searchTerm) {
+                    // 如果搜索框为空，显示热门商品
+                    showPopularItems();
+                    return;
+                }
+
+                // 使用缓存的baseData进行本地搜索（无需向服务器请求）
+                let searchDataSource = cachedBaseData || baseData;
+
+                // 支持新旧型号搜索，但只显示新型号
+                const filteredItems = searchDataSource.filter(item =>
+                    item.Model.toLowerCase().includes(searchTerm) ||
+                    (item.OriginalModel && item.OriginalModel.toLowerCase().includes(searchTerm))
+                );
+
+                let html = `<h3>搜索结果 (${filteredItems.length} 项):</h3>`;
+                if (filteredItems.length === 0) {
+                    html += '<p>未找到匹配的项目</p>';
+                } else {
+                    filteredItems.forEach(item => {
+                        html += `
+                            <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                <img src="${item.image}" alt="${item.Model}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23ccc\' stroke-width=\'2\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><path d=\'M12 8v4m0 4h.01\'/></svg>'; this.style.backgroundColor='#f5f5f5';">
+                                <div style="flex: 1;">
+                                    <div><strong>${item.Model}</strong></div>
+                                    <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(item.ShowPrice)}</span></div>
+                                </div>
+                                <button class="secondary" onclick="event.stopPropagation(); addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="添加到购物车">🛒</button>
+                            </div>
+                        `;
+                    });
+                }
+
+                resultsDiv.innerHTML = html;
+            }, 300); // 300ms防抖延迟
+        }
+
+
+
+        // 从服务器获取最常用的项目，包含本地缓存
+        async function getTopUsedItemsFromServer(type, limit = 5) {
+            try {
+                // 检查本地缓存（10分钟内有效）
+                const cacheKey = `topUsedItems_${type}`;
+                const cachedData = localStorage.getItem(cacheKey);
+                if (cachedData) {
+                    const parsedCache = JSON.parse(cachedData);
+                    if (Date.now() - parsedCache.timestamp < 10 * 60 * 1000) { // 10分钟
+                        return parsedCache.data;
+                    }
+                }
+                
+                // 从服务器获取所有项目数据
+                const allItems = await apiClient.getMachineParts();
+                
+                // 根据类型筛选项目
+                let filteredItems = [];
+                if (type === 'parts') {
+                    filteredItems = allItems.filter(item => 
+                        item.Category && 
+                        (item.Category.toLowerCase().includes('部件') || 
+                         item.Category.toLowerCase().includes('part') ||
+                         item.Category.toLowerCase().includes('自定义') ||
+                         item.Category.toLowerCase().includes('临时'))
+                    );
+                } else if (type === 'fees') {
+                    filteredItems = allItems.filter(item => 
+                        item.Category && 
+                        (item.Category.toLowerCase().includes('费用') || 
+                         item.Category.toLowerCase().includes('fee') ||
+                         item.Category.toLowerCase().includes('临时'))
+                    );
+                } else if (type === 'factors') {
+                    filteredItems = allItems.filter(item => 
+                        item.Category && 
+                        (item.Category.toLowerCase().includes('系数') || 
+                         item.Category.toLowerCase().includes('factor') ||
+                         item.Category.toLowerCase().includes('临时'))
+                    );
+                } else {
+                    // 默认返回所有项目，按添加次数排序
+                    filteredItems = allItems;
+                }
+                
+                // 按添加次数排序（如果没有addedCount字段，则按其他标准排序）
+                filteredItems.sort((a, b) => (b.addedCount || 0) - (a.addedCount || 0));
+                
+                // 返回前limit个项目
+                const result = filteredItems.slice(0, limit);
+                
+                // 缓存结果
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    data: result,
+                    timestamp: Date.now()
+                }));
+                
+                return result;
+            } catch (error) {
+                console.error('从服务器获取最常用项目失败:', error);
+                // 如果服务器请求失败，尝试从缓存获取
+                const cacheKey = `topUsedItems_${type}`;
+                const cachedData = localStorage.getItem(cacheKey);
+                if (cachedData) {
+                    return JSON.parse(cachedData).data;
+                }
+                // 如果没有缓存，返回空数组
+                return [];
+            }
+        }
+
+        // 预加载最常用的项目（在页面初始化时）
+        async function preloadTopUsedItems() {
+            try {
+                // 并行加载所有最常用的项目
+                const [topParts, topFees, topFactors] = await Promise.all([
+                    apiClient.getTopUsedParts().catch(() => []),
+                    apiClient.getTopUsedFees().catch(() => []),
+                    apiClient.getTopUsedFactors().catch(() => [])
+                ]);
+                
+                // 缓存结果
+                cachedTopParts = topParts;
+                cachedTopFees = topFees;
+                cachedTopFactors = topFactors;
+                
+                console.log(`预加载完成: ${topParts.length} 个部件, ${topFees.length} 个费用, ${topFactors.length} 个系数`);
+            } catch (error) {
+                console.error('预加载最常用项目失败:', error);
+            }
+        }
+        
+        // 显示最常用的项目
+        async function showTopUsedItems(type) {
+            let topItems = [];
+            
+            // 优先使用缓存数据
+            if (type === 'parts' && cachedTopParts) {
+                topItems = cachedTopParts;
+            } else if (type === 'fees' && cachedTopFees) {
+                topItems = cachedTopFees;
+            } else if (type === 'factors' && cachedTopFactors) {
+                topItems = cachedTopFactors;
+            } else {
+                // 如果缓存为空，尝试从服务器获取
+                try {
+                    if (type === 'parts') {
+                        topItems = await apiClient.getTopUsedParts();
+                        cachedTopParts = topItems; // 更新缓存
+                    } else if (type === 'fees') {
+                        topItems = await apiClient.getTopUsedFees();
+                        cachedTopFees = topItems; // 更新缓存
+                    } else if (type === 'factors') {
+                        topItems = await apiClient.getTopUsedFactors();
+                        cachedTopFactors = topItems; // 更新缓存
+                    }
+                } catch (error) {
+                    console.error(`获取最常用${type}失败:`, error);
+                    // 如果API调用失败，回退到本地存储
+                    topItems = getTopUsedItems(type);
+                }
+            }
+            
+            // 根据类型显示在不同的容器中
+            let container;
+            if (type === 'parts') {
+                container = document.getElementById('topUsedItems');
+            } else if (type === 'fees') {
+                container = document.getElementById('topUsedFeesContainer');
+            } else if (type === 'factors') {
+                container = document.getElementById('topUsedFactorsContainer');
+            } else {
+                container = document.getElementById('topUsedItems');
+            }
+            
+            if (topItems.length === 0) {
+                container.innerHTML = '<p>暂无常用项目</p>';
+                return;
+            }
+            
+            // 生成常用项目HTML - 使用原来的按钮样式，按使用次数排序，不显示次数
+            let html = '<div style="margin-bottom: 10px;">';
+            topItems.forEach(item => {
+                html += `
+                    <button type="button" class="secondary" 
+                         onclick="${type === 'parts' ? 'fillPartForm' : type === 'fees' ? 'fillTempFeeForm' : 'fillTempFactorForm'}(${JSON.stringify(item).replace(/"/g, '&quot;')})" 
+                         style="background-color: ${type === 'parts' ? '#2196F3' : type === 'fees' ? '#4CAF50' : '#FF9800'}; color: white; margin-right: 5px; margin-bottom: 5px;" 
+                         title="${item.name || item.model}">
+                        ${item.name || item.model}
+                    </button>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // 部件搜索输入处理
+        function partSearchInput(searchTerm) {
+            // 搜索所有可用的部件（从缓存或服务器获取的部件数据）
+            let allParts = [];
+            
+            // 如果有缓存的最常用部件，使用它们作为搜索源
+            if (cachedTopParts && cachedTopParts.length > 0) {
+                allParts = [...cachedTopParts];
+            } else {
+                // 如果没有缓存，使用baseData中的部件（如果适用）
+                // 这里可以扩展为从服务器获取所有部件数据
+                allParts = [];
+            }
+            
+            const resultsContainer = document.getElementById('partSearchResults');
+            if (!searchTerm.trim()) {
+                // 如果搜索词为空，隐藏搜索结果
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            
+            const filteredParts = allParts.filter(part => 
+                (part.name && part.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (part.model && part.model.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            
+            if (filteredParts.length === 0) {
+                resultsContainer.innerHTML = '<p style="margin: 5px 0; font-size: 0.9em; color: #666;">未找到匹配的部件</p>';
+                resultsContainer.style.display = 'block';
+                return;
+            }
+            
+            let html = '<div style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 5px; padding: 5px;">';
+            filteredParts.forEach(part => {
+                html += `
+                    <div class="top-item" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9; cursor: pointer; flex: 0 0 auto; white-space: nowrap;" 
+                         onclick="fillPartForm(${JSON.stringify(part).replace(/"/g, '&quot;')})" title="点击填充数据">
+                        <div style="font-size: 0.9em;"><strong>${part.name || part.model}</strong></div>
+                        <div style="font-size: 0.75em; color: #666;">${part.usageCount || 1}次</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            resultsContainer.innerHTML = html;
+            resultsContainer.style.display = 'block';
+        }
+        
+        // 填充部件表单
+        function fillPartForm(part) {
+            document.getElementById('partModel').value = part.model || '';
+            document.getElementById('partPrice').value = part.defaultPrice || part.price || '';
+            
+            // 隐藏搜索结果
+            document.getElementById('partSearchResults').style.display = 'none';
+            // 清空搜索框
+            document.getElementById('partSearch').value = '';
+        }
+        
+        // 部件搜索输入处理
+        function partSearchInput(searchTerm) {
+            // 搜索所有可用的部件（从缓存）
+            let allParts = [];
+            
+            if (cachedTopParts && cachedTopParts.length > 0) {
+                allParts = [...cachedTopParts];
+            }
+            
+            const resultsContainer = document.getElementById('partSearchResults');
+            if (!searchTerm.trim()) {
+                // 如果搜索词为空，显示空内容但保持容器可见
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            
+            const filteredParts = allParts.filter(part => 
+                (part.name && part.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (part.model && part.model.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            
+            if (filteredParts.length === 0) {
+                resultsContainer.innerHTML = '<span style="color: #999; font-size: 0.9em;">未找到匹配的部件</span>';
+                return;
+            }
+            
+            let html = '<div style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 5px; padding: 2px 0;">';
+            filteredParts.forEach(part => {
+                html += `
+                    <button type="button" class="secondary" 
+                         onclick="fillPartForm(${JSON.stringify(part).replace(/"/g, '&quot;')})" 
+                         style="background-color: #2196F3; color: white; margin-right: 5px; margin-bottom: 5px; white-space: nowrap;" 
+                         title="${part.name || part.model}">
+                        ${part.name || part.model}
+                    </button>
+                `;
+            });
+            html += '</div>';
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        // 临时费用搜索输入处理
+        function tempFeeSearchInput(searchTerm) {
+            // 搜索所有可用的费用（从缓存）
+            let allFees = [];
+            
+            if (cachedTopFees && cachedTopFees.length > 0) {
+                allFees = [...cachedTopFees];
+            }
+            
+            const resultsContainer = document.getElementById('tempFeeSearchResults');
+            if (!searchTerm.trim()) {
+                // 如果搜索词为空，显示空内容但保持容器可见
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            
+            const filteredFees = allFees.filter(fee => 
+                (fee.name && fee.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            
+            if (filteredFees.length === 0) {
+                resultsContainer.innerHTML = '<span style="color: #999; font-size: 0.9em;">未找到匹配的费用</span>';
+                return;
+            }
+            
+            let html = '<div style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 5px; padding: 2px 0;">';
+            filteredFees.forEach(fee => {
+                html += `
+                    <button type="button" class="secondary" 
+                         onclick="fillTempFeeForm(${JSON.stringify(fee).replace(/"/g, '&quot;')})" 
+                         style="background-color: #4CAF50; color: white; margin-right: 5px; margin-bottom: 5px; white-space: nowrap;" 
+                         title="${fee.name}">
+                        ${fee.name}
+                    </button>
+                `;
+            });
+            html += '</div>';
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        // 填充临时费用表单
+        function fillTempFeeForm(fee) {
+            document.getElementById('tempFeeNameCart').value = fee.name || '';
+            document.getElementById('tempFeeAmountCart').value = fee.defaultAmount || '';
+            
+            // 隐藏搜索结果
+            document.getElementById('tempFeeSearchResults').style.display = 'none';
+            // 清空搜索框
+            document.getElementById('tempFeeSearch').value = '';
+        }
+        
+        // 系数搜索输入处理
+        function tempFactorSearchInput(searchTerm) {
+            // 搜索所有可用的系数（从缓存）
+            let allFactors = [];
+            
+            if (cachedTopFactors && cachedTopFactors.length > 0) {
+                allFactors = [...cachedTopFactors];
+            }
+            
+            const resultsContainer = document.getElementById('tempFactorSearchResults');
+            if (!searchTerm.trim()) {
+                // 如果搜索词为空，显示空内容但保持容器可见
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            
+            const filteredFactors = allFactors.filter(factor => 
+                (factor.name && factor.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            
+            if (filteredFactors.length === 0) {
+                resultsContainer.innerHTML = '<span style="color: #999; font-size: 0.9em;">未找到匹配的系数</span>';
+                return;
+            }
+            
+            let html = '<div style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 5px; padding: 2px 0;">';
+            filteredFactors.forEach(factor => {
+                html += `
+                    <button type="button" class="secondary" 
+                         onclick="fillTempFactorForm(${JSON.stringify(factor).replace(/"/g, '&quot;')})" 
+                         style="background-color: #FF9800; color: white; margin-right: 5px; margin-bottom: 5px; white-space: nowrap;" 
+                         title="${factor.name}">
+                        ${factor.name}
+                    </button>
+                `;
+            });
+            html += '</div>';
+            
+            resultsContainer.innerHTML = html;
+        }
+        
+        // 填充系数表单
+        function fillTempFactorForm(factor) {
+            document.getElementById('tempFactorNameCart').value = factor.name || '';
+            document.getElementById('tempFactorValueCart').value = factor.defaultValue || '';
+            
+            // 隐藏搜索结果
+            document.getElementById('tempFactorSearchResults').style.display = 'none';
+            // 清空搜索框
+            document.getElementById('tempFactorSearch').value = '';
+        }
+        
+        // 本地搜索功能
+        function localSearch(type, searchTerm) {
+            let allItems = [];
+            
+            // 根据类型获取所有项目（从缓存或baseData）
+            if (type === 'parts' && cachedTopParts) {
+                allItems = [...cachedTopParts];
+            } else if (type === 'fees' && cachedTopFees) {
+                allItems = [...cachedTopFees];
+            } else if (type === 'factors' && cachedTopFactors) {
+                allItems = [...cachedTopFactors];
+            }
+            
+            const resultsContainer = document.querySelector('#topUsedItems');
+            if (!searchTerm.trim()) {
+                // 如果搜索词为空，重新显示常用项目
+                showTopUsedItems(type);
+                return;
+            }
+            
+            const filteredItems = allItems.filter(item => 
+                (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (item.model && item.model.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            
+            if (filteredItems.length === 0) {
+                resultsContainer.innerHTML = '<p>未找到匹配的项目</p>';
+                return;
+            }
+            
+            let html = `<h3>搜索结果 (${filteredItems.length} 项):</h3>`;
+            filteredItems.forEach(item => {
+                html += `
+                    <div class="top-item" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; background-color: #f9f9f9; cursor: pointer;" 
+                         onclick="fillItemForm(${JSON.stringify(item).replace(/"/g, '&quot;')}, '${type}')">
+                        <div><strong>${item.name || item.model}</strong></div>
+                        <div style="font-size: 0.8em; color: #666;">使用次数: ${item.usageCount || item.useCount || 1}</div>
+                        ${type === 'parts' ? `<div style="font-size: 0.8em; color: #888;">价格: ${item.defaultPrice || item.price || 0}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            // 添加搜索框
+            html += `
+                <div class="form-group" style="margin-top: 15px;">
+                    <label for="localSearchInput">本地搜索:</label>
+                    <input type="text" id="localSearchInput" placeholder="搜索本地项目..." oninput="localSearch('${type}', this.value)" value="${searchTerm}">
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = html;
+        }
+
+        // 填充项目表单
+        function fillItemForm(item, type) {
+            if (type === 'parts') {
+                document.getElementById('partModel').value = item.Model || item.name;
+                document.getElementById('partPrice').value = item.ShowPrice || item.price || '';
+            } else if (type === 'fees') {
+                document.getElementById('tempFeeNameCart').value = item.Model || item.name;
+                document.getElementById('tempFeeAmountCart').value = item.ShowPrice || item.price || '';
+                showTempFeeForm();
+            } else if (type === 'factors') {
+                document.getElementById('tempFactorNameCart').value = item.Model || item.name;
+                document.getElementById('tempFactorValueCart').value = item.ShowPrice || item.value || '';
+                showTempFactorForm();
+            }
+        }
+
+        // 记录项目使用情况到服务器（不触发数据更新检查）
+        async function recordItemUsage(itemModel) {
+            try {
+                // 简单地向服务器发送添加次数增加的请求，但不影响主要数据
+                const response = await apiClient.request(`/machine-parts/${encodeURIComponent(itemModel)}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ 
+                        action: 'incrementAddedCount',
+                        model: itemModel
+                    })
+                });
+                console.log('项目使用情况已记录:', response);
+            } catch (error) {
+                console.error('记录项目使用情况失败:', error);
+            }
+        }
+
+        // 添加项目到购物车
+        async function addToCart(item) {
+            // 检查项目是否已在购物车中
+            const existingItemIndex = cartItems.findIndex(cartItem => cartItem.model === item.Model);
+
+            if (existingItemIndex !== -1) {
+                // 如果已在购物车中，增加数量
+                cartItems[existingItemIndex].quantity += 1;
+            } else {
+                // 如果不在购物车中，添加新项目
+                const cartItem = {
+                    id: Date.now(), // 唯一ID
+                    type: '机器',
+                    model: item.Model,
+                    name: item.OriginalModel,
+                    basePrice: item.ShowPrice,
+                    actualPrice: item.ShowPrice, // 默认实际价格等于基础价格
+                    quantity: 1, // 默认数量为1
+                    image: item.image
+                };
+
+                cartItems.push(cartItem);
+            }
+
+            // 更新被添加次数
+            await recordItemUsage(item);
+
+            // 更新购物车计数
+            updateCartCount();
+
+            // 显示成功消息
+            showMessage(`已将 ${item.Model} 添加到购物车`, 'success');
+        }
+
+        // 添加项目到选择列表
+        function addItem(item) {
+            const newItem = {
+                id: Date.now(), // 唯一ID
+                type: '机器',
+                model: item.Model,
+                name: item.OriginalModel,
+                basePrice: item.ShowPrice,
+                actualPrice: item.ShowPrice, // 默认实际价格等于基础价格
+                quantity: 1 // 默认数量为1
+            };
+
+            selectedItems.push(newItem);
+            renderSelectedItems();
+            updateTotal();
+
+            // 不再清除搜索结果，允许重复添加
+            // document.getElementById('searchInput').value = '';
+            // document.getElementById('searchResults').innerHTML = '';
+        }
+
+        // 渲染已选择的项目列表
+        function renderSelectedItems() {
+            const tbody = document.getElementById('selectedItemsBody');
+            tbody.innerHTML = '';
+
+            if (selectedItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">暂无已选择的项目</td></tr>';
+                return;
+            }
+
+            selectedItems.forEach((item, index) => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>${item.type}</td>
+                    <td>${item.model} (${item.name})</td>
+                    <td>${item.quantity}</td>
+                    <td>${formatCurrency(item.basePrice)}</td>
+                    <td>
+                        <input type="number"
+                               value="${item.actualPrice}"
+                               onchange="updateActualPrice(${index}, this.value)"
+                               min="0"
+                               step="0.01">
+                    </td>
+                    <td>
+                        <button class="danger" onclick="removeSelectedItem(${index})">删除</button>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // 更新实际价格
+        function updateActualPrice(index, value) {
+            selectedItems[index].actualPrice = parseFloat(value) || 0;
+            updateTotal();
+        }
+
+        // 删除已选择的项目
+        function removeSelectedItem(index) {
+            if (confirm('确定要删除这个项目吗？')) {
+                selectedItems.splice(index, 1);
+                renderSelectedItems();
+                updateTotal();
+            }
+        }
+
+        // 修改选中项目
+        function modifySelectedItem(index) {
+            const item = selectedItems[index];
+            const newPrice = prompt(`修改 ${item.name}(${item.model}) 的价格:`, item.actualPrice);
+            if (newPrice !== null) {
+                const parsedPrice = parseFloat(newPrice);
+                if (!isNaN(parsedPrice) && parsedPrice >= 0) {
+                    selectedItems[index].actualPrice = parsedPrice;
+                    renderSelectedItems();
+                    updateTotal();
+                } else {
+                    alert('请输入有效的价格');
+                }
+            }
+        }
+
+        // 更新汇总表中的项目价格
+        function updateSummaryItemPrice(index, type, value) {
+            const parsedValue = parseFloat(value);
+            if (isNaN(parsedValue) || parsedValue < 0) {
+                alert('请输入有效的金额');
+                updateTotal(); // 重新计算以恢复之前的值
+                return;
+            }
+
+            if (type === 'selected') {
+                // 修改选中项目的价格
+                selectedItems[index].actualPrice = parsedValue;
+            } else if (type === 'fee') {
+                // 修改临时费用的实际金额
+                tempItems[index].actualAmount = parsedValue;
+            } else if (type === 'factor') {
+                // 修改系数
+                tempItems[index].value = parsedValue;
+            }
+
+            updateTotal();
+        }
+
+        // 更新汇总表中的项目数量
+        function updateSummaryItemQuantity(index, type, value) {
+            if (type !== 'selected') {
+                return; // 只有选中的项目才有数量
+            }
+
+            const parsedValue = parseInt(value);
+            if (isNaN(parsedValue) || parsedValue < 1) {
+                alert('请输入有效的数量（至少为1）');
+                updateTotal(); // 重新计算以恢复之前的值
+                return;
+            }
+
+            selectedItems[index].quantity = parsedValue;
+            updateTotal();
+        }
+
+        // 从汇总表中删除项目
+        function removeSummaryItem(index, type) {
+            if (confirm('确定要删除这个项目吗？')) {
+                if (type === 'selected') {
+                    selectedItems.splice(index, 1);
+                } else if (type === 'temp') {
+                    tempItems.splice(index, 1);
+                }
+
+                renderSelectedItems();
+                renderTempItems();
+                updateTotal();
+            }
+        }
+
+        // 添加临时费用
+        async function addTempFee() {
+            const name = document.getElementById('tempFeeName').value;
+            const amount = parseFloat(document.getElementById('tempFeeAmount').value) || 0;
+
+            if (!name) {
+                alert('请输入费用名称');
+                return;
+            }
+
+            const tempFee = {
+                id: Date.now(),
+                type: '费用',
+                name: name,
+                baseAmount: amount,    // 原始金额
+                actualAmount: amount,   // 实际金额，默认等于原始金额
+                type: 'fees' // 标记为费用类型
+            };
+
+            tempItems.push(tempFee);
+            
+            // 记录用户创建的费用（在服务器端记录）
+            try {
+                // 创建一个费用记录对象并发送到服务器
+                await apiClient.createMachinePart({
+                    Model: name,
+                    Category: '临时费用',
+                    ShowPrice: amount,
+                    Description: '临时费用-' + name
+                });
+                showMessage('费用已记录到服务器', 'success');
+            } catch (error) {
+                console.error('记录费用到服务器失败:', error);
+                showMessage('记录费用失败: ' + error.message, 'error');
+            }
+            
+            renderTempItems();
+            updateTotal();
+
+            // 清空输入框
+            document.getElementById('tempFeeName').value = '';
+            document.getElementById('tempFeeAmount').value = '';
+        }
+
+        // 添加系数
+        async function addTempFactor() {
+            const name = document.getElementById('tempFactorName').value;
+            const value = parseFloat(document.getElementById('tempFactorValue').value) || 1;
+
+            if (!name) {
+                alert('请输入系数名称');
+                return;
+            }
+
+            const tempFactor = {
+                id: Date.now(),
+                type: '系数',
+                name: name,
+                value: value,
+                type: 'factors' // 标记为系数类型
+            };
+
+            tempItems.push(tempFactor);
+            
+            // 记录用户创建的系数（在服务器端记录）
+            try {
+                // 创建一个系数记录对象并发送到服务器
+                await apiClient.createMachinePart({
+                    Model: name,
+                    Category: '系数',
+                    ShowPrice: value,
+                    Description: '系数-' + name
+                });
+                showMessage('系数已记录到服务器', 'success');
+            } catch (error) {
+                console.error('记录系数到服务器失败:', error);
+                showMessage('记录系数失败: ' + error.message, 'error');
+            }
+            
+            renderTempItems();
+            updateTotal();
+
+            // 清空输入框
+            document.getElementById('tempFactorName').value = '';
+            document.getElementById('tempFactorValue').value = '';
+        }
+
+        // 渲染临时项目列表
+        function renderTempItems() {
+            const tbody = document.getElementById('tempItemsBody');
+            tbody.innerHTML = '';
+
+            if (tempItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暂无临时项目</td></tr>';
+                return;
+            }
+
+            tempItems.forEach((item, index) => {
+                const row = document.createElement('tr');
+
+                if (item.type === '费用') {
+                    row.innerHTML = `
+                        <td>${item.type}</td>
+                        <td>${item.name}</td>
+                        <td>
+                            <input type="number"
+                                   value="${item.actualAmount}"
+                                   onchange="updateTempFee(${index}, this.value)"
+                                   min="0"
+                                   step="0.01">
+                        </td>
+                        <td>
+                            <button class="danger" onclick="removeTempItem(${index})">删除</button>
+                        </td>
+                    `;
+                } else { // 系数
+                    row.innerHTML = `
+                        <td>${item.type}</td>
+                        <td>${item.name}</td>
+                        <td>
+                            <input type="number"
+                                   value="${item.value}"
+                                   onchange="updateTempFactor(${index}, this.value)"
+                                   min="0"
+                                   step="0.01">
+                        </td>
+                        <td>
+                            <button class="danger" onclick="removeTempItem(${index})">删除</button>
+                        </td>
+                    `;
+                }
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // 更新临时费用
+        function updateTempFee(index, value) {
+            tempItems[index].actualAmount = parseFloat(value) || 0;
+            updateTotal();
+        }
+
+        // 更新系数
+        function updateTempFactor(index, value) {
+            tempItems[index].value = parseFloat(value) || 1;
+            updateTotal();
+        }
+
+        // 删除临时项目
+        function removeTempItem(index) {
+            if (confirm('确定要删除这个临时项目吗？')) {
+                tempItems.splice(index, 1);
+                renderTempItems();
+                updateTotal();
+            }
+        }
+
+        // 修改临时费用
+        function modifyTempFee(index) {
+            const item = tempItems[index];
+            const newAmount = prompt(`修改 ${item.name} 的金额:`, item.actualAmount);
+            if (newAmount !== null) {
+                const parsedAmount = parseFloat(newAmount);
+                if (!isNaN(parsedAmount) && parsedAmount >= 0) {
+                    tempItems[index].actualAmount = parsedAmount;
+                    renderTempItems();
+                    updateTotal();
+                } else {
+                    alert('请输入有效的金额');
+                }
+            }
+        }
+
+        // 修改临时系数
+        function modifyTempFactor(index) {
+            const item = tempItems[index];
+            const newValue = prompt(`修改 ${item.name} 的系数:`, item.value);
+            if (newValue !== null) {
+                const parsedValue = parseFloat(newValue);
+                if (!isNaN(parsedValue) && parsedValue >= 0) {
+                    tempItems[index].value = parsedValue;
+                    renderTempItems();
+                    updateTotal();
+                } else {
+                    alert('请输入有效的系数');
+                }
+            }
+        }
+
+        // 显示产品详情
+        function showItemDetail(item) {
+            // 构建所有字段的表格，使值可编辑
+            let fieldsTable = '<div style="max-height: 70vh; overflow-y: auto;"><table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom:35px;">';
+            fieldsTable += '<tbody>';
+            
+            // 遍历item的所有属性（除了image，因为我们要单独处理）
+            for (const key in item) {
+                if (item.hasOwnProperty(key) && key !== 'image') {
+                    // 根据字段类型决定是否使用文本框
+                    let inputField;
+                    if (typeof item[key] === 'number') {
+                        if (key === 'ShowPrice') {
+                            // Special handling for ShowPrice - update the display when changed
+                            inputField = `<input type="number" class="detail-field-input" data-field="${key}" value="${item[key]}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" onchange="updatePriceDisplay('${key}', this.value)">`;
+                        } else {
+                            inputField = `<input type="number" class="detail-field-input" data-field="${key}" value="${item[key]}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">`;
+                        }
+                    } else {
+                        inputField = `<input type="text" class="detail-field-input" data-field="${key}" value="${item[key]}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">`;
+                    }
+                    fieldsTable += `<tr><td style="border: 1px solid #ddd; padding: 10px;"><strong>${key}</strong></td><td style="border: 1px solid #ddd; padding: 10px;">${inputField}</td></tr>`;
+                }
+            }
+            
+            fieldsTable += '</tbody></table></div>';
+            
+            const detailContent = document.getElementById('detailContent');
+            detailContent.innerHTML = `
+                <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
+                    <div style="position: relative; display: inline-block;">
+                        <img id="detailImage" src="${item.image}" alt="${item.Model}" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
+                        <button id="changeImageButton" onclick="changeImage()" style="position: absolute; bottom: 5px; right: 5px; background-color: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-size: 14px; cursor: pointer; z-index: 10;" title="更换图片">+</button>
+                    </div>
+                    <div style="margin-left: 20px;">
+                        <h3>${item.Model}</h3>
+                        <p><strong>价格:</strong> <span id="detailShowPriceDisplay">${formatCurrency(item.ShowPrice)}</span></p>
+                        <div style="margin-top: 10px;">
+                            <button class="secondary" onclick="addToCartFromDetail()" style="margin-right: 10px;" title="添加到购物车">🛒 添加到购物车</button>
+                            <button class="secondary" onclick="saveDetailChanges()" style="background-color: #FF9800;" title="保存修改">💾 保存</button>
+                        </div>
+                    </div>
+                </div>
+                ${fieldsTable}
+            `;
+
+            // 保存当前项目以供添加到购物车和保存使用
+            window.currentDetailItem = JSON.parse(JSON.stringify(item)); // 深拷贝原始数据
+
+            // 显示模态框
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        // 关闭详情模态框
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 从详情页面添加到购物车
+        function addToCartFromDetail() {
+            if (window.currentDetailItem) {
+                // 创建当前项目的副本以避免修改原始数据
+                const currentItem = JSON.parse(JSON.stringify(window.currentDetailItem));
+                
+                // 更新价格字段
+                const showPriceInput = document.querySelector('.detail-field-input[data-field="ShowPrice"]');
+                if (showPriceInput) {
+                    currentItem.ShowPrice = parseFloat(showPriceInput.value) || 0;
+                }
+                
+                // 更新其他可能已修改的字段
+                const detailInputs = document.querySelectorAll('.detail-field-input');
+                detailInputs.forEach(input => {
+                    const fieldName = input.getAttribute('data-field');
+                    if (typeof currentItem[fieldName] === 'number') {
+                        currentItem[fieldName] = parseFloat(input.value) || 0;
+                    } else {
+                        currentItem[fieldName] = input.value;
+                    }
+                });
+                
+                // 更新图片（如果用户更改了图片）
+                const imgElement = document.getElementById('detailImage');
+                if (imgElement) {
+                    currentItem.image = imgElement.src;
+                }
+                
+                addToCart(currentItem);
+            }
+        }
+
+        // 保存详情页的修改
+        function saveDetailChanges() {
+            if (!window.currentDetailItem) {
+                showMessage('没有可保存的数据', 'error');
+                return;
+            }
+
+            // 获取当前显示的表单值并更新当前项目的值
+            const currentModel = window.currentDetailItem.Model;
+            
+            // 更新价格字段
+            const showPriceInput = document.querySelector('.detail-field-input[data-field="ShowPrice"]');
+            if (showPriceInput) {
+                const newShowPrice = parseFloat(showPriceInput.value) || 0;
+                window.currentDetailItem.ShowPrice = newShowPrice;
+            }
+            
+            // 更新其他字段
+            const detailInputs = document.querySelectorAll('.detail-field-input');
+            detailInputs.forEach(input => {
+                const fieldName = input.getAttribute('data-field');
+                if (fieldName === 'ShowPrice') {
+                    // ShowPrice 已经单独处理
+                    return;
+                }
+                
+                if (typeof window.currentDetailItem[fieldName] === 'number') {
+                    window.currentDetailItem[fieldName] = parseFloat(input.value) || 0;
+                } else {
+                    window.currentDetailItem[fieldName] = input.value;
+                }
+            });
+
+            // 在baseData中找到对应的项目并更新
+            const baseDataIndex = baseData.findIndex(item => item.Model === currentModel);
+            if (baseDataIndex !== -1) {
+                baseData[baseDataIndex] = JSON.parse(JSON.stringify(window.currentDetailItem));
+                
+                // 更新显示
+                showItemDetail(window.currentDetailItem);
+                
+                showMessage('数据已保存', 'success');
+            } else {
+                showMessage('无法找到对应的数据项', 'error');
+            }
+        }
+        
+        // 更换图片
+        function changeImage() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // 更新图片显示
+                        const imgElement = document.getElementById('detailImage');
+                        if (imgElement) {
+                            imgElement.src = e.target.result;
+                            
+                            // 更新当前项目的数据
+                            window.currentDetailItem.image = e.target.result;
+                            
+                            // 同时更新显示的详情价格，以防价格在输入框中被修改但未保存
+                            const showPriceInput = document.querySelector('.detail-field-input[data-field="ShowPrice"]');
+                            if (showPriceInput) {
+                                const currentPrice = parseFloat(showPriceInput.value) || 0;
+                                document.getElementById('detailShowPriceDisplay').textContent = formatCurrency(currentPrice);
+                            }
+                            
+                            // 显示消息
+                            showMessage('图片已更新', 'success');
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            
+            input.click();
+        }
+        
+        // 更新价格显示
+        function updatePriceDisplay(fieldKey, newValue) {
+            if (fieldKey === 'ShowPrice') {
+                const displayElement = document.getElementById('detailShowPriceDisplay');
+                if (displayElement) {
+                    // 只有当输入的是有效数字时才更新显示
+                    const numericValue = parseFloat(newValue);
+                    if (!isNaN(numericValue)) {
+                        displayElement.textContent = formatCurrency(numericValue);
+                    }
+                }
+            }
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message ${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.position = 'fixed';
+            messageDiv.style.top = '20px';
+            messageDiv.style.right = '20px';
+            messageDiv.style.zIndex = '1000';
+            messageDiv.style.padding = '10px 20px';
+            messageDiv.style.borderRadius = '4px';
+            messageDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+
+            document.body.appendChild(messageDiv);
+
+            // 3秒后自动移除消息
+            setTimeout(() => {
+                document.body.removeChild(messageDiv);
+            }, 3000);
+        }
+
+        // 显示购物车
+        function showCart() {
+            currentView = 'cart';
+            renderCart();
+
+            // 显示购物车模态框
+            document.getElementById('cartModal').style.display = 'block';
+
+            // 显示操作按钮
+            document.getElementById('cartActions').style.display = 'block';
+
+            // 控制清空购物车按钮的显示：只有在购物车有内容时才显示
+            const modalClearCartBtn = document.getElementById('modalClearCartBtn');
+            if (cartItems.length > 0) {
+                modalClearCartBtn.style.display = 'inline-block';
+            } else {
+                modalClearCartBtn.style.display = 'none';
+            }
+
+            // 同时更新主页面清空按钮显示状态
+            updateCartCount();
+        }
+
+        // 关闭购物车
+        function closeCartModal() {
+            document.getElementById('cartModal').style.display = 'none';
+            currentView = 'main';
+        }
+
+        // 渲染购物车内容
+        function renderCart() {
+            const cartContent = document.getElementById('cartContent');
+
+            let html = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 50px;">序号</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">图片</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">型号</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">单价</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">数量</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">小计</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            if (cartItems.length === 0) {
+                // 购物车为空时，显示表头和"购物车为空"的提示行
+                html += `
+                    <tr>
+                        <td colspan="7" style="border: 1px solid #ddd; padding: 20px; text-align: center; font-size: 16px; color: #666;">购物车为空</td>
+                    </tr>
+                `;
+            } else {
+                // 显示购物车项目
+                cartItems.forEach((item, index) => {
+                    const itemIndex = index + 1; // 序号从1开始
+                    const subtotal = item.actualPrice * item.quantity;
+                    html += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <img src="${item.image}" alt="${item.model}" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ddd;">
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <strong>${item.model}</strong>
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <input type="number"
+                                       value="${item.actualPrice}"
+                                       onchange="updateCartItemPrice(${index}, this.value)"
+                                       min="0"
+                                       step="0.01"
+                                       style="width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; text-align: center;">
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <input type="number"
+                                       value="${item.quantity}"
+                                       onchange="updateCartItemQuantity(${index}, this.value)"
+                                       min="1"
+                                       step="1"
+                                       style="width: 60px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; text-align: center;">
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold;">${formatCurrency(subtotal)}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <button class="danger" onclick="removeCartItem(${index})" title="删除">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 只有在购物车有项目时才显示小计、临时费用和总计
+            if (cartItems.length > 0) {
+                // 添加商品小计行
+                let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
+
+                html += `
+                    <tr style="background-color: #f0f8ff; font-weight: bold;">
+                        <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">商品小计</td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">-</td>
+                    </tr>
+                `;
+
+                // 先添加临时费用行
+                tempItems.filter(item => item.type === '费用').forEach((item, index) => {
+                    const itemIndex = tempItems.findIndex(i => i.id === item.id);
+                    html += `
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px;"><strong>临时费用: ${item.name}</strong></td>
+                            <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <input type="number"
+                                       value="${item.actualAmount}"
+                                       onchange="updateTempFeeAmount(${itemIndex}, this.value)"
+                                       min="0"
+                                       step="0.01"
+                                       style="width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; text-align: right;">
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold;">${formatCurrency(item.actualAmount)}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <button class="danger" onclick="removeTempItemFromCart(${itemIndex})">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // 然后添加系数行
+                tempItems.filter(item => item.type === '系数').forEach((item, index) => {
+                    const itemIndex = tempItems.findIndex(i => i.id === item.id);
+                    html += `
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px;"><strong>系数: ${item.name}</strong></td>
+                            <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <input type="number"
+                                       value="${item.value}"
+                                       onchange="updateTempFactorValue(${itemIndex}, this.value)"
+                                       min="0"
+                                       step="0.01"
+                                       style="width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; text-align: right;">
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold;">x ${item.value}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <button class="danger" onclick="removeTempItemFromCart(${itemIndex})">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // 计算总计
+                let tempFees = tempItems.filter(item => item.type === '费用').reduce((sum, item) => sum + item.actualAmount, 0);
+                let factor = tempItems.filter(item => item.type === '系数').reduce((prod, item) => prod * item.value, 1);
+                let total = (baseTotal + tempFees) * factor;
+
+                // 添加总计行
+                html += `
+                            <tr style="background-color: #e8f5e9; font-weight: bold;">
+                                <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计</td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">-</td>
+                            </tr>
+                        `;
+            }
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            cartContent.innerHTML = html;
+        }
+
+        // 更新购物车项目价格
+        function updateCartItemPrice(index, value) {
+            const parsedValue = parseFloat(value);
+            if (!isNaN(parsedValue) && parsedValue >= 0) {
+                cartItems[index].actualPrice = parsedValue;
+                renderCart(); // 重新渲染以更新总计
+                updateCartSummary(); // 更新主页面购物车摘要
+            } else {
+                showMessage('请输入有效的价格', 'error');
+            }
+        }
+
+        // 更新购物车项目数量
+        function updateCartItemQuantity(index, value) {
+            const parsedValue = parseInt(value);
+            if (!isNaN(parsedValue) && parsedValue >= 1) {
+                cartItems[index].quantity = parsedValue;
+                renderCart(); // 重新渲染以更新总计
+                updateCartSummary(); // 更新主页面购物车摘要
+                updateCartCount(); // 更新计数
+            } else {
+                showMessage('请输入有效的数量（至少为1）', 'error');
+            }
+        }
+
+        
+                                        // 显示临时费用表单
+                                        async function showTempFeeForm() {
+                                            document.getElementById('tempFeeForm').style.display = 'block';
+                                            // 加载最常用的费用
+                                            await showTopUsedItems('fees');
+                                        }
+                        
+                                        // 显示系数表单
+                                        async function showTempFactorForm() {
+                                            document.getElementById('tempFactorForm').style.display = 'block';
+                                            // 加载最常用的系数
+                                            await showTopUsedItems('factors');
+                                        }        
+                        // 关闭临时费用表单
+                        function closeTempFeeForm() {
+                            document.getElementById('tempFeeForm').style.display = 'none';
+                        }
+        
+                        // 关闭系数表单
+                        function closeTempFactorForm() {
+                            document.getElementById('tempFactorForm').style.display = 'none';
+                        }
+        
+                        // 设置临时费用名称
+                        function setTempFeeName(name) {
+                            document.getElementById('tempFeeNameCart').value = name;
+                        }
+        
+                        // 设置临时系数名称
+                        function setTempFactorName(name) {
+                            document.getElementById('tempFactorNameCart').value = name;
+                        }
+        
+                                                        // 添加临时费用到购物车
+                                                        async function addTempFeeToCart() {
+                                                            const name = document.getElementById('tempFeeNameCart').value;
+                                                            const amount = parseFloat(document.getElementById('tempFeeAmountCart').value) || 0;
+                                                
+                                                            if (!name) {
+                                                                showMessage('请输入费用名称', 'error');
+                                                                return;
+                                                            }
+                                                
+                                                            const tempFee = {
+                                                                id: Date.now(),
+                                                                type: '费用',
+                                                                name: name,
+                                                                baseAmount: amount,    // 原始金额
+                                                                actualAmount: amount,   // 实际金额，默认等于原始金额
+                                                                type: 'fees' // 标记为费用类型
+                                                            };
+                                                
+                                                            tempItems.push(tempFee);
+                                                            
+                                                            // 记录用户创建的费用（在服务器端记录）
+                                                            try {
+                                                                await apiClient.createMachinePart({
+                                                                    Model: name,
+                                                                    Category: '临时费用',
+                                                                    ShowPrice: amount,
+                                                                    Description: '临时费用-' + name
+                                                                });
+                                                                showMessage('费用已记录到服务器', 'success');
+                                                            } catch (error) {
+                                                                console.error('记录费用到服务器失败:', error);
+                                                                showMessage('记录费用失败: ' + error.message, 'error');
+                                                            }
+                                                            
+                                                            renderCart();
+                                                            updateCartSummary(); // 更新主页面购物车摘要
+                                                
+                                                            // 清空输入框并关闭模态框
+                                                            document.getElementById('tempFeeNameCart').value = '';
+                                                            document.getElementById('tempFeeAmountCart').value = '';
+                                                            closeTempFeeForm();
+                                                
+                                                            showMessage('临时费用已添加', 'success');
+                                                        }                // 添加系数到购物车
+                async function addTempFactorToCart() {
+                    const name = document.getElementById('tempFactorNameCart').value;
+                    const value = parseFloat(document.getElementById('tempFactorValueCart').value) || 1;
+        
+                    if (!name) {
+                        showMessage('请输入系数名称', 'error');
+                        return;
+                    }
+        
+                    const tempFactor = {
+                        id: Date.now(),
+                        type: '系数',
+                        name: name,
+                        value: value,
+                        type: 'factors' // 标记为系数类型
+                    };
+        
+                    tempItems.push(tempFactor);
+                    
+                    // 记录用户创建的系数（在服务器端记录）
+                    try {
+                        await apiClient.createMachinePart({
+                            Model: name,
+                            Category: '系数',
+                            ShowPrice: value,
+                            Description: '系数-' + name
+                        });
+                        showMessage('系数已记录到服务器', 'success');
+                    } catch (error) {
+                        console.error('记录系数到服务器失败:', error);
+                        showMessage('记录系数失败: ' + error.message, 'error');
+                    }
+                    
+                    renderCart();
+                    updateCartSummary(); // 更新主页面购物车摘要
+        
+                    // 清空输入框并关闭模态框
+                    document.getElementById('tempFactorNameCart').value = '';
+                    document.getElementById('tempFactorValueCart').value = '';
+                    closeTempFactorForm();
+        
+                    showMessage('系数已添加', 'success');
+                }
+                
+                // 显示添加部件表单
+                async function showAddPartForm() {
+                    document.getElementById('addPartForm').style.display = 'block';
+                    // 加载最常用的部件
+                    await showTopUsedItems('parts');
+                }
+                
+                // 关闭添加部件表单
+                function closeAddPartForm() {
+                    document.getElementById('addPartForm').style.display = 'none';
+                }
+                
+                                                                // 添加部件到购物车
+                                                                async function addPartToCart() {
+                                                                    const model = document.getElementById('partModel').value;
+                                                                    const price = parseFloat(document.getElementById('partPrice').value) || 0;
+                                                                    const quantity = parseInt(document.getElementById('partQuantity').value) || 1;
+                                
+                                                                    if (!model) {
+                                                                        showMessage('请输入部件型号', 'error');
+                                                                        return;
+                                                                    }
+                                                                    
+                                                                    if (price < 0) {
+                                                                        showMessage('请输入有效的部件单价', 'error');
+                                                                        return;
+                                                                    }
+                                                                    
+                                                                    if (quantity < 1) {
+                                                                        showMessage('请输入有效的数量（至少为1）', 'error');
+                                                                        return;
+                                                                    }
+                                
+                                                                    const part = {
+                                                                        id: Date.now(),
+                                                                        type: '部件',
+                                                                        model: model,
+                                                                        name: model, // 使用型号作为名称
+                                                                        basePrice: price,    // 原始价格
+                                                                        actualPrice: price,   // 实际价格，默认等于原始价格
+                                                                        quantity: quantity,
+                                                                        image: './sample.jpg', // 使用临时部件图片
+                                                                        type: 'parts' // 标记为部件类型
+                                                                    };
+                                
+                                                                    cartItems.push(part);
+                                                                    
+                                                                    // 记录用户创建的部件（在服务器端记录）
+                                                                    try {
+                                                                        await apiClient.createMachinePart({
+                                                                            Model: model,
+                                                                            Category: '自定义部件',
+                                                                            ShowPrice: price,
+                                                                            Description: '自定义部件-' + model,
+                                                                            image: './sample.jpg'
+                                                                        });
+                                                                        showMessage('部件已记录到服务器', 'success');
+                                                                    } catch (error) {
+                                                                        console.error('记录部件到服务器失败:', error);
+                                                                        showMessage('记录部件失败: ' + error.message, 'error');
+                                                                    }
+                                                                    
+                                                                    renderCart();
+                                                                    updateCartSummary(); // 更新主页面购物车摘要
+                                                                    updateCartCount(); // 更新计数
+                                
+                                                                    // 清空输入框并关闭模态框
+                                                                    document.getElementById('partModel').value = '';
+                                                                    document.getElementById('partPrice').value = '';
+                                                                    document.getElementById('partQuantity').value = '1';
+                                                                    closeAddPartForm();
+                                
+                                                                    showMessage('部件已添加到购物车', 'success');
+                                                                }                // 更新临时费用金额
+        function updateTempFeeAmount(index, value) {
+            const parsedValue = parseFloat(value);
+            if (!isNaN(parsedValue) && parsedValue >= 0) {
+                tempItems[index].actualAmount = parsedValue;
+                renderCart(); // 重新渲染以更新总计
+                updateCartSummary(); // 更新主页面购物车摘要
+            } else {
+                showMessage('请输入有效的金额', 'error');
+            }
+        }
+
+        // 更新系数值
+        function updateTempFactorValue(index, value) {
+            const parsedValue = parseFloat(value);
+            if (!isNaN(parsedValue) && parsedValue >= 0) {
+                tempItems[index].value = parsedValue;
+                renderCart(); // 重新渲染以更新总计
+                updateCartSummary(); // 更新主页面购物车摘要
+            } else {
+                showMessage('请输入有效的系数', 'error');
+            }
+        }
+
+        // 从购物车中删除临时项目
+        function removeTempItemFromCart(index) {
+            if (confirm('确定要删除这个临时项目吗？')) {
+                tempItems.splice(index, 1);
+                renderCart();
+                updateCartSummary(); // 更新主页面购物车摘要
+            }
+        }
+
+        // 从购物车中删除项目
+        function removeCartItem(index) {
+            if (confirm('确定要从购物车中删除这个项目吗？')) {
+                cartItems.splice(index, 1);
+                renderCart();
+                updateCartSummary(); // 更新主页面购物车摘要
+                updateCartCount(); // 更新计数
+            }
+        }
+
+
+
+        // 生成报价单
+        function generateQuote() {
+            // 使用当前的显示状态，默认为false（不显示单价）
+            const showUnitPrice = window.currentShowUnitPrice !== undefined ? window.currentShowUnitPrice : false;
+            closeCartModal();
+
+            // 切换到报价单页面
+            document.querySelector('.container').style.display = 'none';
+            document.getElementById('quotePage').style.display = 'block';
+            currentView = 'quote';
+
+            // 计算总计
+            let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
+            let tempFees = tempItems.filter(item => item.type === '费用').reduce((sum, item) => sum + item.actualAmount, 0);
+            let factor = tempItems.filter(item => item.type === '系数').reduce((prod, item) => prod * item.value, 1);
+            let total = (baseTotal + tempFees) * factor;
+
+            let html = `
+                <div class="section">
+                    <h2 style="text-align: center; color: #333;">报价单</h2>
+            `;
+
+            if (showUnitPrice) {
+                // 显示单价的表格
+                html += `
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background-color: #f2f2f2;">
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 50px;">序号</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">型号</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">单价</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">数量</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">小计</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // 添加购物车项目
+                cartItems.forEach((item, index) => {
+                    const itemIndex = index + 1; // 序号从1开始
+                    const subtotal = item.actualPrice * item.quantity;
+                    html += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <strong>${item.model}</strong>
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualPrice)}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
+                        </tr>
+                    `;
+                });
+
+                // 添加商品小计行
+                if (cartItems.length > 0) {
+                    html += `
+                        <tr style="background-color: #f0f8ff; font-weight: bold;">
+                            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">商品小计</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+                        </tr>
+                    `;
+                }
+
+                // 添加临时费用
+                tempItems.filter(item => item.type === '费用').forEach(item => {
+                    html += `
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="4" style="border: 1px solid #ddd; padding: 10px;"><strong>临时费用: ${item.name}</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualAmount)}</td>
+                        </tr>
+                    `;
+                });
+
+                // 添加系数
+                tempItems.filter(item => item.type === '系数').forEach(item => {
+                    html += `
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="4" style="border: 1px solid #ddd; padding: 10px;"><strong>系数: ${item.name}</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.value}</td>
+                        </tr>
+                    `;
+                });
+
+                // 添加总计行
+                html += `
+                        <tr style="background-color: #e8f5e9; font-weight: bold;">
+                            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+
+            } else {
+                // 不显示单价的表格
+                html += `
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background-color: #f2f2f2;">
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 50px;">序号</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">型号</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // 添加购物车项目
+                cartItems.forEach((item, index) => {
+                    const itemIndex = index + 1; // 序号从1开始
+                    html += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                                <strong>${item.model}</strong>
+                            </td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
+                        </tr>
+                    `;
+                });
+
+                // 计算商品小计
+                let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
+
+                // 添加商品小计行
+                if (cartItems.length > 0) {
+                    html += `
+                        <tr style="background-color: #f0f8ff; font-weight: bold;">
+                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: right;">商品小计</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+                        </tr>
+                    `;
+                }
+
+                // 添加临时费用
+                tempItems.filter(item => item.type === '费用').forEach(item => {
+                    html += `
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px;"><strong>临时费用: ${item.name}</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualAmount)}</td>
+                        </tr>
+                    `;
+                });
+
+                // 添加系数
+                tempItems.filter(item => item.type === '系数').forEach(item => {
+                    html += `
+                        <tr style="background-color: #f9f9f9;">
+                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px;"><strong>系数: ${item.name}</strong></td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.value}</td>
+                        </tr>
+                    `;
+                });
+
+                // 计算总计
+                let tempFees = tempItems.filter(item => item.type === '费用').reduce((sum, item) => sum + item.actualAmount, 0);
+                let factor = tempItems.filter(item => item.type === '系数').reduce((prod, item) => prod * item.value, 1);
+                let total = (baseTotal + tempFees) * factor;
+
+                // 添加总计行
+                html += `
+                        <tr style="background-color: #e8f5e9; font-weight: bold;">
+                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            }
+
+            html += `
+                </div>
+            `;
+
+            document.getElementById('quoteContent').innerHTML = html;
+            
+            // 保存当前的显示状态（修复问题：不再强制重置为false）
+            if (window.currentShowUnitPrice === undefined) {
+                window.currentShowUnitPrice = false;  // 初始状态为false
+            }
+            // 保持当前的显示状态，不重置
+            
+            // 更新浮动按钮显示
+            updateFloatingButtons();
+        }
+
+        // 返回主页
+        function backToMain() {
+            document.querySelector('.container').style.display = 'block';
+            document.getElementById('quotePage').style.display = 'none';
+            currentView = 'main';
+            
+            // 更新浮动按钮显示
+            updateFloatingButtons();
+        }
+
+                // 切换单价显示
+                function toggleShowUnitPrice() {
+                    window.currentShowUnitPrice = !window.currentShowUnitPrice;
+                    generateQuote(); // 重新生成报价单
+                }
+                
+                // 返回购物车
+                function backToCart() {
+                    document.querySelector('.container').style.display = 'block';
+                    document.getElementById('quotePage').style.display = 'none';
+                    showCart(); // 显示购物车模态框
+                    currentView = 'cart';
+                    
+                    // 确保浮动按钮显示正确
+                    updateFloatingButtons();
+                }
+
+                // 清空购物车确认
+                function clearCartConfirmation() {
+                    if (confirm('确定要清空购物车吗？')) {
+                        clearCart();
+                    }
+                }
+
+                // 清空购物车
+                function clearCart() {
+                    cartItems = [];
+                    tempItems = [];
+                    renderCart();
+                    updateCartCount();
+                    updateCartSummary();
+                    showMessage('购物车已清空', 'success');
+                }
+
+                // 格式化金额（每三位添加逗号）
+                function formatCurrency(amount) {
+                    return parseFloat(amount).toLocaleString('zh-CN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+                
+                // 更新浮动按钮显示状态
+                function updateFloatingButtons() {
+                    // 获取浮动按钮元素
+                    const allFloatingCarts = document.querySelectorAll('.floating-cart');
+                    const clearCartBtn = document.getElementById('clearCartBtn');
+                    const quoteButtons = document.querySelector('.floating-quote-buttons');
+                    
+                    // 分别处理普通购物车按钮和清空购物车按钮
+                    allFloatingCarts.forEach(btn => {
+                        if (btn.id !== 'clearCartBtn') {
+                            // 普通购物车按钮
+                            if (currentView === 'quote') {
+                                btn.style.display = 'none';
+                            } else {
+                                // 在主页和购物车页面始终显示购物车按钮
+                                btn.style.display = (currentView !== 'quote') ? 'flex' : 'none';
+                            }
+                        }
+                    });
+                    
+                    if (currentView === 'quote') {
+                        // 在报价单页面，隐藏清空购物车按钮
+                        if (clearCartBtn) clearCartBtn.style.display = 'none';
+                        // 显示报价单按钮
+                        if (quoteButtons) quoteButtons.style.display = 'flex';
+                    } else {
+                        // 在其他页面，显示清空购物车按钮（如果购物车有内容）
+                        if (clearCartBtn) {
+                            const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+                            clearCartBtn.style.display = (cartCount > 0) ? 'flex' : 'none';
+                        }
+                        // 隐藏报价单按钮
+                        if (quoteButtons) quoteButtons.style.display = 'none';
+                    }
+                }
+
+                // 更新购物车计数显示
+        function updateCartCount() {
+            const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartItemCount').textContent = count;
+            document.getElementById('floatingCartCount').textContent = count;
+
+            // 控制清空购物车按钮的显示：只有在购物车有内容时才显示，并且不在报价单页面
+            const clearCartBtn = document.getElementById('clearCartBtn');
+            if (currentView !== 'quote' && count > 0) {
+                clearCartBtn.style.display = 'flex';
+            } else {
+                clearCartBtn.style.display = 'none';
+            }
+
+            updateCartSummary();
+            
+            // 更新浮动按钮显示
+            updateFloatingButtons();
+        }
+
+        // 更新购物车摘要显示
+        function updateCartSummary() {
+            const cartSummary = document.getElementById('cartSummary');
+
+            if (cartItems.length === 0) {
+                cartSummary.innerHTML = '<p style="text-align: center; color: #666;">购物车为空，请添加商品</p>';
+                return;
+            }
+
+            let html = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">型号</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: right;">单价</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">数量</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: right;">小计</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            cartItems.forEach(item => {
+                const subtotal = item.actualPrice * item.quantity;
+                html += `
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 10px;">
+                            <strong>${item.model}</strong>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualPrice)}</td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
+                    </tr>
+                `;
+            });
+
+            // 计算总计
+            let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
+            let tempFees = tempItems.filter(item => item.type === '费用').reduce((sum, item) => sum + item.actualAmount, 0);
+            let factor = tempItems.filter(item => item.type === '系数').reduce((prod, item) => prod * item.value, 1);
+            let total = (baseTotal + tempFees) * factor;
+
+            html += `
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 15px; text-align: right; font-weight: bold;">
+                    <div>商品小计: ${formatCurrency(baseTotal)}</div>
+            `;
+
+            if (tempItems.length > 0) {
+                // 先显示临时费用
+                tempItems.filter(item => item.type === '费用').forEach(item => {
+                    html += `<div>临时费用 (${item.name}): ${formatCurrency(item.actualAmount)}</div>`;
+                });
+
+                // 再显示系数
+                tempItems.filter(item => item.type === '系数').forEach(item => {
+                    html += `<div>系数 (${item.name}): ${item.value}</div>`;
+                });
+            }
+
+            html += `
+                    <div style="margin-top: 10px; font-size: 1.2em; color: #e74c3c;">总计: ${formatCurrency(total)}</div>
+                </div>
+            `;
+
+            cartSummary.innerHTML = html;
+        }
+
+        // 计算总价
+        function updateTotal() {
+            // 计算基础项目总价（考虑数量）
+            let baseTotal = selectedItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
+
+            // 计算临时费用
+            let tempFees = 0;
+            tempItems.forEach(item => {
+                if (item.type === '费用') {
+                    tempFees += item.actualAmount;  // 使用实际金额而不是原始金额
+                }
+            });
+
+            // 计算系数
+            let factor = 1;
+            tempItems.forEach(item => {
+                if (item.type === '系数') {
+                    factor *= item.value;
+                }
+            });
+
+            // 最终总价 = (基础总价 + 临时费用) * 系数
+            const total = (baseTotal + tempFees) * factor;
+
+            document.getElementById('totalAmount').textContent = formatCurrency(total);
+
+            // 更新详细项目列表
+            renderDetailedSummary(baseTotal, tempFees, factor);
+        }
+
+        // 渲染详细项目列表
+        function renderDetailedSummary(baseTotal, tempFees, factor) {
+            const summaryTableBody = document.getElementById('summaryTableBody');
+            summaryTableBody.innerHTML = '';
+
+            let itemIndex = 1;
+
+            // 添加选中的项目
+            selectedItems.forEach(item => {
+                const row = document.createElement('tr');
+
+                // 计算小计
+                const subtotal = item.actualPrice * item.quantity;
+
+                row.innerHTML = `
+                    <td style="border: 1px solid #ddd; padding: 10px;">${itemIndex}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">${item.type} - ${item.model} (${item.name})</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <input type="number"
+                               value="${item.quantity}"
+                               onchange="updateSummaryItemQuantity(${selectedItems.indexOf(item)}, 'selected', this.value)"
+                               min="1"
+                               step="1"
+                               style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(item.basePrice)}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <input type="number"
+                               value="${item.actualPrice}"
+                               onchange="updateSummaryItemPrice(${selectedItems.indexOf(item)}, 'selected', this.value)"
+                               min="0"
+                               step="0.01"
+                               style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(subtotal)}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <button class="danger" onclick="removeSummaryItem(${selectedItems.indexOf(item)}, 'selected')">删除</button>
+                    </td>
+                `;
+
+                summaryTableBody.appendChild(row);
+                itemIndex++;
+            });
+
+            // 添加临时费用
+            tempItems.filter(item => item.type === '费用').forEach(item => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td style="border: 1px solid #ddd; padding: 10px;">${itemIndex}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">临时费用 - ${item.name}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">-</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(item.baseAmount)}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <input type="number"
+                               value="${item.actualAmount}"
+                               onchange="updateSummaryItemPrice(${tempItems.indexOf(item)}, 'fee', this.value)"
+                               min="0"
+                               step="0.01"
+                               style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(item.actualAmount)}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <button class="danger" onclick="removeSummaryItem(${tempItems.indexOf(item)}, 'temp')">删除</button>
+                    </td>
+                `;
+
+                summaryTableBody.appendChild(row);
+                itemIndex++;
+            });
+
+            // 添加系数
+            tempItems.filter(item => item.type === '系数').forEach(item => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td style="border: 1px solid #ddd; padding: 10px;">${itemIndex}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">系数 - ${item.name}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">-</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">x ${item.value}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <input type="number"
+                               value="${item.value}"
+                               onchange="updateSummaryItemPrice(${tempItems.indexOf(item)}, 'factor', this.value)"
+                               min="0"
+                               step="0.01"
+                               style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">x ${item.value}</td>
+                    <td style="border: 1px solid #ddd; padding: 10px;">
+                        <button class="danger" onclick="removeSummaryItem(${tempItems.indexOf(item)}, 'temp')">删除</button>
+                    </td>
+                `;
+
+                summaryTableBody.appendChild(row);
+                itemIndex++;
+            });
+
+            // 如果没有项目，显示提示
+            if (selectedItems.length === 0 && tempItems.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="7" style="border: 1px solid #ddd; padding: 10px; text-align: center;">暂无项目</td>`;
+                summaryTableBody.appendChild(row);
+            }
+        }
+
+        // 显示上传模态框
+        function showUploadModal() {
+            document.getElementById('uploadModal').style.display = 'block';
+        }
+
+        // 关闭上传模态框
+        function closeUploadModal() {
+            document.getElementById('uploadModal').style.display = 'none';
+        }
+
+        // 上传文件
+        async function uploadFile() {
+            const fileInput = document.getElementById('uploadFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('请选择要上传的文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // 显示上传进度信息
+                showMessage('正在上传文件...', 'success');
+                
+                // 发送文件到服务器
+                const response = await fetch('/api/upload-machine-parts', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('文件上传成功', 'success');
+                    closeUploadModal();
+                    
+                    // 重新加载数据以显示新上传的内容
+                    await loadData();
+                } else {
+                    showMessage(`上传失败: ${result.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                console.error('上传文件时出错:', error);
+                showMessage(`上传失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时初始化
+        window.onload = async function() {
+            // 预加载最常用的项目
+            await preloadTopUsedItems();
+            
+            // 自动加载数据
+            await loadData();
+
+            // 初始化购物车计数
+            updateCartCount();
+            
+            // 初始化浮动按钮显示
+            updateFloatingButtons();
+            
+            // 初始化最常用项目显示 - 为部件、费用、系数分别显示
+            // 在页面加载后稍作延迟以确保UI已渲染
+            setTimeout(async () => {
+                await showTopUsedItems('parts');
+            }, 100);
+        };
+    </script>
+
+            <!-- 悬浮清空购物车图标 -->
+            <button id="clearCartBtn" class="floating-cart" onclick="clearCartConfirmation()" title="清空购物车" style="background-color: #f44336; right:100px; bottom: 30px; display: none;">
+                <span>🗑️</span>
+            </button>
+
+            <!-- 悬浮购物车图标 -->
+            <button class="floating-cart" onclick="showCart()" title="查看购物车" style="bottom: 30px;">
+                <span>🛒</span>
+                <span id="floatingCartCount" style="position: absolute; top: -5px; right: -5px; background-color: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center;">0</span>
+            </button>
+    </body>
+    </html>

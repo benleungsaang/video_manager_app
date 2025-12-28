@@ -102,11 +102,13 @@
 
 <body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
   <!-- 深色模式暖色调覆盖层 -->
-  <div id="warm-overlay" class="fixed inset-0 pointer-events-none z-51 hidden dark:block" style="background-color: rgba(255, 153, 0, 0.08); mix-blend-mode: multiply;"></div>
+  <div id="warm-overlay" class="fixed inset-0 pointer-events-none z-51 hidden dark:block"
+    style="background-color: rgba(255, 153, 0, 0.08); mix-blend-mode: multiply;"></div>
   <!-- 顶部导航栏 -->
   <header class="bg-white shadow-md dark:bg-gray-800 dark:text-white">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-primary dark:text-blue-400">视频管理系统 <span id="video-count" class="text-sm text-gray-500 ml-2 dark:text-gray-400">(加载中...)</span></h1>
+      <h1 class="text-2xl font-bold text-primary dark:text-blue-400">视频管理系统 <span id="video-count"
+          class="text-sm text-gray-500 ml-2 dark:text-gray-400">(加载中...)</span></h1>
 
       <!-- 搜索框 -->
       <div class="flex-1 max-w-md mx-8">
@@ -118,12 +120,14 @@
       </div>
 
       <!-- 深色模式切换按钮 -->
-      <button id="theme-toggle" class="mr-4 px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="切换深色模式">
+      <button id="theme-toggle" class="mr-4 px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+        aria-label="切换深色模式">
         <i class="fa fa-moon-o text-gray-700 dark:text-yellow-300"></i>
       </button>
 
       <!-- 上传视频按钮 -->
-      <button id="upload-btn" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+      <button id="upload-btn"
+        class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
         <i class="fa fa-cloud-upload mr-1"></i> 上传视频
       </button>
     </div>
@@ -136,25 +140,28 @@
       <div class="relative">
         <input type="text" id="filter-input" placeholder="在 【 当前搜索结果 】 中筛选 - 标题或标签..."
           class="w-full pl-10 pr-4 py-2 my-5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600">
-    </div>
-
-    <!-- 视频列表区域 -->
-    <div id="video-grid" class="video-grid">
-      <!-- 视频卡片会通过JavaScript动态生成 -->
-      <div class="text-center text-gray-500 py-12">
-        <i class="fa fa-film text-4xl mb-4"></i>
-        <p>暂无视频，请上传视频文件</p>
       </div>
-    </div>
+
+      <!-- 视频列表区域 -->
+      <div id="video-grid" class="video-grid">
+        <!-- 视频卡片会通过JavaScript动态生成 -->
+        <div class="text-center text-gray-500 py-12">
+          <i class="fa fa-film text-4xl mb-4"></i>
+          <p>暂无视频，请上传视频文件</p>
+        </div>
+      </div>
   </main>
 
-    <!---------------------- 视频上传浮框 --------------------------->
-  <div id="upload-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
-    <div class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col dark:bg-gray-800 dark:text-white">
+  <!---------------------- 视频上传浮框 --------------------------->
+  <div id="upload-modal"
+    class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
+    <div
+      class="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col dark:bg-gray-800 dark:text-white">
       <!-- 浮框头部 -->
       <div class="flex justify-between items-center p-4 border-b dark:border-gray-700 dark:bg-gray-700">
         <h3 class="text-xl font-bold dark:text-white">上传视频</h3>
-        <button id="close-upload-modal" class="text-gray-500 hover:text-gray-700 p-2 dark:text-gray-300 dark:hover:text-white">
+        <button id="close-upload-modal"
+          class="text-gray-500 hover:text-gray-700 p-2 dark:text-gray-300 dark:hover:text-white">
           <i class="fa fa-times text-xl"></i>
         </button>
       </div>
@@ -211,7 +218,8 @@
           <!-- 标签选择 -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">标签</label>
-            <div id="tag-selection" class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto p-2 border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600">
+            <div id="tag-selection"
+              class="flex flex-wrap gap-2 mb-2 max-h-32 overflow-y-auto p-2 border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600">
               <!-- 标签会动态生成 -->
               <p class="text-gray-500 text-sm w-full text-center dark:text-gray-400">待添加标签...</p>
             </div>
@@ -219,7 +227,8 @@
               <input type="text" id="new-tag-input-modal" placeholder="添加新标签"
                 class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-primary bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 placeholder="添加新标签">
-              <button id="add-tag-btn-modal" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700">
+              <button id="add-tag-btn-modal"
+                class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700">
                 添加
               </button>
             </div>
@@ -237,10 +246,12 @@
 
       <!-- 浮框底部 -->
       <div class="p-4 border-t flex justify-end gap-3 dark:border-gray-700 dark:bg-gray-800">
-        <button id="cancel-upload-btn" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+        <button id="cancel-upload-btn"
+          class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
           取消
         </button>
-        <button id="save-video-btn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+        <button id="save-video-btn"
+          class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
           保存视频
         </button>
       </div>
@@ -280,235 +291,39 @@
   </div>
 
   <script>
-
-    // 与Flutter原生通信的通道
-
-    const flutterChannel = {
-      // 存储WebSocket实例
-      _ws: null,
-
-      // 存储请求的回调函数，用requestId映射
-      _callbacks: new Map(),
-
-
-
-      // 获取或生成客户端唯一ID
-      _getClientId() {
-
-        let clientId = localStorage.getItem('clientId');
-
-        if (!clientId) {
-
-          // 生成一个UUID作为客户端ID
-
-          clientId = 'web_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-          localStorage.setItem('clientId', clientId);
-
-        }
-
-        return clientId;
-
-      },
-
-      // 请求队列和批处理相关
-      _requestQueue: [],
-      _batchTimeout: null,
-      _maxBatchSize: 10, // 最大批处理请求数
-
-      // 批量发送请求
-      _processRequestBatch() {
-        if (this._requestQueue.length === 0) return;
-
-        // 取出一部分请求进行批处理
-        const batch = this._requestQueue.splice(0, this._maxBatchSize);
-
-        // 创建批量请求
-        const batchRequest = {
-          id: this._generateRequestId(),
-          action: 'batch',
-          params: { requests: batch.map(req => ({
-            id: req.id,
-            action: req.action,
-            params: req.params
-          }))}
+    // HTTP API通信模块
+    const apiClient = {
+      // 通用请求函数
+      async request(endpoint, options = {}) {
+        const url = `/api${endpoint}`;
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          ...options
         };
 
-        // 为每个请求设置回调
-        batch.forEach(request => {
-          this._callbacks.set(request.id, request.callback);
-        });
-
-        console.log('发送批量请求:', batchRequest);
-        this._ws.send(JSON.stringify(batchRequest));
-
-        // 如果还有请求在队列中，继续处理
-        if (this._requestQueue.length > 0) {
-          clearTimeout(this._batchTimeout);
-          this._batchTimeout = setTimeout(() => this._processRequestBatch(), 50); // 50ms延迟
-        } else {
-          this._batchTimeout = null;
-        }
-      },
-
-      // 添加请求到队列（暂时禁用批量请求，以兼容后端）
-      _enqueueRequest(action, params = {}) {
-        // 直接发送单个请求，避免后端不支持批量请求的问题
-        return this._sendRequest(action, params);
-      },
-
-
-
-      // 初始化WebSocket连接
-      _initWebSocket() {
-
-        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
-
-          return Promise.resolve();
-
-        }
-
-        // 检测是否为Safari浏览器
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        
-        return new Promise((resolve, reject) => {
-          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const clientId = this._getClientId();
-          const wsUrl = `${wsProtocol}//${window.location.host}/ws?clientId=${clientId}`;
-          
-          // 为Safari增加连接超时处理
-          let connectionTimeout;
-          if (isSafari) {
-            connectionTimeout = setTimeout(() => {
-              if (this._ws && this._ws.readyState !== WebSocket.OPEN) {
-                console.log('WebSocket连接超时，正在关闭...');
-                this._ws.close();
-                this._ws = null;
-                reject(new Error('WebSocket连接超时'));
-              }
-            }, 15000); // 15秒超时
-          }
-
-          this._ws = new WebSocket(wsUrl);
-          this._ws.onopen = () => {
-            // 清除超时定时器
-            if (connectionTimeout) {
-              clearTimeout(connectionTimeout);
-            }
-            console.log('WebSocket连接已建立，客户端ID:', clientId);
-            console.log('浏览器类型:', isSafari ? 'Safari' : '非Safari');
-
-            // 监听服务端消息
-
-            this._ws.onmessage = (event) => this._handleMessage(event);
-
-            resolve();
-
-          };
-          this._ws.onerror = (error) => {
-            // 清除超时定时器
-            if (connectionTimeout) {
-              clearTimeout(connectionTimeout);
-            }
-            console.error('WebSocket连接错误:', error);
-
-            reject(error);
-
-          };
-          this._ws.onclose = (event) => {
-            // 清除超时定时器
-            if (connectionTimeout) {
-              clearTimeout(connectionTimeout);
-            }
-            console.log('WebSocket连接已关闭，代码:', event.code, '原因:', event.reason);
-            this._ws = null;
-
-            // 增加重连间隔时间，避免频繁重连
-            const retryDelay = isSafari ? 5000 : 3000; // Safari使用更长的重连间隔
-            console.log('尝试重连，延迟:', retryDelay, 'ms');
-            
-            // 3秒后尝试重连
-            setTimeout(() => this._initWebSocket(), retryDelay);
-
-          };
-
-        });
-
-      },
-
-
-      // 处理从服务端收到的消息
-      _handleMessage(event) {
-
         try {
+          const response = await fetch(url, config);
+          const data = await response.json();
 
-          const response = JSON.parse(event.data);
-
-          console.log('收到服务端响应:', response);
-
-
-
-          // 查找对应的回调函数
-
-          const callback = this._callbacks.get(response.id);
-
-          if (callback) {
-
-            callback(response);
-
-            this._callbacks.delete(response.id);
-
+          if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
           }
 
+          return data;
         } catch (error) {
-
-          console.error('处理消息错误:', error);
-
+          console.error(`API请求失败 ${url}:`, error);
+          throw error;
         }
-
-      },
-
-      // 生成唯一请求ID（修改这部分）
-      _generateRequestId() {
-        // 使用时间戳+随机数确保唯一性
-        return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
-      },
-
-      // 发送请求到服务端
-      _sendRequest(action, params = {}) {
-        return new Promise(async (resolve, reject) => {
-          try {
-            // 确保连接已建立
-            await this._initWebSocket();
-
-            // 生成唯一请求ID
-            const requestId = this._generateRequestId();
-
-            // 存储回调函数
-            this._callbacks.set(requestId, (response) => {
-              if (response.success) {
-                resolve(response.data);
-              } else {
-                reject(new Error(response.error || '请求失败'));
-              }
-            });
-
-            // 发送请求
-            const request = {
-              id: requestId,
-              action: action,
-              params: params
-            };
-            console.log('发送请求:', request);
-            this._ws.send(JSON.stringify(request));
-          } catch (error) {
-            reject(error);
-          }
-        });
       },
 
       // 搜索视频的防抖实现
-      searchVideos: function(searchTerm) {
+      _searchDebounceTimer: null,
+      _currentSearchId: null,
+
+      searchVideos: async function (searchTerm) {
         // 防抖功能：延迟执行搜索，取消之前的请求
         if (this._searchDebounceTimer) {
           clearTimeout(this._searchDebounceTimer);
@@ -527,12 +342,12 @@
                 reject(new Error('Search request cancelled due to new search'));
                 return;
               }
-              
-              const result = await this._sendRequest('searchVideos', { query: searchTerm });
-              
+
+              const result = await this.request(`/search?q=${encodeURIComponent(searchTerm)}`);
+
               // 再次检查，确保响应仍是针对最新的搜索请求
               if (this._currentSearchId === searchRequestId) {
-                resolve(result);
+                resolve(result.data);
               } else {
                 reject(new Error('Search request cancelled due to new search'));
               }
@@ -549,190 +364,69 @@
         });
       },
 
-      // 添加搜索防抖定时器变量
-      _searchDebounceTimer: null,
-      _currentSearchId: null,
-
       // 标签相关接口
-
-      // 载入标签列表
-
-      getTags: function () { return flutterChannel._sendRequest('getTags'); },
-
-      // 新增标签
-
-      addTag: function (tagName) { return flutterChannel._sendRequest('createTag', { name: tagName }); },
-
-      // 删除标签
-
-      deleteTag: function (tagId) { return flutterChannel._sendRequest('deleteTag', { id: tagId }); },
-
-
-
-            // 视频相关接口
-      
-            // 载入视频列表
-      
-            getVideos: function () { return flutterChannel._sendRequest('getVideos'); },
-      
-            // 获取最近上传的视频列表
-            getRecentVideos: function (limit) { return flutterChannel._sendRequest('getRecentVideos', { limit: limit || 5 }); },
-      
-            // 获取视频播放链接
-      
-            getVideoUrl: function (videoId) { return flutterChannel._sendRequest('getVideoUrl', { videoId: videoId }); },
-      
-            // 获取视频大小
-      
-            getVideoSize: function (videoId) { return flutterChannel._sendRequest('getVideoSize', { videoId: videoId }); },
-      
-      // 删除视频
-
-      deleteVideo: function (videoId) { return flutterChannel._sendRequest('deleteVideo', { id: videoId }); },
-
-      // 获取视频缩略图
-
-      getThumbnail: function (videoId) { return flutterChannel._sendRequest('getThumbnail', { videoId: videoId }); },
-
-      // 更新视频信息
-
-      updateVideo: function (video) { return flutterChannel._sendRequest('updateVideo', { video: video }); },
-      // 分块上传二进制数据
-      sendBinaryChunk: function (params) {
-
-        return new Promise((resolve, reject) => {
-
-          const requestId = flutterChannel._generateRequestId();
-
-          let binarySent = false;
-
-
-
-          // 发送块元数据
-
-          const metaRequest = {
-
-            id: requestId,
-
-            action: 'uploadBinaryChunk',
-
-            params: {
-
-              fileId: params.fileId,
-
-              chunkIndex: params.chunkIndex,
-
-              totalChunks: params.totalChunks
-
-            }
-
-          };
-
-
-
-          // 监听元数据响应
-
-          const metaListener = (event) => {
-
-            const response = JSON.parse(event.data);
-
-            if (response.id === requestId && response.status === 'ready') {
-
-              flutterChannel._ws.removeEventListener('message', metaListener);
-
-
-
-              // 发送二进制数据
-
-              params.blob.arrayBuffer().then(buffer => {
-
-                flutterChannel._ws.send(buffer);
-
-                binarySent = true;
-
-
-
-                // 监听块确认
-
-                const chunkListener = (event) => {
-
-                  const chunkResponse = JSON.parse(event.data);
-
-                  if (chunkResponse.id === requestId) {
-
-                    flutterChannel._ws.removeEventListener('message', chunkListener);
-
-                    if (chunkResponse.success) {
-
-                      resolve(chunkResponse);
-
-                    } else {
-
-                      reject(new Error(chunkResponse.error));
-
-                    }
-
-                  }
-
-                };
-
-                flutterChannel._ws.addEventListener('message', chunkListener);
-
-              });
-
-            }
-
-          };
-
-
-
-          flutterChannel._ws.addEventListener('message', metaListener);
-
-          flutterChannel._ws.send(JSON.stringify(metaRequest));
-
-
-
-          // 超时处理
-
-          setTimeout(() => {
-
-            if (!binarySent) {
-
-              flutterChannel._ws.removeEventListener('message', metaListener);
-
-              reject(new Error('发送超时'));
-
-            }
-
-          }, 10000);
-
+      getTags: async function () {
+        const response = await this.request('/tags');
+        return response.data;
+      },
+
+      addTag: async function (tagName) {
+        const response = await this.request('/tags', {
+          method: 'POST',
+          body: JSON.stringify({ name: tagName })
         });
-
+        return response.data;
       },
 
-      // 完成二进制文件上传
-
-      completeBinaryUpload: function (fileId, fileName, duration, tagIds, remark, title) {
-
-        // const compressMode = document.querySelector('input[name="compress-mode"]:checked').value;
-
-        return flutterChannel._sendRequest('completeBinaryUpload', {
-
-          fileId,
-
-
-          name: fileName,
-          duration,
-          tagIds,
-          remark,
-          fileSize: state.currentUploadFile.size,
-          // compressMode: compressMode,
-          title: title  // 新增title参数
-
-
-        })
+      deleteTag: async function (tagId) {
+        const response = await this.request(`/tags/${tagId}`, {
+          method: 'DELETE'
+        });
+        return response;
       },
-    }
+
+      // 视频相关接口
+      getVideos: async function () {
+        const response = await this.request('/videos');
+        return response.data;
+      },
+
+      getRecentVideos: async function (limit) {
+        const response = await this.request(`/videos/recent?limit=${limit || 5}`);
+        return response.data;
+      },
+
+      getVideoUrl: async function (videoId) {
+        const response = await this.request(`/videos/${videoId}/url`);
+        return response.data.videoUrl;
+      },
+
+      getVideoSize: async function (videoId) {
+        const response = await this.request(`/videos/${videoId}/size`);
+        return response.data.videoSize;
+      },
+
+      deleteVideo: async function (videoId) {
+        const response = await this.request(`/videos/${videoId}`, {
+          method: 'DELETE'
+        });
+        return response;
+      },
+
+      getThumbnail: async function (videoId) {
+        // 返回缩略图的base64数据
+        const response = await this.request(`/thumbnails/${videoId}`);
+        return response.data.base64;
+      },
+
+      updateVideo: async function (video) {
+        const response = await this.request(`/videos/${video.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(video)
+        });
+        return response.data;
+      }
+    };
     // 状态管理
     const state = {
       videos: [],
@@ -793,108 +487,108 @@
     document.body.appendChild(elements.fileInput);
 
 
-        // 初始化函数
+    // 初始化函数
 
 
-    
 
 
-        async function init() {
+
+    async function init() {
 
 
-          console.log('初始化函数 init() 被调用');
+      console.log('初始化函数 init() 被调用');
 
 
-          try {
+      try {
 
 
-            // 初始化主题
+        // 初始化主题
 
 
-            initTheme();
+        initTheme();
 
 
-    
 
 
-            // 检测是否为Safari浏览器
+
+        // 检测是否为Safari浏览器
 
 
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 
-            
 
 
-            if (isSafari) {
+
+        if (isSafari) {
 
 
-              // 对于Safari，增加一个小延迟以确保WebSocket连接稳定
+          // 对于Safari，增加一个小延迟以确保WebSocket连接稳定
 
 
-              console.log('检测到Safari浏览器，等待连接稳定...');
+          console.log('检测到Safari浏览器，等待连接稳定...');
 
 
-              await new Promise(resolve => setTimeout(resolve, 500)); // 500ms延迟
-
-
-            }
-
-
-    
-
-
-            // 加载视频和标签数据
-
-
-            await loadTags();
-
-
-            await loadVideos(5); // 只加载最近的5个视频以提高初始化效率
-
-
-    
-
-
-            // 绑定事件监听器
-
-
-            bindEvents();
-
-
-          } catch (error) {
-
-
-            console.log('初始化失败:', error);
-
-
-          }
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms延迟
 
 
         }
 
-        // 加载视频列表
-        async function loadVideos(limit = null) {
-          try {
-            if (limit) {
-              console.log(`加载最近 ${limit} 个视频...`);
-              const videos = await flutterChannel.getRecentVideos(limit);
-              state.videos = videos;
-            } else {
-              console.log('加载视频列表...');
-              const videos = await flutterChannel.getVideos();
-              state.videos = videos;
-            }
-            renderVideoGrid();
-          } catch (error) {
-            console.error('加载视频失败:', error);
-          }
+
+
+
+
+        // 加载视频和标签数据
+
+
+        await loadTags();
+
+
+        await loadVideos(5); // 只加载最近的5个视频以提高初始化效率
+
+
+
+
+
+        // 绑定事件监听器
+
+
+        bindEvents();
+
+
+      } catch (error) {
+
+
+        console.log('初始化失败:', error);
+
+
+      }
+
+
+    }
+
+    // 加载视频列表
+    async function loadVideos(limit = null) {
+      try {
+        if (limit) {
+          console.log(`加载最近 ${limit} 个视频...`);
+          const videos = await apiClient.getRecentVideos(limit);
+          state.videos = videos;
+        } else {
+          console.log('加载视频列表...');
+          const videos = await apiClient.getVideos();
+          state.videos = videos;
         }
+        renderVideoGrid();
+      } catch (error) {
+        console.error('加载视频失败:', error);
+      }
+    }
     // 加载标签列表
     async function loadTags() {
       try {
         console.log('加载标签列表...');
-        const tags = await flutterChannel.getTags();
+        const tags = await apiClient.getTags();
         state.tags = tags;
         // renderTagFilters();
         // renderTagList();
@@ -962,17 +656,7 @@
 
       try {
         // 获取Base64格式的缩略图
-        const thumbnailData = await flutterChannel.getThumbnail(video.id);
-
-        // 检查缩略图数据格式 - 兼容不同格式
-        let base64Data = null;
-        if (typeof thumbnailData === 'string') {
-          // 如果直接返回字符串
-          base64Data = thumbnailData;
-        } else if (thumbnailData && typeof thumbnailData === 'object') {
-          // 如果返回对象，尝试不同字段名
-          base64Data = thumbnailData.base64 || thumbnailData.data || thumbnailData.thumbnail || thumbnailData;
-        }
+        const base64Data = await apiClient.getThumbnail(video.id);
 
         if (!base64Data) {
           throw new Error('缩略图数据格式错误，无法获取base64数据');
@@ -1350,9 +1034,9 @@
       }
       if (state.currentEditingVideo) {
         state.currentEditingVideo.title = elements.videoTitle.value.trim(),
-        state.currentEditingVideo.tagIds = state.selectedTagIdsForUpload,
+          state.currentEditingVideo.tagIds = state.selectedTagIdsForUpload,
           state.currentEditingVideo.remark = elements.videoRemark.value.trim()
-        await flutterChannel.updateVideo(state.currentEditingVideo)
+        await apiClient.updateVideo(state.currentEditingVideo)
         await loadVideos(5); // 只加载最近的5个视频
         initUploadModal() // 这会重置所有状态，包括currentEditingVideo
         showToast('视频信息更新成功');
@@ -1385,38 +1069,387 @@
         await uploadBinary(fileId, videoFile)
       }
 
+            // 获取视频时长
 
+            const duration = !isNaN(elements.videoPreview.duration)
 
+              ? Math.floor(elements.videoPreview.duration)
 
+              : 0; // 获取不到时长时赋值为 0
 
+            // 使用不带扩展名的文件名作为标题
 
+            const titleWithoutExt = elements.videoTitle.value.trim(); // 使用用户输入的标题（已去除扩展名）
 
-      const duration = !isNaN(elements.videoPreview.duration)
+      
 
-        ? Math.floor(elements.videoPreview.duration)
+                        try {
 
-        : 0; // 获取不到时长时赋值为 0
-      // 使用不带扩展名的文件名作为标题
-      const titleWithoutExt = elements.videoTitle.value.trim(); // 使用用户输入的标题（已去除扩展名）
+      
 
-      try {
-        // 完成上传（不等待后端转换任务）
-        flutterChannel.completeBinaryUpload(
-          state.currentFileId,
-          state.currentUploadFile.name, // 保留原始文件名用于存储
-          duration,
-          state.selectedTagIdsForUpload,
-          elements.videoRemark.value.trim(),
-          titleWithoutExt  // 使用不带后缀的标题
-        ).then(result => {
-          loadVideos(5); // 只加载最近的5个视频
-          console.log('视频上传完成:', result);
-          showToast('视频上传成功');
-        }).catch(error => {
-          console.error('上传失败:', error);
-          alert(`上传失败: ${error.message || '未知错误'}`);
+            
+
+      
+
+                          // 使用分块上传
+
+      
+
+                          const fileId = state.currentFileId;
+
+      
+
+                          const videoFile = state.currentUploadFile;
+
+      
+
+                          const title = titleWithoutExt;
+
+      
+
+                          const remark = elements.videoRemark.value.trim();
+
+      
+
+                          const tagIds = state.selectedTagIdsForUpload;
+
+      
+
+            
+
+      
+
+                    // 根据浏览器类型和文件大小计算最优分块大小
+
+      
+
+                    function calcOptimalChunkSize(totalSize, userAgent) {
+
+      
+
+                      const isSafari = /safari/.test(userAgent.toLowerCase()) && !/chrome|edge|firefox/.test(userAgent.toLowerCase());
+
+      
+
+                      const isIPhone = /iphone|ipod/.test(userAgent.toLowerCase());
+
+      
+
+                      const isIPad = /ipad/.test(userAgent.toLowerCase());
+
+      
+
+                      const isIOS = isIPhone || isIPad;
+
+      
+
+                      const isIPhoneSafari = isIPhone && isSafari;
+
+      
+
+                      const isIOSBrowser = isIOS && isSafari;
+
+      
+
+                      
+
+      
+
+                      let chunkSize;
+
+      
+
+                      
+
+      
+
+                      if (isIOSBrowser) {
+
+      
+
+                        // iOS Safari 规则
+
+      
+
+                        if (totalSize <= 25 * 1024 * 1024) { // ≤25MB
+
+      
+
+                          chunkSize = 256 * 1024; // 256KB
+
+      
+
+                        } else if (totalSize <= 50 * 1024 * 1024) { // 25MB~50MB
+
+      
+
+                          chunkSize = 512 * 1024; // 512KB
+
+      
+
+                        } else { // ＞50MB
+
+      
+
+                          chunkSize = 1 * 1024 * 1024; // 1MB
+
+      
+
+                        }
+
+      
+
+                      } else if (isSafari) {
+
+      
+
+                        // 桌面Safari 规则
+
+      
+
+                        if (totalSize <= 50 * 1024 * 1024) { // ≤50MB
+
+      
+
+                          chunkSize = 512 * 1024; // 512KB
+
+      
+
+                        } else if (totalSize <= 100 * 1024 * 1024) { // 50MB~100MB
+
+      
+
+                          chunkSize = 1 * 1024 * 1024; // 1MB
+
+      
+
+                        } else { // ＞100MB
+
+      
+
+                          chunkSize = 2 * 1024 * 1024; // 2MB
+
+      
+
+                        }
+
+      
+
+                      } else {
+
+      
+
+                        // 其他浏览器（Chrome/Firefox/Edge等）规则
+
+      
+
+                        if (totalSize <= 100 * 1024 * 1024) { // ≤100MB
+
+      
+
+                          chunkSize = 1 * 1024 * 1024; // 1MB
+
+      
+
+                        } else if (totalSize <= 500 * 1024 * 1024) { // 100MB~500MB
+
+      
+
+                          chunkSize = 2 * 1024 * 1024; // 2MB
+
+      
+
+                        } else { // ＞500MB
+
+      
+
+                          chunkSize = 5 * 1024 * 1024; // 5MB
+
+      
+
+                        }
+
+      
+
+                      }
+
+      
+
+                      
+
+      
+
+                      return chunkSize;
+
+      
+
+                    }
+
+      
+
+                    
+
+      
+
+                    const chunkSize = calcOptimalChunkSize(videoFile.size, navigator.userAgent);
+
+      
+
+                    const totalChunks = Math.ceil(videoFile.size / chunkSize);
+
+      
+
+            
+
+      
+
+                    // 显示进度条容器
+
+      
+
+                    elements.progressContainerTop.classList.remove('hidden');
+
+      
+
+                    elements.progressBarTop.style.width = '0%';
+
+      
+
+                    elements.progressContainerBottom.classList.remove('hidden');
+
+      
+
+                    elements.progressBarBottom.style.width = '0%';
+
+      
+
+            
+
+      
+
+                    // 1. 初始化上传
+
+      
+
+                    const initResponse = await fetch('/api/upload', {
+
+      
+
+                      method: 'POST',
+
+      
+
+                      headers: {
+
+      
+
+                        'Content-Type': 'application/json'
+
+      
+
+                      },
+
+      
+
+                      body: JSON.stringify({
+
+      
+
+                        action: 'initUpload',
+
+      
+
+                        fileId: fileId,
+
+      
+
+                        fileName: videoFile.name,
+
+      
+
+                        totalSize: videoFile.size,
+
+      
+
+                        totalChunks: totalChunks,
+
+      
+
+                        userAgent: navigator.userAgent
+
+      
+
+                      })
+
+      
+
+                    });
+
+        const initResult = await initResponse.json();
+        if (!initResult.success) {
+          throw new Error(initResult.error || '初始化上传失败');
+        }
+
+        const chunkSize = initResult.chunkSize || (2 * 1024 * 1024); // 2MB默认块大小
+        const totalChunks = Math.ceil(videoFile.size / chunkSize);
+
+        // 2. 分块上传
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize, videoFile.size);
+          const chunk = videoFile.slice(start, end);
+
+          // 创建FormData来发送二进制数据
+          const formData = new FormData();
+          formData.append('chunk', chunk, `chunk_${i}`);
+          
+          // 添加其他元数据
+          formData.append('action', 'uploadChunk');
+          formData.append('fileId', fileId);
+          formData.append('chunkIndex', i.toString());
+
+          const chunkResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const chunkResult = await chunkResponse.json();
+          if (!chunkResult.success) {
+            throw new Error(chunkResult.error || `上传分块 ${i+1} 失败`);
+          }
+
+          // 更新进度
+          const progress = Math.floor(((i + 1) / totalChunks) * 100);
+          elements.progressBarTop.style.width = `${progress}%`;
+          elements.progressBarBottom.style.width = `${progress}%`;
+        }
+
+        // 3. 完成上传
+        const completeResponse = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'completeUpload',
+            fileId: fileId,
+            title: title,
+            remark: remark,
+            duration: duration,
+            tagIds: tagIds,
+            fileSize: videoFile.size
+          })
         });
 
+        const completeResult = await completeResponse.json();
+        if (completeResult.success) {
+          loadVideos(5); // 只加载最近的5个视频
+          console.log('视频上传完成:', completeResult);
+          showToast('视频上传成功');
+        } else {
+          throw new Error(completeResult.error || '完成上传失败');
+        }
+        
         // 刷新列表并重置状态（不等待转换完成）
         await loadVideos(5); // 只加载最近的5个视频
         state.selectedTagIdsForUpload = [];
@@ -1427,6 +1460,23 @@
         URL.revokeObjectURL(elements.videoPreview.src);
       } catch (error) {
         console.error('上传失败:', error);
+        
+        // 如果上传失败，尝试取消上传以清理临时文件
+        try {
+          await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              action: 'cancelUpload',
+              fileId: state.currentFileId
+            })
+          });
+        } catch (cleanupError) {
+          console.error('清理临时文件失败:', cleanupError);
+        }
+        
         alert(`上传失败: ${error.message || '未知错误'}`);
       } finally {
         elements.saveVideoBtn.disabled = false;
@@ -1438,14 +1488,29 @@
       }
     }
 
-    // 移除视频预览的错误监听器（如果存在）
-      if (elements.videoPreview._errorHandler) {
+    // 初始化视频详细内容
+    function initUploadModal() {
+      // 添加日志以便调试
+      console.log('initUploadModal: 开始重置模态框');
+
+      // 先移除错误监听器，避免设置空src时触发错误
+      if (elements.videoPreview && elements.videoPreview._errorHandler) {
+        console.log('initUploadModal: 移除错误监听器');
         elements.videoPreview.removeEventListener('error', elements.videoPreview._errorHandler);
         elements.videoPreview._errorHandler = null;
       }
-      // 清除视频预览
-      elements.videoPreview.src = '';
-      if (elements.videoPreview.src) {
+
+      // 停止视频播放并清除源
+      if (elements.videoPreview) {
+        console.log('initUploadModal: 停止视频播放，当前src:', elements.videoPreview.src);
+        elements.videoPreview.pause();
+        elements.videoPreview.currentTime = 0; // 重置播放位置
+        elements.videoPreview.src = '';
+        elements.videoPreview.load(); // 加载空源以确保停止播放
+        console.log('initUploadModal: 已清除视频源');
+      }
+
+      if (elements.videoPreview && elements.videoPreview.src) {
         URL.revokeObjectURL(elements.videoPreview.src);
       }
       // 隐藏预上传按钮
@@ -1453,8 +1518,6 @@
       // 隐藏预上传进度条
       elements.progressBarTop.style.width = '0%';
       elements.progressContainerTop.classList.add('hidden');
-      // 隐藏压缩选项
-      // elements.videoCompressBox.classList.add('hidden')
       // 清空下方输入框
       elements.videoTitle.value = '';
       elements.newTagInputModal.value = '';
@@ -1473,168 +1536,133 @@
       state.cancelUpload = false, // 是否正在执行缓存
         elements.uploadModal.classList.add('hidden')
 
+      console.log('initUploadModal: 模态框重置完成');
+    }
 
     // 缓存视频，预上传
     async function uploadBinary(fileId, videoFile) {
       try {
-        elements.saveVideoBtn.disabled = true
-        // 初始化上传
-        await flutterChannel._sendRequest('initBinaryUpload', {
-          fileId,
-          fileName: videoFile.name,
-          totalSize: videoFile.size,
-          mimeType: videoFile.type
+        // 根据浏览器类型和文件大小计算最优分块大小
+        function calcOptimalChunkSize(totalSize, userAgent) {
+          const isSafari = /safari/.test(userAgent.toLowerCase()) && !/chrome|edge|firefox/.test(userAgent.toLowerCase());
+          const isIPhone = /iphone|ipod/.test(userAgent.toLowerCase());
+          const isIPad = /ipad/.test(userAgent.toLowerCase());
+          const isIOS = isIPhone || isIPad;
+          const isIPhoneSafari = isIPhone && isSafari;
+          const isIOSBrowser = isIOS && isSafari;
+          
+          let chunkSize;
+          
+          if (isIOSBrowser) {
+            // iOS Safari 规则
+            if (totalSize <= 25 * 1024 * 1024) { // ≤25MB
+              chunkSize = 256 * 1024; // 256KB
+            } else if (totalSize <= 50 * 1024 * 1024) { // 25MB~50MB
+              chunkSize = 512 * 1024; // 512KB
+            } else { // ＞50MB
+              chunkSize = 1 * 1024 * 1024; // 1MB
+            }
+          } else if (isSafari) {
+            // 桌面Safari 规则
+            if (totalSize <= 50 * 1024 * 1024) { // ≤50MB
+              chunkSize = 512 * 1024; // 512KB
+            } else if (totalSize <= 100 * 1024 * 1024) { // 50MB~100MB
+              chunkSize = 1 * 1024 * 1024; // 1MB
+            } else { // ＞100MB
+              chunkSize = 2 * 1024 * 1024; // 2MB
+            }
+          } else {
+            // 其他浏览器（Chrome/Firefox/Edge等）规则
+            if (totalSize <= 100 * 1024 * 1024) { // ≤100MB
+              chunkSize = 1 * 1024 * 1024; // 1MB
+            } else if (totalSize <= 500 * 1024 * 1024) { // 100MB~500MB
+              chunkSize = 2 * 1024 * 1024; // 2MB
+            } else { // ＞500MB
+              chunkSize = 5 * 1024 * 1024; // 5MB
+            }
+          }
+          
+          return chunkSize;
+        }
+        
+        const chunkSize = calcOptimalChunkSize(videoFile.size, navigator.userAgent);
+        const totalChunks = Math.ceil(videoFile.size / chunkSize);
+
+        // 1. 初始化上传
+        const initResponse = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'initUpload',
+            fileId: fileId,
+            fileName: videoFile.name,
+            totalSize: videoFile.size,
+            totalChunks: totalChunks,
+            userAgent: navigator.userAgent
+          })
         });
 
-        // 分块上传
-        await uploadBinaryInChunks(fileId, videoFile, (progress) => {
-          elements.progressBarTop.style.width = `${progress}%`;
-          elements.progressBarBottom.style.width = `${progress}%`;
-        });
-        elements.saveVideoBtn.disabled = false
-      } catch (errer) {
-        console.error('预传失败:', error);
-        alert(`预传失败: ${error.message || '未知错误'}`);
-      }
-
-    }
-
-    // 获取当前设备，以便优化上传分块大小
-    function calcChunkSize(totalSize) {
-      // { isMobile: 是否移动设备, isIPhoneSafari: 是否苹果手机Safari }
-      const userAgent = navigator.userAgent.toLowerCase();
-      const isMobile = /iphone|ipod|ipad|android|windows phone/.test(userAgent);
-      const isIPhone = /iphone|ipod/.test(userAgent); // 仅匹配苹果手机（排除 iPad）
-      const isSafari = /safari/.test(userAgent) && !/chrome|edge|firefox/.test(userAgent); // 纯 Safari（排除伪装 Safari 的浏览器）
-      const isIPhoneSafari = isIPhone && isSafari;
-      let chunkSize;
-
-      // return {
-      //   isMobile,
-      //   isIPhoneSafari: isIPhone && isSafari
-      // };
-      if (isIPhoneSafari) {
-        // 苹果手机 Safari 规则
-        if (totalSize <= 25 * 1024 * 1024) { // ≤25MB
-          chunkSize = 256 * 1024; // 256KB
-        } else if (totalSize <= 50 * 1024 * 1024) { // 25MB~50MB
-          chunkSize = 512 * 1024; // 512KB
-        } else { // ＞50MB
-          chunkSize = 1 * 1024 * 1024; // 1MB
+        const initResult = await initResponse.json();
+        if (!initResult.success) {
+          throw new Error(initResult.error || '初始化上传失败');
         }
-      } else {
-        // 电脑浏览器规则（Chrome/Firefox/Edge/非Safari手机浏览器）
-        if (totalSize <= 100 * 1024 * 1024) { // ≤100MB
-          chunkSize = 1 * 1024 * 1024; // 1MB
-        } else if (totalSize <= 500 * 1024 * 1024) { // 100MB~500MB
-          chunkSize = 2 * 1024 * 1024; // 2MB
-        } else { // ＞500MB
-          chunkSize = 2 * 1024 * 1024; // 2MB
-        }
-      }
-      return chunkSize
-    }
 
-    // 分块上传二进制视频文件
-    async function uploadBinaryInChunks(fileId, videoFile, onProgress) {
-      const totalSize = videoFile.size;
-      const chunkSize = calcChunkSize(totalSize); // 256KB/块
-      const totalChunks = Math.ceil(totalSize / chunkSize);
+        const effectiveChunkSize = initResult.chunkSize || chunkSize; // 使用后端返回的块大小或计算的大小
+        const effectiveTotalChunks = Math.ceil(videoFile.size / effectiveChunkSize);
 
-      for (let start = 0; start < totalSize; start += chunkSize) {
-        if (state.cancelUpload) {
-          sendCancelToBackend(fileId);
-          return;
-        }
-        const end = Math.min(start + chunkSize, totalSize);
-        const chunkBlob = videoFile.slice(start, end);
-        const chunkIndex = Math.floor(start / chunkSize);
+        // 2. 分块上传
+        for (let i = 0; i < effectiveTotalChunks; i++) {
+          const start = i * effectiveChunkSize;
+          const end = Math.min(start + effectiveChunkSize, videoFile.size);
+          const chunk = videoFile.slice(start, end);
 
-        try {
-          // 发送二进制块
-          await flutterChannel.sendBinaryChunk({
-            fileId,
-            chunkIndex,
-            totalChunks,
-            blob: chunkBlob
+          // 创建FormData来发送二进制数据
+          const formData = new FormData();
+          formData.append('chunk', chunk, `chunk_${i}`);
+          
+          // 添加其他元数据
+          formData.append('action', 'uploadChunk');
+          formData.append('fileId', fileId);
+          formData.append('chunkIndex', i.toString());
+
+          const chunkResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
           });
 
-          // 更新进度
-          const progress = Math.floor((end / totalSize) * 100);
-          onProgress(progress);
-
-          // Safari兼容性延迟
-          await new Promise(resolve => setTimeout(resolve, 50));
-        } catch (error) {
-          console.error(`块 ${chunkIndex} 上传失败:`, error);
-          throw new Error(`上传失败，块索引: ${chunkIndex}`);
-        }
-      }
-    }
-
-    function sendCancelToBackend(fileId) {
-      // 如果有已上传但未合并的文件，通知后端删除
-      try {
-        flutterChannel._sendRequest('cancelBinaryUpload', {
-          fileId: fileId
-        });
-        state.pendingUploads.delete(state.currentFileId);
-        console.log('分块上传任务已被取消，发送清空服务器缓存命令...')
-      } catch (error) {
-        console.error('取消上传失败:', error);
-      }
-    }
-
-          // 初始化视频详细内容
-          function initUploadModal() {
-            // 添加日志以便调试
-            console.log('initUploadModal: 开始重置模态框');
-
-            // 先移除错误监听器，避免设置空src时触发错误
-            if (elements.videoPreview && elements.videoPreview._errorHandler) {
-              console.log('initUploadModal: 移除错误监听器');
-              elements.videoPreview.removeEventListener('error', elements.videoPreview._errorHandler);
-              elements.videoPreview._errorHandler = null;
-            }
-
-            // 停止视频播放并清除源
-            if (elements.videoPreview) {
-              console.log('initUploadModal: 停止视频播放，当前src:', elements.videoPreview.src);
-              elements.videoPreview.pause();
-              elements.videoPreview.src = '';
-              elements.videoPreview.load(); // 加载空源以确保停止播放
-              console.log('initUploadModal: 已清除视频源');
-            }
-
-            if (elements.videoPreview && elements.videoPreview.src) {
-              URL.revokeObjectURL(elements.videoPreview.src);
-            }
-            // 隐藏预上传按钮
-            elements.uploadFirstBtn.classList.add('hidden');
-            // 隐藏预上传进度条
-            elements.progressBarTop.style.width = '0%';
-            elements.progressContainerTop.classList.add('hidden');
-            // 清空下方输入框
-            elements.videoTitle.value = '';
-            elements.newTagInputModal.value = '';
-            elements.videoRemark.value = '';
-            // 隐藏底部上传进度条
-            elements.progressBarTop.style.width = '0%';
-            elements.progressContainerBottom.classList.add('hidden');
-            // 恢复保存按钮状态
-            elements.saveVideoBtn.disabled = false
-            // 重置 state 关于操作上传文件的状态
-            state.currentEditingVideo = null;
-            state.selectedTagIdsForUpload = [];
-            state.pendingUploads = new Map(), // 存储已上传但未合并的文件ID
-              state.currentUploadFile = null;
-            state.currentFileId = null;
-            state.cancelUpload = false, // 是否正在执行缓存
-              elements.uploadModal.classList.add('hidden')
-
-            console.log('initUploadModal: 模态框重置完成');
+          const chunkResult = await chunkResponse.json();
+          if (!chunkResult.success) {
+            throw new Error(chunkResult.error || `上传分块 ${i+1} 失败`);
           }
 
+          // 更新进度（对于预上传，可以更新顶部进度条）
+          const progress = Math.floor(((i + 1) / effectiveTotalChunks) * 100);
+          elements.progressBarTop.style.width = `${progress}%`;
+        }
+      } catch (error) {
+        console.error('预上传失败:', error);
+        
+        // 如果上传失败，尝试取消上传以清理临时文件
+        try {
+          await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              action: 'cancelUpload',
+              fileId: fileId
+            })
+          });
+        } catch (cleanupError) {
+          console.error('清理临时文件失败:', cleanupError);
+        }
+        
+        throw error; // 重新抛出错误，让调用方处理
+      }
+    }
 
     // 添加打开视频详情的函数
     async function openVideoDetail(video) {
@@ -1647,7 +1675,7 @@
       state.selectedTagIdsForUpload = [...video.tagIds];
 
       // 显示视频预览
-      const thumbnailData = await flutterChannel.getThumbnail(video.id);
+      const thumbnailData = await apiClient.getThumbnail(video.id);
       if (thumbnailData && thumbnailData.videoUrl) {
         elements.videoPreview.src = thumbnailData.videoUrl;
       }
@@ -1713,13 +1741,13 @@
 
         // 等待元数据加载完成后再尝试播放
         elements.videoPreview.addEventListener('loadedmetadata', () => {
-            console.log('视频元数据加载完成');
+          console.log('视频元数据加载完成');
 
-            // 修复Safari中自动播放问题
-            if (isSafari && !isIOS) {
-              // 在桌面Safari中，阻止自动播放
-              elements.videoPreview.pause();
-            }
+          // 修复Safari中自动播放问题
+          if (isSafari && !isIOS) {
+            // 在桌面Safari中，阻止自动播放
+            elements.videoPreview.pause();
+          }
         });
 
 
@@ -1846,7 +1874,7 @@
           const videoId = deleteVideoBtn.dataset.videoId;
           if (confirm('确定要删除这个视频吗？此操作不可恢复。')) {
             try {
-              await flutterChannel.deleteVideo(videoId);
+              await apiClient.deleteVideo(videoId);
               showToast('视频已删除');
               await loadVideos(5); // 重新加载最近的5个视频
             } catch (error) {
@@ -1901,7 +1929,7 @@
 
             try {
               // 调用后端搜索接口
-              const searchResults = await flutterChannel.searchVideos(searchTerm);
+              const searchResults = await apiClient.searchVideos(searchTerm);
               // 保存原始视频列表，方便后续筛选恢复
               state.originalVideos = state.videos;
               // 使用搜索结果更新视频列表
@@ -2027,7 +2055,7 @@
           elements.saveVideoBtn.textContent = '保存视频';
           elements.saveVideoBtn.disabled = false;
 
-        } catch (errer) {
+        } catch (error) {
           alert(`预上传失败: ${error.message || '未知错误'}`);
           return;
         }
@@ -2155,7 +2183,7 @@
 
 
             // 对不存在的标签进行添加
-            const newTag = await flutterChannel.addTag(tagName);
+            const newTag = await apiClient.addTag(tagName);
             // 更新本地标签列表
             state.tags.push(newTag);
             state.selectedTagIdsForUpload.push(newTag.id);
@@ -2264,28 +2292,8 @@
       // 初始化下载 - 获取文件总大小
       async init() {
         try {
-          // 1. 明确发送 HEAD 请求（仅要头信息）
-          // console.log(`发送视频信息请求： ${this.videoUrl}`)
-          //   const response = await fetch(this.videoUrl, {
-          //     method: 'HEAD',
-          //     mode: 'cors', // 显式指定跨域模式（内网也需要）
-          //       credentials: 'omit', // 禁用凭证（避免跨域权限问题）
-          //     headers: {
-          //       'Origin': window.location.origin, // 显式声明请求源
-          //       'Cache-Control': 'no-cache', // 禁用缓存
-          //       'Pragma': 'no-cache',
-          //       'Accept': '*/*', // 匹配后端 Content-Type
-          //     },
-          //   });
-
-          // // const response = await fetch(this.videoUrl, { method: 'HEAD' });
-          // if (!response.ok) throw new Error('获取文件信息失败');
-          // console.log(response)
-          // console.log(`response.headers： ${response.headers}`)
-          // console.log(`response.status： ${response.status}`)
-          // this.totalSize = parseInt(response.headers.get('Content-Length'));
-          const fileSize = await flutterChannel.getVideoSize(this.videoId)
-          this.totalSize = fileSize['videoSize']
+          // apiClient.getVideoSize返回的是response.data.videoSize，已经是数字格式
+          this.totalSize = await apiClient.getVideoSize(this.videoId);
           await this.loadCache(); // 加载缓存的分块
           return this.totalSize;
         } catch (error) {
@@ -2446,11 +2454,10 @@
         a.download = this.originalFileName || `video_${this.videoId}${fileExtension}`;
         document.body.appendChild(a);
         a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          this.cleanupCache(); // 清理缓存
-        }, 1000);
+        // 立即移除元素和清理URL
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.cleanupCache(); // 清理缓存
       }
 
       // 清理缓存
@@ -2469,5 +2476,6 @@
       }
     }
   </script>
-  </body>
+</body>
+
 </html>
