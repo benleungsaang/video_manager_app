@@ -2106,6 +2106,50 @@ class ServerService with ChangeNotifier {
       // 从Hive数据库获取部件
       final partsBox = Hive.box<Part>('temp_parts');
       
+      // 检查是否是incrementAddedCount操作
+      if (params['action'] == 'incrementAddedCount' &&
+          params['model'] != null) {
+        final model = params['model'] as String;
+
+        // 遍历box中的所有项目找到匹配的model
+        for (final key in partsBox.keys) {
+          final part = partsBox.get(key)!;
+
+          if (part.model == model) {
+            // 创建更新后的Part对象，增加addedCount
+            final updatedPart = Part(
+              id: part.id,
+              model: part.model,
+              price: part.price,
+              remark: part.remark,
+              addedCount: part.addedCount + 1, // 增加被添加次数
+            );
+
+            // 更新到Hive数据库
+            await partsBox.put(key, updatedPart);
+
+            // 更新部件数据版本时间戳
+            updatePartsTimestamp();
+            
+            print('部件使用次数已更新: ${updatedPart.model}, 次数: ${updatedPart.addedCount}');
+
+            return Response.ok(
+              json.encode({
+                'success': true,
+                'data': updatedPart.toJson(),
+                'timestamp': _lastPartsUpdate // 返回当前部件数据的时间戳
+              }),
+              headers: {'Content-Type': 'application/json'},
+            );
+          }
+        }
+
+        return Response.notFound(
+          json.encode({'success': false, 'error': '未找到对应的部件'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       // 遍历box中的所有项目找到匹配的id
       for (final key in partsBox.keys) {
         final part = partsBox.get(key)!;
@@ -2506,33 +2550,70 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  // 创建费用
-  Future<Response> _handleCreateTempFee(Request request) async {
-    try {
-      final body = await request.readAsString();
-      final params = json.decode(body);
-
-      final feesBox = Hive.box<TempFee>('temp_fees');
-      
-      final newFee = TempFee(
-        name: params['name']?.toString() ?? params['Model']?.toString() ?? params['model']?.toString() ?? '',
-        value: (params['value'] as num?)?.toDouble() ?? (params['defaultAmount'] as num?)?.toDouble() ?? (params['price'] as num?)?.toDouble() ?? 0.0,
-        addedCount: params['addedCount']?.toInt() ?? params['usageCount']?.toInt() ?? 1, // 默认为1次添加
-      );
-      
-      await feesBox.add(newFee);
-      
-      // 创建新的费用项时，始终更新时间戳
-      updateFeesTimestamp();
-      
-      return Response.ok(
-        json.encode({
-          'success': true, 
-          'data': newFee.toJson(),
-          'timestamp': _lastFeesUpdate  // 返回当前费用数据的时间戳
-        }),
-        headers: {'Content-Type': 'application/json'},
-      );
+      // 创建费用
+      Future<Response> _handleCreateTempFee(Request request) async {
+        try {
+          final body = await request.readAsString();
+          final params = json.decode(body);
+    
+          final feesBox = Hive.box<TempFee>('temp_fees');
+          
+          final name = params['name']?.toString() ?? params['Model']?.toString() ?? params['model']?.toString() ?? '';
+          final value = (params['value'] as num?)?.toDouble() ?? (params['defaultAmount'] as num?)?.toDouble() ?? (params['price'] as num?)?.toDouble() ?? 0.0;
+          final addedCount = params['addedCount']?.toInt() ?? params['usageCount']?.toInt() ?? 1; // 默认为1次添加
+          final action = params['action']?.toString() ?? ''; // 操作类型
+          
+          // 检查是否已存在相同名称的费用，如果是则更新而不是创建新实例
+          TempFee? existingFee = null;
+          int? existingFeeKey;  // 使用int类型，因为Hive的key通常是int
+          
+          // 遍历box中的所有项目查找匹配的name
+          for (final key in feesBox.keys) {
+            final fee = feesBox.get(key)!;
+            if (fee.name == name) {
+              existingFee = fee;
+              existingFeeKey = key as int; // Hive的key是int类型
+              break;
+            }
+          }
+          
+          TempFee resultFee;
+          
+          if (existingFee != null && existingFeeKey != null) {
+            // 更新现有费用，增加addedCount
+            resultFee = TempFee(
+              name: name,
+              value: value != 0.0 ? value : existingFee.value,
+              addedCount: existingFee.addedCount + 1,  // 增加被添加次数（而不是使用传入的参数）
+            );
+            
+            // 更新到Hive数据库
+            await feesBox.put(existingFeeKey, resultFee);
+          } else {
+            // 创建新费用
+            resultFee = TempFee(
+              name: name,
+              value: value,
+              addedCount: addedCount,
+            );
+            
+            // 保存到Hive数据库
+            await feesBox.add(resultFee);
+          }
+          
+          // 更新费用数据版本时间戳
+          updateFeesTimestamp();
+          
+          // 返回成功响应，包括费用数据和时间戳信息
+          return Response.ok(
+            json.encode({
+              'success': true, 
+              'data': resultFee.toJson(),
+              'timestamp': _lastFeesUpdate,  // 返回当前费用数据的时间戳
+              'action': action  // 返回操作类型
+            }),
+            headers: {'Content-Type': 'application/json'},
+          );
     } catch (e) {
       print('创建费用失败: $e');
       return Response.internalServerError(
@@ -2550,6 +2631,48 @@ class ServerService with ChangeNotifier {
 
       final feesBox = Hive.box<TempFee>('temp_fees');
       
+      // 检查是否是incrementAddedCount操作
+      if (params['action'] == 'incrementAddedCount' &&
+          params['name'] != null) {
+        final name = params['name'] as String;
+
+        // 在Hive中，TempFee没有ID，所以我们需要通过name来匹配
+        for (final key in feesBox.keys) {
+          final fee = feesBox.get(key)!;
+
+          if (fee.name == name) {
+            // 创建更新后的TempFee对象，增加addedCount
+            final updatedFee = TempFee(
+              name: fee.name,
+              value: fee.value,
+              addedCount: fee.addedCount + 1, // 增加被添加次数
+            );
+
+            // 更新到Hive数据库
+            await feesBox.put(key, updatedFee);
+
+            // 更新费用数据版本时间戳
+            updateFeesTimestamp();
+            
+            print('费用使用次数已更新: ${updatedFee.name}, 次数: ${updatedFee.addedCount}');
+
+            return Response.ok(
+              json.encode({
+                'success': true,
+                'data': updatedFee.toJson(),
+                'timestamp': _lastFeesUpdate // 返回当前费用数据的时间戳
+              }),
+              headers: {'Content-Type': 'application/json'},
+            );
+          }
+        }
+
+        return Response.notFound(
+          json.encode({'success': false, 'error': '未找到对应的费用'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       // 在Hive中，TempFee没有ID，所以我们需要通过name来匹配
       // 这里我们假设URL参数id实际上是name
       for (final key in feesBox.keys) {
@@ -2678,33 +2801,70 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  // 创建系数
-  Future<Response> _handleCreateTempFactor(Request request) async {
-    try {
-      final body = await request.readAsString();
-      final params = json.decode(body);
-
-      final factorsBox = Hive.box<TempFactor>('temp_factors');
-      
-      final newFactor = TempFactor(
-        name: params['name']?.toString() ?? params['Model']?.toString() ?? params['model']?.toString() ?? '',
-        value: (params['value'] as num?)?.toDouble() ?? (params['defaultValue'] as num?)?.toDouble() ?? (params['price'] as num?)?.toDouble() ?? 0.0,
-        addedCount: params['addedCount']?.toInt() ?? params['usageCount']?.toInt() ?? 1, // 默认为1次添加
-      );
-      
-      await factorsBox.add(newFactor);
-      
-      // 创建新的系数项时，始终更新时间戳
-      updateFactorsTimestamp();
-      
-      return Response.ok(
-        json.encode({
-          'success': true, 
-          'data': newFactor.toJson(),
-          'timestamp': _lastFactorsUpdate  // 返回当前系数数据的时间戳
-        }),
-        headers: {'Content-Type': 'application/json'},
-      );
+      // 创建系数
+      Future<Response> _handleCreateTempFactor(Request request) async {
+        try {
+          final body = await request.readAsString();
+          final params = json.decode(body);
+    
+          final factorsBox = Hive.box<TempFactor>('temp_factors');
+          
+          final name = params['name']?.toString() ?? params['Model']?.toString() ?? params['model']?.toString() ?? '';
+          final value = (params['value'] as num?)?.toDouble() ?? (params['defaultValue'] as num?)?.toDouble() ?? (params['price'] as num?)?.toDouble() ?? 0.0;
+          final addedCount = params['addedCount']?.toInt() ?? params['usageCount']?.toInt() ?? 1; // 默认为1次添加
+          final action = params['action']?.toString() ?? ''; // 操作类型
+          
+          // 检查是否已存在相同名称的系数，如果是则更新而不是创建新实例
+          TempFactor? existingFactor = null;
+          int? existingFactorKey;  // 使用int类型，因为Hive的key通常是int
+          
+          // 遍历box中的所有项目查找匹配的name
+          for (final key in factorsBox.keys) {
+            final factor = factorsBox.get(key)!;
+            if (factor.name == name) {
+              existingFactor = factor;
+              existingFactorKey = key as int; // Hive的key是int类型
+              break;
+            }
+          }
+          
+          TempFactor resultFactor;
+          
+          if (existingFactor != null && existingFactorKey != null) {
+            // 更新现有系数，增加addedCount
+            resultFactor = TempFactor(
+              name: name,
+              value: value != 0.0 ? value : existingFactor.value,
+              addedCount: existingFactor.addedCount + 1,  // 增加被添加次数（而不是使用传入的参数）
+            );
+            
+            // 更新到Hive数据库
+            await factorsBox.put(existingFactorKey, resultFactor);
+          } else {
+            // 创建新系数
+            resultFactor = TempFactor(
+              name: name,
+              value: value,
+              addedCount: addedCount,
+            );
+            
+            // 保存到Hive数据库
+            await factorsBox.add(resultFactor);
+          }
+          
+          // 更新系数数据版本时间戳
+          updateFactorsTimestamp();
+          
+          // 返回成功响应，包括系数数据和时间戳信息
+          return Response.ok(
+            json.encode({
+              'success': true, 
+              'data': resultFactor.toJson(),
+              'timestamp': _lastFactorsUpdate,  // 返回当前系数数据的时间戳
+              'action': action  // 返回操作类型
+            }),
+            headers: {'Content-Type': 'application/json'},
+          );
     } catch (e) {
       print('创建系数失败: $e');
       return Response.internalServerError(
@@ -2722,6 +2882,48 @@ class ServerService with ChangeNotifier {
 
       final factorsBox = Hive.box<TempFactor>('temp_factors');
       
+      // 检查是否是incrementAddedCount操作
+      if (params['action'] == 'incrementAddedCount' &&
+          params['name'] != null) {
+        final name = params['name'] as String;
+
+        // 在Hive中，TempFactor没有ID，所以我们需要通过name来匹配
+        for (final key in factorsBox.keys) {
+          final factor = factorsBox.get(key)!;
+
+          if (factor.name == name) {
+            // 创建更新后的TempFactor对象，增加addedCount
+            final updatedFactor = TempFactor(
+              name: factor.name,
+              value: factor.value,
+              addedCount: factor.addedCount + 1, // 增加被添加次数
+            );
+
+            // 更新到Hive数据库
+            await factorsBox.put(key, updatedFactor);
+
+            // 更新系数数据版本时间戳
+            updateFactorsTimestamp();
+            
+            print('系数使用次数已更新: ${updatedFactor.name}, 次数: ${updatedFactor.addedCount}');
+
+            return Response.ok(
+              json.encode({
+                'success': true,
+                'data': updatedFactor.toJson(),
+                'timestamp': _lastFactorsUpdate // 返回当前系数数据的时间戳
+              }),
+              headers: {'Content-Type': 'application/json'},
+            );
+          }
+        }
+
+        return Response.notFound(
+          json.encode({'success': false, 'error': '未找到对应的系数'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       // 在Hive中，TempFactor没有ID，所以我们需要通过name来匹配
       for (final key in factorsBox.keys) {
         final factor = factorsBox.get(key)!;
