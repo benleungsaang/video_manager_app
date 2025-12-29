@@ -19,9 +19,9 @@ class PartAdapter extends TypeAdapter<Part> {
     return Part(
       id: fields[0] as String,
       model: fields[1] as String,
-      name: fields[2] as String,
-      defaultPrice: fields[3] as double,
-      usageCount: fields[4] as int,
+      price: fields[2] as double,
+      remark: fields[3] as String,
+      addedCount: fields[4] as int,
     );
   }
 
@@ -34,11 +34,11 @@ class PartAdapter extends TypeAdapter<Part> {
       ..writeByte(1)
       ..write(obj.model)
       ..writeByte(2)
-      ..write(obj.name)
+      ..write(obj.price)
       ..writeByte(3)
-      ..write(obj.defaultPrice)
+      ..write(obj.remark)
       ..writeByte(4)
-      ..write(obj.usageCount);
+      ..write(obj.addedCount);
   }
 
   @override

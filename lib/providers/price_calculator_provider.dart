@@ -48,9 +48,9 @@ class PriceCalculatorProvider extends ChangeNotifier {
   
   double get subtotal => _cartItems.fold(0, (sum, item) => sum + (item.actualPrice * item.quantity));
   
-  double get totalFees => _tempFees.fold(0, (sum, fee) => sum + fee.defaultAmount);
+  double get totalFees => _tempFees.fold(0, (sum, fee) => sum + fee.value);
   
-  double get totalFactors => _tempFactors.fold(1, (sum, factor) => sum * factor.defaultValue);
+  double get totalFactors => _tempFactors.fold(1, (sum, factor) => sum * factor.value);
   
   double get totalPrice => (subtotal + totalFees) * totalFactors;
   
@@ -402,13 +402,13 @@ class PriceCalculatorProvider extends ChangeNotifier {
   }
   
   // 添加临时部件
-  Future<void> addTempPart(String model, String name, double defaultPrice) async {
+  Future<void> addTempPart(String model, String name, double price, {String remark = ''}) async {
     final newPart = Part(
       id: Uuid().v4(),
       model: model,
-      name: name,
-      defaultPrice: defaultPrice,
-      usageCount: 1, // 新添加的项目使用次数为1
+      price: price,
+      remark: remark, // 部件详细描述
+      addedCount: 1, // 被添加次数
     );
     
     _tempParts.add(newPart);
@@ -419,10 +419,9 @@ class PriceCalculatorProvider extends ChangeNotifier {
   // 添加临时费用
   Future<void> addTempFee(String name, double defaultAmount) async {
     final newFee = TempFee(
-      id: Uuid().v4(),
       name: name,
-      defaultAmount: defaultAmount,
-      usageCount: 1, // 新添加的项目使用次数为1
+      value: defaultAmount,
+      addedCount: 1, // 新添加的项目被添加次数为1
     );
     
     _tempFees.add(newFee);
@@ -433,10 +432,9 @@ class PriceCalculatorProvider extends ChangeNotifier {
   // 添加临时系数
   Future<void> addTempFactor(String name, double defaultValue) async {
     final newFactor = TempFactor(
-      id: Uuid().v4(),
       name: name,
-      defaultValue: defaultValue,
-      usageCount: 1, // 新添加的项目使用次数为1
+      value: defaultValue,
+      addedCount: 1, // 新添加的项目被添加次数为1
     );
     
     _tempFactors.add(newFactor);
@@ -448,25 +446,25 @@ class PriceCalculatorProvider extends ChangeNotifier {
   Future<void> incrementTempPartUsage(String id) async {
     final index = _tempParts.indexWhere((item) => item.id == id);
     if (index != -1) {
-      _tempParts[index] = _tempParts[index].copyWith(usageCount: _tempParts[index].usageCount + 1);
+      _tempParts[index] = _tempParts[index].copyWith(addedCount: _tempParts[index].addedCount + 1);
       notifyListeners();
       await _saveTempParts();
     }
   }
   
-  Future<void> incrementTempFeeUsage(String id) async {
-    final index = _tempFees.indexWhere((item) => item.id == id);
+  Future<void> incrementTempFeeUsage(String name) async {
+    final index = _tempFees.indexWhere((item) => item.name == name);
     if (index != -1) {
-      _tempFees[index] = _tempFees[index].copyWith(usageCount: _tempFees[index].usageCount + 1);
+      _tempFees[index] = _tempFees[index].copyWith(addedCount: _tempFees[index].addedCount + 1);
       notifyListeners();
       await _saveTempFees();
     }
   }
   
-  Future<void> incrementTempFactorUsage(String id) async {
-    final index = _tempFactors.indexWhere((item) => item.id == id);
+  Future<void> incrementTempFactorUsage(String name) async {
+    final index = _tempFactors.indexWhere((item) => item.name == name);
     if (index != -1) {
-      _tempFactors[index] = _tempFactors[index].copyWith(usageCount: _tempFactors[index].usageCount + 1);
+      _tempFactors[index] = _tempFactors[index].copyWith(addedCount: _tempFactors[index].addedCount + 1);
       notifyListeners();
       await _saveTempFactors();
     }
@@ -479,14 +477,14 @@ class PriceCalculatorProvider extends ChangeNotifier {
     _saveTempParts();
   }
   
-  void removeTempFee(String id) {
-    _tempFees.removeWhere((item) => item.id == id);
+  void removeTempFee(String name) {
+    _tempFees.removeWhere((item) => item.name == name);
     notifyListeners();
     _saveTempFees();
   }
   
-  void removeTempFactor(String id) {
-    _tempFactors.removeWhere((item) => item.id == id);
+  void removeTempFactor(String name) {
+    _tempFactors.removeWhere((item) => item.name == name);
     notifyListeners();
     _saveTempFactors();
   }
@@ -537,17 +535,17 @@ class PriceCalculatorProvider extends ChangeNotifier {
     }
   }
   
-  // 获取热门临时项目（使用次数最多的项目）
+  // 获取热门临时项目（被添加次数最多的项目）
   List<Part> getTopUsedParts(int count) {
-    return List.from(_tempParts)..sort((a, b) => b.usageCount.compareTo(a.usageCount))..removeRange(count, _tempParts.length > count ? _tempParts.length : count);
+    return List.from(_tempParts)..sort((a, b) => b.addedCount.compareTo(a.addedCount))..removeRange(count, _tempParts.length > count ? _tempParts.length : count);
   }
   
   List<TempFee> getTopUsedFees(int count) {
-    return List.from(_tempFees)..sort((a, b) => b.usageCount.compareTo(a.usageCount))..removeRange(count, _tempFees.length > count ? _tempFees.length : count);
+    return List.from(_tempFees)..sort((a, b) => b.addedCount.compareTo(a.addedCount))..removeRange(count, _tempFees.length > count ? _tempFees.length : count);
   }
   
   List<TempFactor> getTopUsedFactors(int count) {
-    return List.from(_tempFactors)..sort((a, b) => b.usageCount.compareTo(a.usageCount))..removeRange(count, _tempFactors.length > count ? _tempFactors.length : count);
+    return List.from(_tempFactors)..sort((a, b) => b.addedCount.compareTo(a.addedCount))..removeRange(count, _tempFactors.length > count ? _tempFactors.length : count);
   }
   
   // 价格计算相关功能
@@ -556,11 +554,11 @@ class PriceCalculatorProvider extends ChangeNotifier {
   }
   
   double calculateTotalFees() {
-    return _tempFees.fold(0, (sum, fee) => sum + fee.defaultAmount);
+    return _tempFees.fold(0, (sum, fee) => sum + fee.value);
   }
   
   double calculateTotalFactors() {
-    return _tempFactors.fold(1, (sum, factor) => sum * factor.defaultValue);
+    return _tempFactors.fold(1, (sum, factor) => sum * factor.value);
   }
   
   double calculateTotalPrice() {

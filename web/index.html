@@ -14,22 +14,7 @@
   <link rel="stylesheet" type="text/x-font-otf" href="fonts/fontawesome-webfont.woff">
   <link rel="stylesheet" type="text/x-font-otf" href="fonts/fontawesome-webfont.woff2">
 
-  <!-- 配置Tailwind自定义颜色 -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#64748b',
-          },
-        },
-      }
-    }
-
-  </script>
-
-  <!-- 配置Tailwind深色模式 -->
+  <!-- 配置Tailwind自定义颜色和深色模式 -->
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -1291,112 +1276,780 @@
 
       
 
-                    const chunkSize = calcOptimalChunkSize(videoFile.size, navigator.userAgent);
+                                        const chunkSize = calcOptimalChunkSize(videoFile.size, navigator.userAgent);
 
       
 
-                    const totalChunks = Math.ceil(videoFile.size / chunkSize);
+                    
 
       
 
-            
+                    
 
       
 
-                    // 显示进度条容器
+                    
 
       
 
-                    elements.progressContainerTop.classList.remove('hidden');
+                                        const totalChunks = Math.ceil(videoFile.size / chunkSize);
 
       
 
-                    elements.progressBarTop.style.width = '0%';
+                    
 
       
 
-                    elements.progressContainerBottom.classList.remove('hidden');
+                    
 
       
 
-                    elements.progressBarBottom.style.width = '0%';
+                    
 
       
 
-            
+                                
 
       
 
-                    // 1. 初始化上传
+                    
 
       
 
-                    const initResponse = await fetch('/api/upload', {
+                    
 
       
 
-                      method: 'POST',
+                    
 
       
 
-                      headers: {
+                          
 
       
 
-                        'Content-Type': 'application/json'
+                    
 
       
 
-                      },
+                    
 
       
 
-                      body: JSON.stringify({
+                    
 
       
 
-                        action: 'initUpload',
+                                        // 显示进度条容器
 
       
 
-                        fileId: fileId,
+                    
 
       
 
-                        fileName: videoFile.name,
+                    
 
       
 
-                        totalSize: videoFile.size,
+                    
 
       
 
-                        totalChunks: totalChunks,
+                          
 
       
 
-                        userAgent: navigator.userAgent
+                    
 
       
 
-                      })
+                    
 
       
 
-                    });
+                    
 
-        const initResult = await initResponse.json();
-        if (!initResult.success) {
-          throw new Error(initResult.error || '初始化上传失败');
-        }
+      
 
-        const chunkSize = initResult.chunkSize || (2 * 1024 * 1024); // 2MB默认块大小
-        const totalChunks = Math.ceil(videoFile.size / chunkSize);
+                                        elements.progressContainerTop.classList.remove('hidden');
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                        elements.progressBarTop.style.width = '0%';
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                        elements.progressContainerBottom.classList.remove('hidden');
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                        elements.progressBarBottom.style.width = '0%';
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                        // 1. 初始化上传
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                        const initResponse = await fetch('/api/upload', {
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                          method: 'POST',
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                          headers: {
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            'Content-Type': 'application/json'
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                          },
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                          body: JSON.stringify({
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            action: 'initUpload',
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            fileId: fileId,
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            fileName: videoFile.name,
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            totalSize: videoFile.size,
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            totalChunks: totalChunks,
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                            userAgent: navigator.userAgent
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                          })
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                          
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                                        });
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                            const initResult = await initResponse.json();
+
+      
+
+                    
+
+      
+
+                            if (!initResult.success) {
+
+      
+
+                    
+
+      
+
+                              throw new Error(initResult.error || '初始化上传失败');
+
+      
+
+                    
+
+      
+
+                            }
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                    
+
+      
+
+                            const effectiveChunkSize = initResult.chunkSize || (2 * 1024 * 1024); // 2MB默认块大小
+
+      
+
+                    
+
+      
+
+                            const effectiveTotalChunks = Math.ceil(videoFile.size / effectiveChunkSize);
 
         // 2. 分块上传
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * chunkSize;
-          const end = Math.min(start + chunkSize, videoFile.size);
+        for (let i = 0; i < effectiveTotalChunks; i++) {
+          const start = i * effectiveChunkSize;
+          const end = Math.min(start + effectiveChunkSize, videoFile.size);
           const chunk = videoFile.slice(start, end);
 
           // 创建FormData来发送二进制数据
@@ -1419,7 +2072,7 @@
           }
 
           // 更新进度
-          const progress = Math.floor(((i + 1) / totalChunks) * 100);
+          const progress = Math.floor(((i + 1) / effectiveTotalChunks) * 100);
           elements.progressBarTop.style.width = `${progress}%`;
           elements.progressBarBottom.style.width = `${progress}%`;
         }

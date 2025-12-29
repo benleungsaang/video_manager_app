@@ -785,13 +785,29 @@
           // 获取机器部件
           getMachineParts: async function () {
             const response = await this.request('/machine-parts');
-            return response.data;
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              // 更新machineParts的时间戳缓存
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.machineParts = response.timestamp;
+              }
+            }
+            return response.data || response;
           },
           
           // 获取部件
           getParts: async function () {
             const response = await this.request('/parts');
-            return response.data;
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              // 这里可以更新parts的时间戳缓存
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.parts = response.timestamp;
+              }
+            }
+            return response.data || response;
           },
           
           // 获取机器部件数量
@@ -822,25 +838,45 @@
           // 获取最常用的部件
           getTopUsedParts: async function () {
             const response = await this.request('/top-used/parts');
-            return response.data || [];
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.topUsedParts = response.timestamp;
+              }
+            }
+            return response.data || response;
           },
           
           // 获取最常用的费用
           getTopUsedFees: async function () {
             const response = await this.request('/top-used/fees');
-            return response.data || [];
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.topUsedFees = response.timestamp;
+              }
+            }
+            return response.data || response;
           },
           
           // 获取最常用的系数
           getTopUsedFactors: async function () {
             const response = await this.request('/top-used/factors');
-            return response.data || [];
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.topUsedFactors = response.timestamp;
+              }
+            }
+            return response.data || response;
           },
           
           // 检查数据是否有更新
-          checkDataUpdate: async function (lastUpdate) {
-            const params = lastUpdate ? `?lastUpdate=${lastUpdate}` : '';
-            const response = await this.request('/check-data-update' + params);
+          checkDataUpdate: async function () {
+            const response = await this.request('/check-data-update');
             return response;
           },
           
@@ -860,6 +896,100 @@
               body: JSON.stringify(part)
             });
             return response.data;
+          },
+          
+          // 创建临时费用
+          createTempFee: async function (fee) {
+            const response = await this.request('/temp-fees', {
+              method: 'POST',
+              body: JSON.stringify(fee)
+            });
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.fees = response.timestamp;
+              }
+            }
+            return response;
+          },
+          
+          // 更新临时费用
+          updateTempFee: async function (name, fee) {
+            const response = await this.request(`/temp-fees/${encodeURIComponent(name)}`, {
+              method: 'PUT',
+              body: JSON.stringify(fee)
+            });
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.fees = response.timestamp;
+              }
+            }
+            return response;
+          },
+          
+          // 删除临时费用
+          deleteTempFee: async function (name) {
+            const response = await this.request(`/temp-fees/${encodeURIComponent(name)}`, {
+              method: 'DELETE'
+            });
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.fees = response.timestamp;
+              }
+            }
+            return response;
+          },
+          
+          // 创建临时系数
+          createTempFactor: async function (factor) {
+            const response = await this.request('/temp-factors', {
+              method: 'POST',
+              body: JSON.stringify(factor)
+            });
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.factors = response.timestamp;
+              }
+            }
+            return response;
+          },
+          
+          // 更新临时系数
+          updateTempFactor: async function (name, factor) {
+            const response = await this.request(`/temp-factors/${encodeURIComponent(name)}`, {
+              method: 'PUT',
+              body: JSON.stringify(factor)
+            });
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.factors = response.timestamp;
+              }
+            }
+            return response;
+          },
+          
+          // 删除临时系数
+          deleteTempFactor: async function (name) {
+            const response = await this.request(`/temp-factors/${encodeURIComponent(name)}`, {
+              method: 'DELETE'
+            });
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.factors = response.timestamp;
+              }
+            }
+            return response;
           },
           
           // 更新机器部件
@@ -886,6 +1016,32 @@
               method: 'DELETE'
             });
             return response;
+          },
+          
+          // 获取所有费用
+          getFees: async function () {
+            const response = await this.request('/temp-fees');
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.fees = response.timestamp;
+              }
+            }
+            return response.data || response;
+          },
+          
+          // 获取所有系数
+          getFactors: async function () {
+            const response = await this.request('/temp-factors');
+            // 如果服务器返回了时间戳，更新本地缓存的时间戳
+            if (response.timestamp) {
+              if (typeof window !== 'undefined') {
+                if (!window.timestampCache) window.timestampCache = {};
+                window.timestampCache.factors = response.timestamp;
+              }
+            }
+            return response.data || response;
           }
         };
 
@@ -910,16 +1066,12 @@
 
         // 显示热门商品（被添加次数最多的前5个）
         function showPopularItems() {
-                    // 筛选出机器类别（根据Category字段判断）
-                    const machineItems = baseData.filter(item => 
-                        item.Category && 
-                        (item.Category.toLowerCase().includes('machine') || 
-                         item.Category.toLowerCase().includes('机器') ||
-                         item.Category.toLowerCase().includes('整机'))
-                    );
+                    // 从本地缓存获取数据
+                    const cachedData = JSON.parse(localStorage.getItem('cachedMachineParts') || '[]');
+                    const allData = cachedData.length > 0 ? cachedData : baseData;
                     
-                    // 按被添加次数排序，取前5个
-                    const popularItems = [...machineItems]
+                    // 直接对全部数据按addedCount排序，取前5个
+                    const popularItems = [...allData]
                         .sort((a, b) => (b.addedCount || 0) - (a.addedCount || 0))
                         .slice(0, 5);
             
@@ -927,20 +1079,19 @@
                     if (popularItems.length === 0) {
                         html += '<p>暂无数据</p>';
                     } else {
-                        popularItems.forEach(item => {
-                            html += `
-                                <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                    <img src="${item.image}" alt="${item.Model}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23ccc\' stroke-width=\'2\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><path d=\'M12 8v4m0 4h.01\'/></svg>'; this.style.backgroundColor='#f5f5f5';">
-                                    <div style="flex: 1;">
-                                        <div><strong>${item.Model}</strong></div>
-                                        <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(item.ShowPrice)}</span></div>
-                                        <div style="color: #999; font-size: 0.8em;">被添加 ${(item.addedCount || 0)} 次</div>
-                                    </div>
-                                    <button class="secondary" onclick="event.stopPropagation(); addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="添加到购物车">🛒</button>
-                                </div>
-                            `;
-                        });
-                    }
+                                            popularItems.forEach(item => {
+                                                html += `
+                                                    <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                                        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.Model}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;">
+                                                        <div style="flex: 1;">
+                                                            <div><strong>${item.Model}</strong></div>
+                                                            <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(item.ShowPrice)}</span></div>
+                                                            <div style="color: #999; font-size: 0.8em;">被添加 ${(item.addedCount || 0)} 次</div>
+                                                        </div>
+                                                        <button class="secondary" onclick="event.stopPropagation(); addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" title="添加到购物车">🛒</button>
+                                                    </div>
+                                                `;
+                                            });                    }
             
                     document.getElementById('searchResults').innerHTML = html;        }
 
@@ -954,39 +1105,137 @@
         // 加载基础数据（带缓存和更新检查）
         async function loadData() {
             try {
-                // 首先检查数据是否有更新
-                const updateCheck = await apiClient.checkDataUpdate(lastUpdateTime);
+                // 首先检查机器部件数据是否有更新
+                const updateCheck = await apiClient.checkDataUpdate();
                 
-                if (updateCheck.hasUpdates) {
-                    // 有更新，从服务器加载完整数据
-                    console.log('检测到数据更新，加载完整数据...');
+                // 检查本地缓存的时间戳
+                const cachedMachinePartsTimestamp = localStorage.getItem('lastMachinePartsTimestamp');
+                const serverMachinePartsTimestamp = updateCheck.lastMachinePartsUpdate;
+                
+                if (!cachedMachinePartsTimestamp || parseInt(cachedMachinePartsTimestamp) < serverMachinePartsTimestamp) {
+                    // 机器部件数据有更新，从服务器加载完整数据
+                    console.log('检测到机器部件数据更新，加载完整数据...');
                     baseData = await apiClient.getMachineParts();
-                    lastUpdateTime = updateCheck.lastMachinePartsUpdate;
                     
-                    // 同时获取最常用项目
-                    try {
-                        cachedTopParts = await apiClient.getTopUsedParts();
-                        cachedTopFees = await apiClient.getTopUsedFees();
-                        cachedTopFactors = await apiClient.getTopUsedFactors();
-                    } catch (e) {
-                        console.error('获取最常用项目失败:', e);
-                        // 如果获取最常用项目失败，使用空数组
-                        cachedTopParts = [];
-                        cachedTopFees = [];
-                        cachedTopFactors = [];
-                    }
+                    // 缓存数据到localStorage
+                    localStorage.setItem('cachedMachineParts', JSON.stringify(baseData));
+                    localStorage.setItem('lastMachinePartsTimestamp', serverMachinePartsTimestamp.toString()); // 更新时间戳
                     
-                    // 缓存数据
+                    // 缓存数据到内存变量
                     cachedBaseData = baseData;
                     
-                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">成功加载 ${baseData.length} 条数据</div>`;
+                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">成功加载 ${baseData.length} 条机器部件数据</div>`;
+                    console.log('机器部件数据已更新');
                 } else {
-                    // 没有更新，使用缓存数据
-                    console.log('使用缓存数据');
-                    baseData = cachedBaseData || await apiClient.getMachineParts(); // 如果缓存为空则仍需加载
-                    lastUpdateTime = updateCheck.lastMachinePartsUpdate;
+                    // 机器部件数据没有更新，使用缓存数据
+                    const localStorageData = localStorage.getItem('cachedMachineParts');
                     
-                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">使用缓存数据 (${baseData.length} 条)</div>`;
+                    if (localStorageData) {
+                        baseData = JSON.parse(localStorageData);
+                        console.log('使用缓存的机器部件数据');
+                    } else {
+                        // 如果localStorage没有数据，从服务器加载（首次访问）
+                        console.log('首次访问，从服务器加载机器部件数据...');
+                        baseData = await apiClient.getMachineParts();
+                        localStorage.setItem('lastMachinePartsTimestamp', updateCheck.lastMachinePartsUpdate.toString());
+                        localStorage.setItem('cachedMachineParts', JSON.stringify(baseData));
+                    }
+                    
+                    document.getElementById('dataStatus').innerHTML = `<div class="status-message success">使用缓存的机器部件数据 (${baseData.length} 条)</div>`;
+                }
+                
+                // 同时获取部件数据（如果有更新）
+                const partsTimestamp = localStorage.getItem('lastPartsTimestamp');
+                const serverPartsTimestamp = updateCheck.lastPartsUpdate;
+                
+                if (!partsTimestamp || parseInt(partsTimestamp) < serverPartsTimestamp) {
+                    // 部件数据有更新，从服务器加载
+                    console.log('检测到部件数据更新，加载部件数据...');
+                    window.partsData = await apiClient.getParts();
+                    localStorage.setItem('lastPartsTimestamp', serverPartsTimestamp.toString());
+                    console.log(`部件数据已更新，共 ${window.partsData ? window.partsData.length : 0} 条`);
+                } else {
+                    // 部件数据没有更新，可以考虑从缓存加载（如果需要缓存partsData）
+                    console.log('使用缓存的部件数据');
+                }
+                
+                // 确保所有数据项都有addedCount字段
+                if (baseData && Array.isArray(baseData)) {
+                    baseData.forEach(item => {
+                        if (item.addedCount === undefined) {
+                            item.addedCount = 0;
+                        }
+                    });
+                }
+                
+                // 检查费用数据是否有更新
+                const feesTimestamp = localStorage.getItem('lastFeesTimestamp');
+                const serverFeesTimestamp = updateCheck.lastFeesUpdate;
+                
+                if (!feesTimestamp || parseInt(feesTimestamp) < serverFeesTimestamp) {
+                    // 费用数据有更新，从服务器加载
+                    console.log('检测到费用数据更新，加载费用数据...');
+                    window.feesData = await apiClient.getFees();
+                    localStorage.setItem('lastFeesTimestamp', serverFeesTimestamp.toString());
+                    console.log(`费用数据已更新，共 ${window.feesData ? window.feesData.length : 0} 条`);
+                } else {
+                    // 费用数据没有更新，可以考虑从缓存加载（如果需要缓存feesData）
+                    console.log('使用缓存的费用数据');
+                }
+                
+                // 检查系数数据是否有更新
+                const factorsTimestamp = localStorage.getItem('lastFactorsTimestamp');
+                const serverFactorsTimestamp = updateCheck.lastFactorsUpdate;
+                
+                if (!factorsTimestamp || parseInt(factorsTimestamp) < serverFactorsTimestamp) {
+                    // 系数数据有更新，从服务器加载
+                    console.log('检测到系数数据更新，加载系数数据...');
+                    window.factorsData = await apiClient.getFactors();
+                    localStorage.setItem('lastFactorsTimestamp', serverFactorsTimestamp.toString());
+                    console.log(`系数数据已更新，共 ${window.factorsData ? window.factorsData.length : 0} 条`);
+                } else {
+                    // 系数数据没有更新，可以考虑从缓存加载（如果需要缓存factorsData）
+                    console.log('使用缓存的系数数据');
+                }
+                
+                // 检查最常用项目是否有更新（通过时间戳比较）
+                try {
+                    // 获取服务器时间戳
+                    const updateCheck = await apiClient.checkDataUpdate();
+                    
+                    // 检查topUsedParts时间戳
+                    const cachedTopPartsTimestamp = localStorage.getItem('lastTopPartsTimestamp');
+                    if (!cachedTopPartsTimestamp || parseInt(cachedTopPartsTimestamp) < updateCheck.lastPartsUpdate) {
+                        cachedTopParts = await apiClient.getTopUsedParts();
+                        localStorage.setItem('lastTopPartsTimestamp', updateCheck.lastPartsUpdate.toString());
+                    } else {
+                        // 从缓存加载（如果有缓存机制的话）
+                        console.log('使用缓存的topUsedParts数据');
+                    }
+                    
+                    // 检查topUsedFees时间戳
+                    const cachedTopFeesTimestamp = localStorage.getItem('lastTopFeesTimestamp');
+                    if (!cachedTopFeesTimestamp || parseInt(cachedTopFeesTimestamp) < updateCheck.lastFeesUpdate) {
+                        cachedTopFees = await apiClient.getTopUsedFees();
+                        localStorage.setItem('lastTopFeesTimestamp', updateCheck.lastFeesUpdate.toString());
+                    } else {
+                        console.log('使用缓存的topUsedFees数据');
+                    }
+                    
+                    // 检查topUsedFactors时间戳
+                    const cachedTopFactorsTimestamp = localStorage.getItem('lastTopFactorsTimestamp');
+                    if (!cachedTopFactorsTimestamp || parseInt(cachedTopFactorsTimestamp) < updateCheck.lastFactorsUpdate) {
+                        cachedTopFactors = await apiClient.getTopUsedFactors();
+                        localStorage.setItem('lastTopFactorsTimestamp', updateCheck.lastFactorsUpdate.toString());
+                    } else {
+                        console.log('使用缓存的topUsedFactors数据');
+                    }
+                } catch (e) {
+                    console.error('获取最常用项目失败:', e);
+                    // 如果获取最常用项目失败，使用空数组
+                    cachedTopParts = [];
+                    cachedTopFees = [];
+                    cachedTopFactors = [];
                 }
                 
                 // 更新搜索框状态 - 始终启用搜索
@@ -1000,10 +1249,23 @@
                 // 更新标题旁的统计数据
                 updateStatsDisplay();
             } catch (error) {
-                // 如果从服务器获取失败，尝试从缓存加载
-                if (cachedBaseData) {
-                    console.log('使用缓存数据（服务器加载失败）');
-                    baseData = cachedBaseData;
+                console.error('加载数据失败:', error);
+                
+                // 如果从服务器获取失败，尝试从localStorage缓存加载
+                const localStorageData = localStorage.getItem('cachedMachineParts');
+                if (localStorageData) {
+                    console.log('使用localStorage缓存数据（服务器加载失败）');
+                    baseData = JSON.parse(localStorageData);
+                    
+                    // 确保所有数据项都有addedCount字段（如果不存在则初始化为0）
+                    if (baseData && Array.isArray(baseData)) {
+                        baseData.forEach(item => {
+                            if (item.addedCount === undefined) {
+                                item.addedCount = 0;
+                            }
+                        });
+                    }
+                    
                     document.getElementById('dataStatus').innerHTML = `<div class="status-message success">使用缓存数据 (${baseData.length} 条)</div>`;
                     
                     // 更新搜索框状态
@@ -1050,8 +1312,17 @@
                     return;
                 }
 
-                // 使用缓存的baseData进行本地搜索（无需向服务器请求）
-                let searchDataSource = cachedBaseData || baseData;
+                // 优先使用localStorage缓存数据，如果没有则使用内存缓存数据
+                let localStorageData = localStorage.getItem('cachedMachineParts');
+                let searchDataSource = [];
+                
+                if (localStorageData) {
+                    searchDataSource = JSON.parse(localStorageData);
+                } else if (cachedBaseData) {
+                    searchDataSource = cachedBaseData;
+                } else {
+                    searchDataSource = baseData;
+                }
 
                 // 支持新旧型号搜索，但只显示新型号
                 const filteredItems = searchDataSource.filter(item =>
@@ -1066,7 +1337,7 @@
                     filteredItems.forEach(item => {
                         html += `
                             <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                                <img src="${item.image}" alt="${item.Model}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'80\' height=\'80\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23ccc\' stroke-width=\'2\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><path d=\'M12 8v4m0 4h.01\'/></svg>'; this.style.backgroundColor='#f5f5f5';">
+                                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.Model}" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;">
                                 <div style="flex: 1;">
                                     <div><strong>${item.Model}</strong></div>
                                     <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(item.ShowPrice)}</span></div>
@@ -1154,25 +1425,11 @@
             }
         }
 
-        // 预加载最常用的项目（在页面初始化时）
+        // 预加载最常用的项目（在页面初始化时） - 已合并到loadData中以避免重复请求
         async function preloadTopUsedItems() {
-            try {
-                // 并行加载所有最常用的项目
-                const [topParts, topFees, topFactors] = await Promise.all([
-                    apiClient.getTopUsedParts().catch(() => []),
-                    apiClient.getTopUsedFees().catch(() => []),
-                    apiClient.getTopUsedFactors().catch(() => [])
-                ]);
-                
-                // 缓存结果
-                cachedTopParts = topParts;
-                cachedTopFees = topFees;
-                cachedTopFactors = topFactors;
-                
-                console.log(`预加载完成: ${topParts.length} 个部件, ${topFees.length} 个费用, ${topFactors.length} 个系数`);
-            } catch (error) {
-                console.error('预加载最常用项目失败:', error);
-            }
+            // 此函数保留用于兼容性，但实际功能已在loadData函数中实现
+            // 以避免重复请求数据
+            console.log('preloadTopUsedItems: 已合并到loadData中，避免重复请求');
         }
         
         // 显示最常用的项目
@@ -1278,7 +1535,7 @@
                     <div class="top-item" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9; cursor: pointer; flex: 0 0 auto; white-space: nowrap;" 
                          onclick="fillPartForm(${JSON.stringify(part).replace(/"/g, '&quot;')})" title="点击填充数据">
                         <div style="font-size: 0.9em;"><strong>${part.name || part.model}</strong></div>
-                        <div style="font-size: 0.75em; color: #666;">${part.usageCount || 1}次</div>
+                        <div style="font-size: 0.75em; color: #666;">${part.addedCount || 1}次</div>
                     </div>
                 `;
             });
@@ -1291,7 +1548,7 @@
         // 填充部件表单
         function fillPartForm(part) {
             document.getElementById('partModel').value = part.model || '';
-            document.getElementById('partPrice').value = part.defaultPrice || part.price || '';
+            document.getElementById('partPrice').value = part.price || '';
             
             // 隐藏搜索结果
             document.getElementById('partSearchResults').style.display = 'none';
@@ -1346,7 +1603,10 @@
             // 搜索所有可用的费用（从缓存）
             let allFees = [];
             
-            if (cachedTopFees && cachedTopFees.length > 0) {
+            // 优先使用完整的费用数据，如果不存在则使用topFees
+            if (window.feesData && window.feesData.length > 0) {
+                allFees = [...window.feesData];
+            } else if (cachedTopFees && cachedTopFees.length > 0) {
                 allFees = [...cachedTopFees];
             }
             
@@ -1385,7 +1645,7 @@
         // 填充临时费用表单
         function fillTempFeeForm(fee) {
             document.getElementById('tempFeeNameCart').value = fee.name || '';
-            document.getElementById('tempFeeAmountCart').value = fee.defaultAmount || '';
+            document.getElementById('tempFeeAmountCart').value = fee.value || '';
             
             // 隐藏搜索结果
             document.getElementById('tempFeeSearchResults').style.display = 'none';
@@ -1398,7 +1658,10 @@
             // 搜索所有可用的系数（从缓存）
             let allFactors = [];
             
-            if (cachedTopFactors && cachedTopFactors.length > 0) {
+            // 优先使用完整的系数数据，如果不存在则使用topFactors
+            if (window.factorsData && window.factorsData.length > 0) {
+                allFactors = [...window.factorsData];
+            } else if (cachedTopFactors && cachedTopFactors.length > 0) {
                 allFactors = [...cachedTopFactors];
             }
             
@@ -1437,7 +1700,7 @@
         // 填充系数表单
         function fillTempFactorForm(factor) {
             document.getElementById('tempFactorNameCart').value = factor.name || '';
-            document.getElementById('tempFactorValueCart').value = factor.defaultValue || '';
+            document.getElementById('tempFactorValueCart').value = factor.value || '';
             
             // 隐藏搜索结果
             document.getElementById('tempFactorSearchResults').style.display = 'none';
@@ -1481,8 +1744,8 @@
                     <div class="top-item" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; background-color: #f9f9f9; cursor: pointer;" 
                          onclick="fillItemForm(${JSON.stringify(item).replace(/"/g, '&quot;')}, '${type}')">
                         <div><strong>${item.name || item.model}</strong></div>
-                        <div style="font-size: 0.8em; color: #666;">使用次数: ${item.usageCount || item.useCount || 1}</div>
-                        ${type === 'parts' ? `<div style="font-size: 0.8em; color: #888;">价格: ${item.defaultPrice || item.price || 0}</div>` : ''}
+                        <div style="font-size: 0.8em; color: #666;">被添加次数: ${item.addedCount || item.useCount || 1}</div>
+                        ${type === 'parts' ? `<div style="font-size: 0.8em; color: #888;">价格: ${item.price || 0}</div>` : ''}
                     </div>
                 `;
             });
@@ -1501,8 +1764,8 @@
         // 填充项目表单
         function fillItemForm(item, type) {
             if (type === 'parts') {
-                document.getElementById('partModel').value = item.Model || item.name;
-                document.getElementById('partPrice').value = item.ShowPrice || item.price || '';
+                document.getElementById('partModel').value = item.model || item.name;
+                document.getElementById('partPrice').value = item.price || '';
             } else if (type === 'fees') {
                 document.getElementById('tempFeeNameCart').value = item.Model || item.name;
                 document.getElementById('tempFeeAmountCart').value = item.ShowPrice || item.price || '';
@@ -1525,7 +1788,7 @@
                         model: itemModel
                     })
                 });
-                console.log('项目使用情况已记录:', response);
+                console.log('项目使用情况已记录:', response.message || response);
             } catch (error) {
                 console.error('记录项目使用情况失败:', error);
             }
@@ -1556,13 +1819,69 @@
             }
 
             // 更新被添加次数
-            await recordItemUsage(item);
+            await recordItemUsage(item.Model);
+            
+            // 更新baseData中的addedCount字段并同步到localStorage
+            updateAddedCount(item.Model);
 
             // 更新购物车计数
             updateCartCount();
 
             // 显示成功消息
             showMessage(`已将 ${item.Model} 添加到购物车`, 'success');
+        }
+        
+        // 更新项目被添加次数并同步到localStorage
+        function updateAddedCount(model) {
+            // 在baseData中找到对应的项目并更新addedCount
+            const baseDataIndex = baseData.findIndex(item => item.Model === model);
+            if (baseDataIndex !== -1) {
+                // 如果addedCount字段不存在，初始化为1，否则递增
+                if (baseData[baseDataIndex].addedCount === undefined) {
+                    baseData[baseDataIndex].addedCount = 1;
+                } else {
+                    baseData[baseDataIndex].addedCount += 1;
+                }
+            }
+            
+            // 在localStorage缓存中也更新addedCount
+            const cachedData = JSON.parse(localStorage.getItem('cachedMachineParts') || '[]');
+            if (cachedData && cachedData.length > 0) {
+                const cachedIndex = cachedData.findIndex(item => item.Model === model);
+                if (cachedIndex !== -1) {
+                    if (cachedData[cachedIndex].addedCount === undefined) {
+                        cachedData[cachedIndex].addedCount = 1;
+                    } else {
+                        cachedData[cachedIndex].addedCount += 1;
+                    }
+                } else {
+                    // 如果项目在localStorage中不存在但存在于baseData中，也将其添加到缓存
+                    const baseItem = baseData.find(item => item.Model === model);
+                    if (baseItem) {
+                        if (baseItem.addedCount === undefined) {
+                            baseItem.addedCount = 1;
+                        } else {
+                            baseItem.addedCount += 1;
+                        }
+                    }
+                }
+                
+                // 同步更新后的数据到localStorage
+                localStorage.setItem('cachedMachineParts', JSON.stringify(cachedData));
+            } else {
+                // 如果localStorage中没有数据，使用baseData并更新addedCount
+                const localStorageData = JSON.parse(JSON.stringify(baseData));
+                localStorageData.forEach(item => {
+                    if (item.Model === model) {
+                        if (item.addedCount === undefined) {
+                            item.addedCount = 1;
+                        } else {
+                            item.addedCount += 1;
+                        }
+                    }
+                });
+                localStorage.setItem('cachedMachineParts', JSON.stringify(localStorageData));
+            }
         }
 
         // 添加项目到选择列表
@@ -1897,26 +2216,15 @@
 
         // 显示产品详情
         function showItemDetail(item) {
-            // 构建所有字段的表格，使值可编辑
+            // 构建所有字段的表格，以只读形式显示
             let fieldsTable = '<div style="max-height: 70vh; overflow-y: auto;"><table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom:35px;">';
             fieldsTable += '<tbody>';
             
             // 遍历item的所有属性（除了image，因为我们要单独处理）
             for (const key in item) {
                 if (item.hasOwnProperty(key) && key !== 'image') {
-                    // 根据字段类型决定是否使用文本框
-                    let inputField;
-                    if (typeof item[key] === 'number') {
-                        if (key === 'ShowPrice') {
-                            // Special handling for ShowPrice - update the display when changed
-                            inputField = `<input type="number" class="detail-field-input" data-field="${key}" value="${item[key]}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" onchange="updatePriceDisplay('${key}', this.value)">`;
-                        } else {
-                            inputField = `<input type="number" class="detail-field-input" data-field="${key}" value="${item[key]}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">`;
-                        }
-                    } else {
-                        inputField = `<input type="text" class="detail-field-input" data-field="${key}" value="${item[key]}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">`;
-                    }
-                    fieldsTable += `<tr><td style="border: 1px solid #ddd; padding: 10px;"><strong>${key}</strong></td><td style="border: 1px solid #ddd; padding: 10px;">${inputField}</td></tr>`;
+                    // 以只读形式显示字段值
+                    fieldsTable += `<tr><td style="border: 1px solid #ddd; padding: 10px;"><strong>${key}</strong></td><td id="detail-field-${key}" style="border: 1px solid #ddd; padding: 10px;">${item[key]}</td></tr>`;
                 }
             }
             
@@ -1926,7 +2234,7 @@
             detailContent.innerHTML = `
                 <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
                     <div style="position: relative; display: inline-block;">
-                        <img id="detailImage" src="${item.image}" alt="${item.Model}" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
+                        <img id="detailImage" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.Model}" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
                         <button id="changeImageButton" onclick="changeImage()" style="position: absolute; bottom: 5px; right: 5px; background-color: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-size: 14px; cursor: pointer; z-index: 10;" title="更换图片">+</button>
                     </div>
                     <div style="margin-left: 20px;">
@@ -1934,15 +2242,20 @@
                         <p><strong>价格:</strong> <span id="detailShowPriceDisplay">${formatCurrency(item.ShowPrice)}</span></p>
                         <div style="margin-top: 10px;">
                             <button class="secondary" onclick="addToCartFromDetail()" style="margin-right: 10px;" title="添加到购物车">🛒 添加到购物车</button>
-                            <button class="secondary" onclick="saveDetailChanges()" style="background-color: #FF9800;" title="保存修改">💾 保存</button>
+                            <button id="editButton" class="secondary" onclick="toggleEditDetail()" style="background-color: #2196F3; color: white;" title="编辑">✏️ 编辑</button>
                         </div>
                     </div>
                 </div>
-                ${fieldsTable}
+                <div id="fieldsContainer">${fieldsTable}</div>
+                <div id="editControls" style="display: none; margin-top: 10px;">
+                    <button class="secondary" onclick="saveDetailChanges()" style="background-color: #4CAF50; color: white;" title="保存修改">💾 保存</button>
+                    <button class="secondary" onclick="cancelEditDetail()" style="background-color: #f44336; color: white;" title="取消编辑">❌ 取消</button>
+                </div>
             `;
 
             // 保存当前项目以供添加到购物车和保存使用
             window.currentDetailItem = JSON.parse(JSON.stringify(item)); // 深拷贝原始数据
+            window.originalDetailItem = JSON.parse(JSON.stringify(item)); // 保存原始数据用于取消编辑
 
             // 显示模态框
             document.getElementById('detailModal').style.display = 'block';
@@ -1996,41 +2309,177 @@
             // 获取当前显示的表单值并更新当前项目的值
             const currentModel = window.currentDetailItem.Model;
             
-            // 更新价格字段
-            const showPriceInput = document.querySelector('.detail-field-input[data-field="ShowPrice"]');
-            if (showPriceInput) {
-                const newShowPrice = parseFloat(showPriceInput.value) || 0;
-                window.currentDetailItem.ShowPrice = newShowPrice;
+            // 检查是否有实际更改
+            let hasChanges = false;
+            const updatedItem = JSON.parse(JSON.stringify(window.currentDetailItem));
+            
+            // 遍历所有详情字段，检查并更新当前项目的数据
+            for (const key in updatedItem) {
+                if (updatedItem.hasOwnProperty(key) && key !== 'image') {
+                    const fieldElement = document.getElementById(`detail-field-${key}`);
+                    if (fieldElement && fieldElement.querySelector('input')) {
+                        const inputElement = fieldElement.querySelector('input');
+                        let newValue;
+                        
+                        if (typeof updatedItem[key] === 'number') {
+                            newValue = parseFloat(inputElement.value) || 0;
+                        } else {
+                            newValue = inputElement.value;
+                        }
+                        
+                        // 检查值是否发生变化
+                        if (updatedItem[key] !== newValue) {
+                            hasChanges = true;
+                            updatedItem[key] = newValue;
+                        }
+                    }
+                }
             }
             
-            // 更新其他字段
-            const detailInputs = document.querySelectorAll('.detail-field-input');
-            detailInputs.forEach(input => {
-                const fieldName = input.getAttribute('data-field');
-                if (fieldName === 'ShowPrice') {
-                    // ShowPrice 已经单独处理
-                    return;
-                }
+            // 如果没有变化，不执行任何操作
+            if (!hasChanges) {
+                showMessage('没有检测到更改，无需保存', 'info');
+                // 切换回查看模式
+                viewFields();
                 
-                if (typeof window.currentDetailItem[fieldName] === 'number') {
-                    window.currentDetailItem[fieldName] = parseFloat(input.value) || 0;
-                } else {
-                    window.currentDetailItem[fieldName] = input.value;
-                }
-            });
-
-            // 在baseData中找到对应的项目并更新
-            const baseDataIndex = baseData.findIndex(item => item.Model === currentModel);
-            if (baseDataIndex !== -1) {
-                baseData[baseDataIndex] = JSON.parse(JSON.stringify(window.currentDetailItem));
+                const editButton = document.getElementById('editButton');
+                editButton.innerHTML = '✏️ 编辑';
+                editButton.onclick = toggleEditDetail;
                 
-                // 更新显示
-                showItemDetail(window.currentDetailItem);
-                
-                showMessage('数据已保存', 'success');
-            } else {
-                showMessage('无法找到对应的数据项', 'error');
+                const editControls = document.getElementById('editControls');
+                editControls.style.display = 'none';
+                return;
             }
+            
+            // 用更新后的数据替换当前项目
+            window.currentDetailItem = updatedItem;
+            
+            // 向后端发送更新请求
+            updateItemOnServer(updatedItem)
+                .then(success => {
+                    if (success) {
+                        // 在baseData中找到对应的项目并更新
+                        const baseDataIndex = baseData.findIndex(item => item.Model === currentModel);
+                        if (baseDataIndex !== -1) {
+                            baseData[baseDataIndex] = JSON.parse(JSON.stringify(window.currentDetailItem));
+                            
+                            // 更新显示
+                            showItemDetail(window.currentDetailItem);
+                            
+                            showMessage('数据已保存', 'success');
+                        } else {
+                            showMessage('无法找到对应的数据项', 'error');
+                        }
+                    } else {
+                        showMessage('保存到服务器失败', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('保存到服务器时出错: ' + error.message, 'error');
+                });
+        }
+        
+        // 向服务器更新项目
+        async function updateItemOnServer(item) {
+            try {
+                // 从原始API客户端复制请求方法
+                const response = await fetch(`/api/machine-parts/${encodeURIComponent(item.Model)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ...item,
+                        action: 'updateMachinePart'  // 添加action参数
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                return result.success === true;
+            } catch (error) {
+                console.error('更新项目到服务器失败:', error);
+                throw error;
+            }
+        }
+        
+        // 切换编辑模式
+        function toggleEditDetail() {
+            const fieldsContainer = document.getElementById('fieldsContainer');
+            const editControls = document.getElementById('editControls');
+            const editButton = document.getElementById('editButton');
+            
+            if (editButton.textContent.includes('编辑')) {
+                // 切换到编辑模式
+                editFields();
+                editButton.innerHTML = '💾 保存';
+                editButton.onclick = function() {
+                    saveDetailChanges(); // saveDetailChanges函数内部会处理界面切换
+                };
+                editControls.style.display = 'block';
+            } else {
+                // 切换回查看模式
+                viewFields();
+                editButton.innerHTML = '✏️ 编辑';
+                editButton.onclick = toggleEditDetail;
+                editControls.style.display = 'none';
+            }
+        }
+        
+        // 进入编辑模式
+        function editFields() {
+            for (const key in window.currentDetailItem) {
+                if (window.currentDetailItem.hasOwnProperty(key) && key !== 'image') {
+                    const fieldElement = document.getElementById(`detail-field-${key}`);
+                    if (fieldElement) {
+                        const currentValue = window.currentDetailItem[key];
+                        let inputField;
+                        if (typeof currentValue === 'number') {
+                            if (key === 'ShowPrice') {
+                                // Special handling for ShowPrice - update the display when changed
+                                inputField = `<input type="number" class="detail-field-input" data-field="${key}" value="${currentValue}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" onchange="updatePriceDisplay('${key}', this.value)">`;
+                            } else {
+                                inputField = `<input type="number" class="detail-field-input" data-field="${key}" value="${currentValue}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">`;
+                            }
+                        } else {
+                            inputField = `<input type="text" class="detail-field-input" data-field="${key}" value="${currentValue}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">`;
+                        }
+                        fieldElement.innerHTML = inputField;
+                    }
+                }
+            }
+        }
+        
+        // 进入查看模式
+        function viewFields() {
+            for (const key in window.currentDetailItem) {
+                if (window.currentDetailItem.hasOwnProperty(key) && key !== 'image') {
+                    const fieldElement = document.getElementById(`detail-field-${key}`);
+                    if (fieldElement) {
+                        const currentValue = window.currentDetailItem[key];
+                        fieldElement.innerHTML = currentValue;
+                    }
+                }
+            }
+        }
+        
+        // 取消编辑并恢复原始值
+        function cancelEditDetail() {
+            // 恢复原始数据
+            window.currentDetailItem = JSON.parse(JSON.stringify(window.originalDetailItem));
+            
+            // 切换回查看模式
+            viewFields();
+            
+            const editButton = document.getElementById('editButton');
+            editButton.innerHTML = '✏️ 编辑';
+            editButton.onclick = toggleEditDetail;
+            
+            const editControls = document.getElementById('editControls');
+            editControls.style.display = 'none';
         }
         
         // 更换图片
@@ -2170,7 +2619,7 @@
                         <tr>
                             <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
                             <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
-                                <img src="${item.image}" alt="${item.model}" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ddd;">
+                                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.model}" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ddd;">
                             </td>
                             <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                                 <strong>${item.model}</strong>
@@ -2360,18 +2809,39 @@
                                                 
                                                             tempItems.push(tempFee);
                                                             
-                                                            // 记录用户创建的费用（在服务器端记录）
+                                                            // 创建费用到服务器
                                                             try {
-                                                                await apiClient.createMachinePart({
-                                                                    Model: name,
-                                                                    Category: '临时费用',
-                                                                    ShowPrice: amount,
-                                                                    Description: '临时费用-' + name
-                                                                });
-                                                                showMessage('费用已记录到服务器', 'success');
+                                                                const newFee = {
+                                                                    name: name,
+                                                                    value: amount,
+                                                                    addedCount: 1 // 初始添加次数为1
+                                                                };
+                                                                
+                                                                const response = await apiClient.createTempFee(newFee);
+                                                                if (response.success) {
+                                                                    // 更新本地费用数据缓存
+                                                                    if (window.feesData) {
+                                                                        // 检查是否已存在同名费用，如果存在则更新，否则添加
+                                                                        const existingIndex = window.feesData.findIndex(f => f.name === name);
+                                                                        if (existingIndex !== -1) {
+                                                                            window.feesData[existingIndex] = { ...newFee, ...response.data };
+                                                                        } else {
+                                                                            window.feesData.push({ ...newFee, ...response.data });
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    // 更新本地时间戳缓存
+                                                                    if (response.timestamp) {
+                                                                        localStorage.setItem('lastFeesTimestamp', response.timestamp.toString());
+                                                                    }
+                                                                    
+                                                                    showMessage('费用已添加到服务器', 'success');
+                                                                } else {
+                                                                    showMessage('费用添加失败: ' + (response.error || '未知错误'), 'error');
+                                                                }
                                                             } catch (error) {
-                                                                console.error('记录费用到服务器失败:', error);
-                                                                showMessage('记录费用失败: ' + error.message, 'error');
+                                                                console.error('添加费用到服务器失败:', error);
+                                                                showMessage('添加费用失败: ' + error.message, 'error');
                                                             }
                                                             
                                                             renderCart();
@@ -2403,18 +2873,39 @@
         
                     tempItems.push(tempFactor);
                     
-                    // 记录用户创建的系数（在服务器端记录）
+                    // 创建系数到服务器
                     try {
-                        await apiClient.createMachinePart({
-                            Model: name,
-                            Category: '系数',
-                            ShowPrice: value,
-                            Description: '系数-' + name
-                        });
-                        showMessage('系数已记录到服务器', 'success');
+                        const newFactor = {
+                            name: name,
+                            value: value,
+                            addedCount: 1 // 初始添加次数为1
+                        };
+                        
+                        const response = await apiClient.createTempFactor(newFactor);
+                        if (response.success) {
+                            // 更新本地系数数据缓存
+                            if (window.factorsData) {
+                                // 检查是否已存在同名系数，如果存在则更新，否则添加
+                                const existingIndex = window.factorsData.findIndex(f => f.name === name);
+                                if (existingIndex !== -1) {
+                                    window.factorsData[existingIndex] = { ...newFactor, ...response.data };
+                                } else {
+                                    window.factorsData.push({ ...newFactor, ...response.data });
+                                }
+                            }
+                            
+                            // 更新本地时间戳缓存
+                            if (response.timestamp) {
+                                localStorage.setItem('lastFactorsTimestamp', response.timestamp.toString());
+                            }
+                            
+                            showMessage('系数已添加到服务器', 'success');
+                        } else {
+                            showMessage('系数添加失败: ' + (response.error || '未知错误'), 'error');
+                        }
                     } catch (error) {
-                        console.error('记录系数到服务器失败:', error);
-                        showMessage('记录系数失败: ' + error.message, 'error');
+                        console.error('添加系数到服务器失败:', error);
+                        showMessage('添加系数失败: ' + error.message, 'error');
                     }
                     
                     renderCart();
@@ -2461,7 +2952,44 @@
                                                                         return;
                                                                     }
                                 
-                                                                    const part = {
+                                                                    // 记录用户创建的部件（在服务器端记录）
+                                                                    try {
+                                                                        const response = await apiClient.createPart({
+                                                                            model: model,
+                                                                            price: price, // 使用新的price字段
+                                                                            remark: '', // 部件详细描述
+                                                                            addedCount: 1, // 被添加次数
+                                                                            action: 'createPart' // 操作类型
+                                                                        });
+                                                                        
+                                                                        // 如果服务器返回了新数据，更新本地缓存
+                                                                        if (response.data && response.timestamp) {
+                                                                            // 更新本地缓存的时间戳
+                                                                            if (response.timestamp > (lastUpdateTime || 0)) {
+                                                                                lastUpdateTime = response.timestamp;
+                                                                                // 如果有parts缓存，也应更新
+                                                                                if (window.partsData) {
+                                                                                    // 查找并更新或添加部件
+                                                                                    const existingIndex = window.partsData.findIndex(p => p.model === model);
+                                                                                    if (existingIndex !== -1) {
+                                                                                        // 更新现有部件
+                                                                                        window.partsData[existingIndex] = response.data;
+                                                                                    } else {
+                                                                                        // 添加新部件
+                                                                                        window.partsData.push(response.data);
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        
+                                                                        showMessage('部件已记录到服务器', 'success');
+                                                                    } catch (error) {
+                                                                        console.error('记录部件到服务器失败:', error);
+                                                                        showMessage('记录部件失败: ' + error.message, 'error');
+                                                                    }
+                                                                    
+                                                                    // 添加到购物车
+                                                                    const cartPart = {
                                                                         id: Date.now(),
                                                                         type: '部件',
                                                                         model: model,
@@ -2473,22 +3001,7 @@
                                                                         type: 'parts' // 标记为部件类型
                                                                     };
                                 
-                                                                    cartItems.push(part);
-                                                                    
-                                                                    // 记录用户创建的部件（在服务器端记录）
-                                                                    try {
-                                                                        await apiClient.createMachinePart({
-                                                                            Model: model,
-                                                                            Category: '自定义部件',
-                                                                            ShowPrice: price,
-                                                                            Description: '自定义部件-' + model,
-                                                                            image: './sample.jpg'
-                                                                        });
-                                                                        showMessage('部件已记录到服务器', 'success');
-                                                                    } catch (error) {
-                                                                        console.error('记录部件到服务器失败:', error);
-                                                                        showMessage('记录部件失败: ' + error.message, 'error');
-                                                                    }
+                                                                    cartItems.push(cartPart);
                                                                     
                                                                     renderCart();
                                                                     updateCartSummary(); // 更新主页面购物车摘要
@@ -3100,10 +3613,7 @@
 
         // 页面加载时初始化
         window.onload = async function() {
-            // 预加载最常用的项目
-            await preloadTopUsedItems();
-            
-            // 自动加载数据
+            // 自动加载数据（包含最常用项目的加载）
             await loadData();
 
             // 初始化购物车计数

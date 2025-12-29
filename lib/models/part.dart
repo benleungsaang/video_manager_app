@@ -11,29 +11,29 @@ class Part {
   final String model;           // 部件型号 (必填)
 
   @HiveField(2)
-  final String name;            // 部件名称 (必填)
+  final double price;           // 价格 (必填)
 
   @HiveField(3)
-  final double defaultPrice;    // 默认价格 (必填)
+  final String remark;          // 部件详细描述 (可选)
 
   @HiveField(4)
-  final int usageCount;         // 使用次数 (默认0，用于显示热门部件)
+  final int addedCount;         // 被添加次数 (可选)
 
   Part({
     required this.id,
     required this.model,
-    required this.name,
-    required this.defaultPrice,
-    this.usageCount = 0,
+    required this.price,
+    this.remark = '',
+    this.addedCount = 0,
   });
 
   factory Part.fromJson(Map<String, dynamic> json) {
     return Part(
       id: json['id']?.toString() ?? '',
       model: json['model']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
-      defaultPrice: (json['defaultPrice'] as num?)?.toDouble() ?? 0.0,
-      usageCount: json['usageCount']?.toInt() ?? 0,
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      remark: json['remark']?.toString() ?? '',
+      addedCount: json['addedCount']?.toInt() ?? 0,
     );
   }
 
@@ -41,9 +41,9 @@ class Part {
     return {
       'id': id,
       'model': model,
-      'name': name,
-      'defaultPrice': defaultPrice,
-      'usageCount': usageCount,
+      'price': price,
+      'remark': remark,
+      'addedCount': addedCount,
     };
   }
 
@@ -51,16 +51,16 @@ class Part {
   Part copyWith({
     String? id,
     String? model,
-    String? name,
-    double? defaultPrice,
-    int? usageCount,
+    double? price,
+    String? remark,
+    int? addedCount,
   }) {
     return Part(
       id: id ?? this.id,
       model: model ?? this.model,
-      name: name ?? this.name,
-      defaultPrice: defaultPrice ?? this.defaultPrice,
-      usageCount: usageCount ?? this.usageCount,
+      price: price ?? this.price,
+      remark: remark ?? this.remark,
+      addedCount: addedCount ?? this.addedCount,
     );
   }
 }

@@ -17,25 +17,22 @@ class TempFeeAdapter extends TypeAdapter<TempFee> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return TempFee(
-      id: fields[0] as String,
-      name: fields[1] as String,
-      defaultAmount: fields[2] as double,
-      usageCount: fields[3] as int,
+      name: fields[0] as String,
+      value: fields[1] as double,
+      addedCount: fields[2] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, TempFee obj) {
     writer
-      ..writeByte(4)
-      ..writeByte(0)
-      ..write(obj.id)
-      ..writeByte(1)
-      ..write(obj.name)
-      ..writeByte(2)
-      ..write(obj.defaultAmount)
       ..writeByte(3)
-      ..write(obj.usageCount);
+      ..writeByte(0)
+      ..write(obj.name)
+      ..writeByte(1)
+      ..write(obj.value)
+      ..writeByte(2)
+      ..write(obj.addedCount);
   }
 
   @override

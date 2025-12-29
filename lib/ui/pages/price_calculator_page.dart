@@ -929,7 +929,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
                                   children: [
                                     Text('${fee.name}:',
                                         style: const TextStyle(fontSize: 13)),
-                                    Text('¥${fee.defaultAmount.toStringAsFixed(2)}',
+                                    Text('¥${fee.value.toStringAsFixed(2)}',
                                         style: const TextStyle(fontSize: 13, color: Colors.green)),
                                   ],
                                 )),
@@ -958,7 +958,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
                                   children: [
                                     Text('${factor.name}:',
                                         style: const TextStyle(fontSize: 13)),
-                                    Text('${factor.defaultValue.toStringAsFixed(2)}x',
+                                    Text('${factor.value.toStringAsFixed(2)}x',
                                         style: const TextStyle(fontSize: 13, color: Colors.orange)),
                                   ],
                                 )),
@@ -1750,7 +1750,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
                                 ),
                                 Expanded(
                                   child: Text(
-                                    '¥${fee.defaultAmount.toStringAsFixed(2)}',
+                                    '¥${fee.value.toStringAsFixed(2)}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold),
                                   ),

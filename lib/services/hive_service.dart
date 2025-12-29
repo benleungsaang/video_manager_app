@@ -31,6 +31,19 @@ class HiveService {
     Hive.registerAdapter(TagAdapter());
     registerPriceCalculatorAdapters();
 
+    // 清理旧的temp_fees和temp_factors数据，由于模型改变导致不兼容
+    try {
+      await Hive.deleteBoxFromDisk(_tempFeesBox); // 删除旧的不兼容费用数据
+    } catch (e) {
+      print('删除旧的temp_fees数据失败(可能不存在): $e');
+    }
+    
+    try {
+      await Hive.deleteBoxFromDisk(_tempFactorsBox); // 删除旧的不兼容系数数据
+    } catch (e) {
+      print('删除旧的temp_factors数据失败(可能不存在): $e');
+    }
+
     // 打开箱
     await Hive.openBox<Video>(_videoBox);
     await Hive.openBox<Tag>(_tagBox);
