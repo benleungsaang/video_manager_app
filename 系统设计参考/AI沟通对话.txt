@@ -1,0 +1,7 @@
+当前的@server_service.dart文件太过臃肿了，不利于管理使用，请合理地拆分文件
+
+处理完前述要求后执行以下操作：
+1、对本次修改过的html文件做node -e语法检查，如本次无处理过html文件则跳过；
+2、html文件修改过后非必要不执行flutter build web，影响执行效率；
+3、有修改过的html文件在./web中的文件覆盖到./build/web中，如本次无处理过html文件则跳过；
+4、对本次修改过的dart文件做dart analyze语法检查，如本次无处理过dart文件则跳过；

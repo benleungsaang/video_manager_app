@@ -3,35 +3,23 @@ import 'package:path/path.dart' as p;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import '../../models/video.dart';
-
 import 'package:provider/provider.dart';
-
 import 'package:file_picker/file_picker.dart';
-
 import 'package:video_manager_app/ui/pages/server_control_page.dart';
 import 'package:video_manager_app/ui/pages/price_calculator_page.dart';
-
+import 'package:video_manager_app/ui/pages/user_management_page.dart';
 import 'package:video_manager_app/utils/file_utils.dart';
-
 import '../widgets/video_grid.dart';
-
 import '../widgets/upload_button.dart';
-
 import 'video_play_page.dart';
-
 import '../pages/tag_management_page.dart';
-
 import '../../providers/video_provider.dart';
-
 import '../../models/transcode_task.dart';
 import '../../providers/transcode_provider.dart';
 import '../widgets/transcode_queue_panel.dart';
 import '../widgets/file_replace_dialog.dart';
 import '../widgets/video_initialization_dialog.dart';
-import 'dart:io';
-import 'package:path/path.dart' as p;
 import '../../utils/storage_utils.dart';
-import '../../utils/file_utils.dart';
 
 class HomePage extends StatefulWidget {
   final String? initialSearchKeyword; // 添加初始搜索关键字参数
@@ -617,6 +605,18 @@ class _HomePageState extends State<HomePage> {
                 );
               },
               tooltip: '价格计算器',
+            ),
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserManagementPage(),
+                  ),
+                );
+              },
+              tooltip: '用户管理',
             ),
             IconButton(
               icon: const Icon(Icons.cloud, color: Colors.white),

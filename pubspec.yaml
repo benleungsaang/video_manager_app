@@ -65,6 +65,9 @@ dependencies:
   # 权限处理
   permission_handler: ^11.0.1
 
+  # TOTP验证
+  otp: ^3.1.3
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录/绑定TOTP - 视频管理系统</title>
+  <!-- 引入Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入Font Awesome图标库 -->
+  <link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
+  
+  <!-- 配置Tailwind自定义颜色 -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+          },
+        },
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
+  <!-- 顶部导航栏 -->
+  <header class="bg-white shadow-md dark:bg-gray-800 dark:text-white">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-primary dark:text-blue-400">视频管理系统 - 身份验证</h1>
+      
+      <!-- 导航链接 -->
+      <div class="flex space-x-4">
+        <button id="theme-toggle" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="切换深色模式">
+          <i class="fa fa-moon-o text-gray-700 dark:text-yellow-300"></i>
+        </button>
+        <a href="entry.html" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+          <i class="fa fa-home text-gray-700 dark:text-gray-300"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+      <div class="bg-white rounded-xl p-8 shadow-md text-center dark:bg-gray-800 dark:text-white">
+        <i class="fa fa-shield text-6xl text-primary mb-6"></i>
+        <h2 class="text-3xl font-bold mb-4">身份验证</h2>
+        <p class="text-lg text-gray-600 mb-8 dark:text-gray-300">
+          请选择您要进行的操作
+        </p>
+        
+        <div class="mb-8" id="login-section">
+          <h3 class="text-xl font-semibold mb-4">登录</h3>
+          <div class="space-y-4">
+            <div>
+              <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">用户名</label>
+              <input type="text" id="login-username" placeholder="输入用户名" 
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-gray-600 dark:text-white dark:border-gray-500">
+            </div>
+            <div>
+              <label for="login-code" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">TOTP验证码</label>
+              <input type="text" id="login-code" placeholder="输入6位验证码" maxlength="6"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-gray-600 dark:text-white dark:border-gray-500">
+            </div>
+            <button id="login-btn" 
+              class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+              <i class="fa fa-sign-in mr-2"></i>登录
+            </button>
+          </div>
+        </div>
+        
+        <div class="border-t my-6 dark:border-gray-700"></div>
+        
+        <div id="binding-section">
+          <h3 class="text-xl font-semibold mb-4">绑定TOTP验证器</h3>
+          <div class="space-y-4">
+            <div>
+              <label for="bind-username" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">用户名</label>
+              <input type="text" id="bind-username" placeholder="输入用户名" 
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-gray-600 dark:text-white dark:border-gray-500">
+            </div>
+            <button id="bind-generate-btn" 
+              class="w-full bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary/90 transition dark:bg-green-600 dark:hover:bg-green-700">
+              <i class="fa fa-qrcode mr-2"></i>生成绑定二维码
+            </button>
+          </div>
+          
+          <!-- 绑定界面（初始隐藏） -->
+          <div id="bind-qr-section" class="hidden mt-6 p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
+            <h4 class="text-lg font-semibold mb-3">绑定TOTP验证器</h4>
+            <p class="text-gray-600 mb-4 dark:text-gray-300">
+              请使用微软 Authenticator 或其他TOTP应用扫描下方二维码，然后输入6位验证码完成绑定
+            </p>
+            <div id="qr-container" class="flex justify-center mb-4">
+              <!-- 二维码将通过JavaScript动态生成 -->
+            </div>
+            <div class="mb-4">
+              <label for="bind-verification-code" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">验证码</label>
+              <input type="text" id="bind-verification-code" placeholder="输入6位验证码" maxlength="6"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-gray-600 dark:text-white dark:border-gray-500">
+            </div>
+            <button id="bind-verify-btn" 
+              class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+              <i class="fa fa-check-circle mr-2"></i>验证并绑定
+            </button>
+            <button id="bind-cancel-btn" class="w-full mt-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
+              <i class="fa fa-times mr-2"></i>取消绑定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 操作成功提示框 toast -->
+  <div id="toast"
+    class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+    操作成功
+  </div>
+
+  <script>
+    // API客户端
+    const apiClient = {
+      async request(endpoint, options = {}) {
+        const url = `/api${endpoint}`;
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          ...options
+        };
+
+        try {
+          const response = await fetch(url, config);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          return data;
+        } catch (error) {
+          console.error(`API请求失败 ${url}:`, error);
+          throw error;
+        }
+      }
+    };
+
+    // DOM元素引用
+    const elements = {
+      loginUsername: document.getElementById('login-username'),
+      loginCode: document.getElementById('login-code'),
+      loginBtn: document.getElementById('login-btn'),
+      
+      bindUsername: document.getElementById('bind-username'),
+      bindGenerateBtn: document.getElementById('bind-generate-btn'),
+      bindQrSection: document.getElementById('bind-qr-section'),
+      qrContainer: document.getElementById('qr-container'),
+      bindVerificationCode: document.getElementById('bind-verification-code'),
+      bindVerifyBtn: document.getElementById('bind-verify-btn'),
+      bindCancelBtn: document.getElementById('bind-cancel-btn'),
+      
+      themeToggle: document.getElementById('theme-toggle'),
+      toast: document.getElementById('toast')
+    };
+
+    // 当前绑定用户和密钥
+    let currentBindUser = '';
+    let currentBindSecret = '';
+
+    // 初始化函数
+    async function init() {
+      // 初始化主题
+      initTheme();
+      
+      // 绑定事件监听器
+      bindEvents();
+    }
+
+    // 绑定事件
+    function bindEvents() {
+      elements.loginBtn.addEventListener('click', login);
+      elements.bindGenerateBtn.addEventListener('click', generateTotpForBinding);
+      elements.bindVerifyBtn.addEventListener('click', verifyBinding);
+      elements.bindCancelBtn.addEventListener('click', cancelBinding);
+      elements.themeToggle.addEventListener('click', toggleTheme);
+    }
+
+    // 登录
+    async function login() {
+      const username = elements.loginUsername.value.trim();
+      const code = elements.loginCode.value.trim();
+
+      if (!username) {
+        showToast('请输入用户名', 'error');
+        return;
+      }
+
+      if (!code || code.length !== 6) {
+        showToast('请输入6位验证码', 'error');
+        return;
+      }
+
+      try {
+        const result = await apiClient.request('/users/authenticate', {
+          method: 'POST',
+          body: JSON.stringify({ username, code })
+        });
+
+        if (result.success && result.data.authenticated) {
+          showToast('登录成功');
+          // 这里可以重定向到用户主页或其他页面
+          alert('登录成功！您可以访问受保护的资源了。');
+        } else {
+          showToast('登录失败：验证码错误或用户状态异常', 'error');
+        }
+      } catch (error) {
+        console.error('登录失败:', error);
+        showToast('登录失败: ' + error.message, 'error');
+      }
+    }
+
+    // 生成TOTP密钥用于绑定
+    async function generateTotpForBinding() {
+      const username = elements.bindUsername.value.trim();
+
+      if (!username) {
+        showToast('请输入用户名', 'error');
+        return;
+      }
+
+      try {
+        const result = await apiClient.request('/users/generate-totp', {
+          method: 'POST',
+          body: JSON.stringify({ username })
+        });
+
+        if (result.success) {
+          currentBindUser = username;
+          currentBindSecret = result.data.secret;
+          
+          // 显示绑定界面和二维码
+          elements.bindQrSection.classList.remove('hidden');
+          
+          // 生成二维码（这里我们使用一个简化的方法，实际项目中可能需要引入二维码库）
+          const qrCodeHtml = `
+            <div class="bg-white p-4 rounded-lg inline-block">
+              <p class="text-sm mb-2 font-mono break-all">${result.data.otpAuthUrl}</p>
+              <div class="bg-gray-200 border-2 border-dashed rounded-xl w-48 h-48 flex items-center justify-center">
+                <span class="text-gray-500">二维码预览</span>
+              </div>
+              <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                TOTP密钥: ${result.data.secret}
+              </p>
+            </div>
+          `;
+          
+          elements.qrContainer.innerHTML = qrCodeHtml;
+          
+          showToast('TOTP密钥已生成，请扫描二维码完成绑定');
+        } else {
+          showToast(result.error || '生成TOTP密钥失败', 'error');
+        }
+      } catch (error) {
+        console.error('生成TOTP密钥失败:', error);
+        showToast('生成TOTP密钥失败: ' + error.message, 'error');
+      }
+    }
+
+    // 验证绑定
+    async function verifyBinding() {
+      const code = elements.bindVerificationCode.value.trim();
+
+      if (!code || code.length !== 6) {
+        showToast('请输入6位验证码', 'error');
+        return;
+      }
+
+      if (!currentBindUser) {
+        showToast('请先生成绑定密钥', 'error');
+        return;
+      }
+
+      try {
+        const result = await apiClient.request('/users/verify-totp', {
+          method: 'POST',
+          body: JSON.stringify({ username: currentBindUser, code })
+        });
+
+        if (result.success && result.data.isValid) {
+          showToast('绑定验证成功');
+          
+          // 根据用户角色提示下一步操作
+          alert('绑定验证成功！\n\n- 管理员用户将立即激活并可使用系统\n- 普通用户需要等待管理员审批后才能登录');
+          
+          // 重置绑定界面
+          cancelBinding();
+        } else {
+          showToast('验证码错误，请重试', 'error');
+        }
+      } catch (error) {
+        console.error('验证绑定失败:', error);
+        showToast('验证绑定失败: ' + error.message, 'error');
+      }
+    }
+
+    // 取消绑定
+    function cancelBinding() {
+      elements.bindQrSection.classList.add('hidden');
+      elements.bindVerificationCode.value = '';
+      currentBindUser = '';
+      currentBindSecret = '';
+      
+      // 重置表单
+      elements.bindUsername.value = '';
+    }
+
+    // 工具函数：显示操作成功提示框
+    function showToast(message, type = 'success') {
+      const toast = elements.toast;
+      toast.textContent = message;
+      toast.className = toast.className.replace('bg-green-500', type === 'error' ? 'bg-red-500' : 'bg-green-500');
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    // 切换深色模式
+    function toggleTheme() {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      
+      // 更新图标
+      updateThemeIcon();
+    }
+
+    // 更新主题图标
+    function updateThemeIcon() {
+      const iconElement = elements.themeToggle.querySelector('i');
+      if (document.documentElement.classList.contains('dark')) {
+        iconElement.className = 'fa fa-sun-o text-yellow-300';
+      } else {
+        iconElement.className = 'fa fa-moon-o text-gray-700 dark:text-gray-300';
+      }
+    }
+
+    // 初始化主题
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcon();
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

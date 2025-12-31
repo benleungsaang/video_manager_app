@@ -89,6 +89,24 @@
           </a>
         </div>
         
+        <!-- 管理员入口（只对管理员显示） -->
+        <div id="admin-section" class="mt-6 hidden">
+          <h3 class="text-xl font-semibold mb-3 text-center">管理员功能</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 用户管理入口 -->
+            <a href="user_management.html" class="bg-purple-50 p-6 rounded-lg border-2 border-purple-200 hover:border-purple-400 transition cursor-pointer dark:bg-purple-900/30 dark:border-purple-800 dark:hover:border-purple-600">
+              <i class="fa fa-users text-4xl text-purple-500 mb-4"></i>
+              <h3 class="text-xl font-semibold mb-2">用户管理</h3>
+              <p class="text-gray-600 mb-4 dark:text-gray-300">
+                管理系统用户，包括创建、审批等功能
+              </p>
+              <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition">
+                进入用户管理
+              </button>
+            </a>
+          </div>
+        </div>
+        
         <div class="mt-8 bg-gray-100 rounded-lg p-6 dark:bg-gray-700">
           <h3 class="text-lg font-semibold mb-3">系统信息</h3>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -115,6 +133,54 @@
   </footer>
 
   <script>
+    // API客户端
+    const apiClient = {
+      async request(endpoint, options = {}) {
+        const url = `/api${endpoint}`;
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          ...options
+        };
+
+        try {
+          const response = await fetch(url, config);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          return data;
+        } catch (error) {
+          console.error(`API请求失败 ${url}:`, error);
+          throw error;
+        }
+      }
+    };
+    
+    // 检查用户会话和角色
+    async function checkUserSession() {
+      try {
+        // 这里可以检查用户是否已登录
+        // 在实际应用中，通常通过检查存储的会话ID来验证用户状态
+        const sessionId = localStorage.getItem('sessionId');
+        if (sessionId) {
+          // 如果有会话ID，可以验证它是否仍然有效
+          // 这里我们简化处理，只检查是否存储了会话ID
+          const adminSection = document.getElementById('admin-section');
+          if (adminSection) {
+            // 显示管理员功能（在实际应用中，这应该基于用户角色）
+            adminSection.classList.remove('hidden');
+          }
+        }
+      } catch (error) {
+        console.error('检查用户会话失败:', error);
+      }
+    }
+
     // 更新时间
     function updateTime() {
       const now = new Date();
@@ -156,7 +222,7 @@
       localStorage.setItem('theme', theme);
     });
     
-    // 为卡片添加点击事件（除了链接本身）
+    // 为卡片添加点击事件（除了链接本身） 
     document.querySelectorAll('.bg-blue-50, .bg-green-50').forEach(card => {
       card.addEventListener('click', function(e) {
         // 如果点击的是按钮，不触发导航
@@ -170,6 +236,29 @@
         }
       });
     });
+    
+    // 添加身份验证入口
+    const mainGrid = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.gap-6');
+    if (mainGrid) {
+      const authCard = document.createElement('div');
+      authCard.className = 'bg-yellow-50 p-6 rounded-lg border-2 border-yellow-200 hover:border-yellow-400 transition cursor-pointer dark:bg-yellow-900/30 dark:border-yellow-800 dark:hover:border-yellow-600';
+      authCard.innerHTML = `
+        <a href="auth.html" class="">
+          <i class="fa fa-shield text-4xl text-yellow-500 mb-4"></i>
+          <h3 class="text-xl font-semibold mb-2">身份验证</h3>
+          <p class="text-gray-600 mb-4 dark:text-gray-300">
+            登录系统或绑定TOTP验证器
+          </p>
+          <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition">
+            进入验证页面
+          </button>
+        </a>
+      `;
+      mainGrid.appendChild(authCard);
+    }
+    
+    // 页面加载完成后检查用户会话
+    document.addEventListener('DOMContentLoaded', checkUserSession);
   </script>
 </body>
 </html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户管理 - 视频管理系统</title>
+  <!-- 引入Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入Font Awesome图标库 -->
+  <link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
+  
+  <!-- 配置Tailwind自定义颜色 -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#64748b',
+          },
+        },
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
+  <!-- 顶部导航栏 -->
+  <header class="bg-white shadow-md dark:bg-gray-800 dark:text-white">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-primary dark:text-blue-400">用户管理系统</h1>
+      
+      <!-- 导航链接 -->
+      <div class="flex space-x-4">
+        <button id="theme-toggle" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="切换深色模式">
+          <i class="fa fa-moon-o text-gray-700 dark:text-yellow-300"></i>
+        </button>
+        <a href="entry.html" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+          <i class="fa fa-home text-gray-700 dark:text-gray-300"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="bg-white rounded-xl p-6 shadow-md dark:bg-gray-800 dark:text-white mb-6">
+        <h2 class="text-2xl font-bold mb-4">用户管理面板</h2>
+        
+        <!-- 用户创建表单 -->
+        <div class="mb-8 p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
+          <h3 class="text-xl font-semibold mb-3">创建新用户</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label for="username-input" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">用户名</label>
+              <input type="text" id="username-input" placeholder="输入用户名" 
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-gray-600 dark:text-white dark:border-gray-500">
+            </div>
+            <div>
+              <label for="role-select" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">角色</label>
+              <select id="role-select" 
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 dark:bg-gray-600 dark:text-white dark:border-gray-500">
+                <option value="user">普通用户</option>
+                <option value="admin">管理员</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button id="create-user-btn" 
+                class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+                <i class="fa fa-user-plus mr-2"></i>创建用户
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 待审批用户列表 -->
+        <div class="mb-8">
+          <h3 class="text-xl font-semibold mb-3">待审批用户</h3>
+          <div id="pending-approval-container" class="space-y-3">
+            <!-- 待审批用户将通过JavaScript动态加载 -->
+            <div class="text-center text-gray-500 py-4">
+              <i class="fa fa-clock-o text-2xl mb-2"></i>
+              <p>暂无待审批用户</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 所有用户列表 -->
+        <div>
+          <h3 class="text-xl font-semibold mb-3">所有用户</h3>
+          <div id="all-users-container" class="overflow-x-auto">
+            <table class="min-w-full bg-white dark:bg-gray-700 rounded-lg overflow-hidden">
+              <thead class="bg-gray-100 dark:bg-gray-600">
+                <tr>
+                  <th class="py-2 px-4 text-left">ID</th>
+                  <th class="py-2 px-4 text-left">用户名</th>
+                  <th class="py-2 px-4 text-left">角色</th>
+                  <th class="py-2 px-4 text-left">状态</th>
+                  <th class="py-2 px-4 text-left">创建时间</th>
+                  <th class="py-2 px-4 text-left">最后登录</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <!-- 用户数据将通过JavaScript动态加载 -->
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-gray-500">加载中...</td>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 操作成功提示框 toast -->
+  <div id="toast"
+    class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 z-50">
+    操作成功
+  </div>
+
+  <script>
+    // API客户端
+    const apiClient = {
+      async request(endpoint, options = {}) {
+        const url = `/api${endpoint}`;
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          ...options
+        };
+
+        try {
+          const response = await fetch(url, config);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          return data;
+        } catch (error) {
+          console.error(`API请求失败 ${url}:`, error);
+          throw error;
+        }
+      }
+    };
+
+    // DOM元素引用
+    const elements = {
+      usernameInput: document.getElementById('username-input'),
+      roleSelect: document.getElementById('role-select'),
+      createUserBtn: document.getElementById('create-user-btn'),
+      pendingApprovalContainer: document.getElementById('pending-approval-container'),
+      allUsersContainer: document.getElementById('all-users-container'),
+      usersTableBody: document.getElementById('users-table-body'),
+      themeToggle: document.getElementById('theme-toggle'),
+      toast: document.getElementById('toast')
+    };
+
+    // 初始化函数
+    async function init() {
+      // 初始化主题
+      initTheme();
+      
+      // 绑定事件监听器
+      bindEvents();
+      
+      // 加载数据
+      await loadPendingApprovalUsers();
+      await loadAllUsers();
+    }
+
+    // 绑定事件
+    function bindEvents() {
+      elements.createUserBtn.addEventListener('click', createUser);
+      elements.themeToggle.addEventListener('click', toggleTheme);
+    }
+
+    // 创建用户
+    async function createUser() {
+      const username = elements.usernameInput.value.trim();
+      const role = elements.roleSelect.value;
+
+      if (!username) {
+        showToast('请输入用户名', 'error');
+        return;
+      }
+
+      try {
+        const result = await apiClient.request('/users', {
+          method: 'POST',
+          body: JSON.stringify({ username, role })
+        });
+
+        if (result.success) {
+          showToast('用户创建成功');
+          elements.usernameInput.value = '';
+          // 刷新用户列表
+          await loadPendingApprovalUsers();
+          await loadAllUsers();
+        } else {
+          showToast(result.error || '创建用户失败', 'error');
+        }
+      } catch (error) {
+        console.error('创建用户失败:', error);
+        showToast('创建用户失败: ' + error.message, 'error');
+      }
+    }
+
+    // 加载待审批用户
+    async function loadPendingApprovalUsers() {
+      try {
+        const result = await apiClient.request('/users/pending-approval');
+        
+        if (result.success) {
+          const users = result.data;
+          
+          if (users.length === 0) {
+            elements.pendingApprovalContainer.innerHTML = `
+              <div class="text-center text-gray-500 py-4">
+                <i class="fa fa-clock-o text-2xl mb-2"></i>
+                <p>暂无待审批用户</p>
+              </div>
+            `;
+            return;
+          }
+
+          let html = '';
+          users.forEach(user => {
+            html += `
+              <div class="p-4 bg-white border rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <h4 class="font-semibold">${user.username}</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                      角色: ${user.role === 'admin' ? '管理员' : '普通用户'} | 
+                      状态: ${getUserStatusText(user.status)}
+                    </p>
+                  </div>
+                  <div class="flex space-x-2">
+                    <button onclick="approveUser('${user.username}')" 
+                      class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition text-sm">
+                      <i class="fa fa-check mr-1"></i>通过
+                    </button>
+                    <button onclick="rejectUser('${user.username}')" 
+                      class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-sm">
+                      <i class="fa fa-times mr-1"></i>拒绝
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          
+          elements.pendingApprovalContainer.innerHTML = html;
+        } else {
+          elements.pendingApprovalContainer.innerHTML = `
+            <div class="text-center text-red-500 py-4">
+              <i class="fa fa-exclamation-triangle text-2xl mb-2"></i>
+              <p>加载待审批用户失败</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('加载待审批用户失败:', error);
+        elements.pendingApprovalContainer.innerHTML = `
+          <div class="text-center text-red-500 py-4">
+            <i class="fa fa-exclamation-triangle text-2xl mb-2"></i>
+            <p>加载待审批用户失败: ${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // 加载所有用户
+    async function loadAllUsers() {
+      try {
+        const result = await apiClient.request('/users');
+        
+        if (result.success) {
+          const users = result.data;
+          
+          if (users.length === 0) {
+            elements.usersTableBody.innerHTML = `
+              <tr>
+                <td colspan="6" class="text-center py-4 text-gray-500">暂无用户</td>
+              </tr>
+            `;
+            return;
+          }
+
+          let html = '';
+          users.forEach(user => {
+            html += `
+              <tr class="border-b dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <td class="py-2 px-4">${user.id}</td>
+                <td class="py-2 px-4">${user.username}</td>
+                <td class="py-2 px-4">${user.role === 'admin' ? '管理员' : '普通用户'}</td>
+                <td class="py-2 px-4">${getUserStatusText(user.status)}</td>
+                <td class="py-2 px-4">${formatDate(user.createdAt)}</td>
+                <td class="py-2 px-4">${user.lastLoginAt ? formatDate(user.lastLoginAt) : '从未登录'}</td>
+              </tr>
+            `;
+          });
+          
+          elements.usersTableBody.innerHTML = html;
+        } else {
+          elements.usersTableBody.innerHTML = `
+            <tr>
+              <td colspan="6" class="text-center py-4 text-red-500">加载用户失败</td>
+            </tr>
+          `;
+        }
+      } catch (error) {
+        console.error('加载用户失败:', error);
+        elements.usersTableBody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center py-4 text-red-500">加载用户失败: ${error.message}</td>
+          </tr>
+        `;
+      }
+    }
+
+    // 审批用户
+    async function approveUser(username) {
+      if (!confirm(`确定要审批通过用户 "${username}" 吗？`)) {
+        return;
+      }
+
+      try {
+        const result = await apiClient.request('/users/approve', {
+          method: 'POST',
+          body: JSON.stringify({ username })
+        });
+
+        if (result.success) {
+          showToast('用户审批通过');
+          // 刷新列表
+          await loadPendingApprovalUsers();
+          await loadAllUsers();
+        } else {
+          showToast(result.error || '审批失败', 'error');
+        }
+      } catch (error) {
+        console.error('审批用户失败:', error);
+        showToast('审批失败: ' + error.message, 'error');
+      }
+    }
+
+    // 拒绝用户审批
+    async function rejectUser(username) {
+      if (!confirm(`确定要拒绝用户 "${username}" 的审批吗？`)) {
+        return;
+      }
+
+      try {
+        const result = await apiClient.request('/users/reject', {
+          method: 'POST',
+          body: JSON.stringify({ username })
+        });
+
+        if (result.success) {
+          showToast('用户审批已拒绝');
+          // 刷新列表
+          await loadPendingApprovalUsers();
+          await loadAllUsers();
+        } else {
+          showToast(result.error || '拒绝审批失败', 'error');
+        }
+      } catch (error) {
+        console.error('拒绝用户审批失败:', error);
+        showToast('拒绝审批失败: ' + error.message, 'error');
+      }
+    }
+
+    // 获取用户状态文本
+    function getUserStatusText(status) {
+      switch (status) {
+        case 'pending_activation':
+          return '待激活';
+        case 'pending_approval':
+          return '待审批';
+        case 'pending_reset':
+          return '重置待审批';
+        case 'active':
+          return '活跃';
+        case 'disabled':
+          return '已禁用';
+        default:
+          return status;
+      }
+    }
+
+    // 工具函数：格式化日期
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    }
+
+    // 工具函数：显示操作成功提示框
+    function showToast(message, type = 'success') {
+      const toast = elements.toast;
+      toast.textContent = message;
+      toast.className = toast.className.replace('bg-green-500', type === 'error' ? 'bg-red-500' : 'bg-green-500');
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    // 切换深色模式
+    function toggleTheme() {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      
+      // 更新图标
+      updateThemeIcon();
+    }
+
+    // 更新主题图标
+    function updateThemeIcon() {
+      const iconElement = elements.themeToggle.querySelector('i');
+      if (document.documentElement.classList.contains('dark')) {
+        iconElement.className = 'fa fa-sun-o text-yellow-300';
+      } else {
+        iconElement.className = 'fa fa-moon-o text-gray-700 dark:text-gray-300';
+      }
+    }
+
+    // 初始化主题
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcon();
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

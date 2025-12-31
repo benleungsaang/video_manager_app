@@ -7,8 +7,39 @@ import '../models/cart_item.dart';
 import '../models/part.dart';
 import '../models/temp_fee.dart';
 import '../models/temp_factor.dart';
+import '../models/user.dart';
 import '../models/price_calculator_adapters.dart';
 import '../utils/storage_utils.dart'; // 新增导入
+
+// Temporary adapter for typeId 47 to handle old data
+class Type47Adapter extends TypeAdapter {
+  @override
+  final int typeId = 47;
+
+  @override
+  void write(BinaryWriter writer, dynamic obj) {
+    // Write nothing - this is just a placeholder to handle old data
+    writer.writeByte(0); // Write 0 fields
+  }
+
+  @override
+  dynamic read(BinaryReader reader) {
+    // Read the number of fields
+    final numOfFields = reader.readByte();
+    
+    // Skip all field keys and values to handle old data gracefully
+    for (int i = 0; i < numOfFields; i++) {
+      try {
+        reader.readByte(); // Skip field key
+        reader.read(); // Skip field value
+      } catch (e) {
+        // If there's an error reading, return null to avoid crashing
+        break;
+      }
+    }
+    return null; // Return null for old data that we no longer need
+  }
+}
 
 class HiveService {
   // 箱名定义
@@ -19,6 +50,7 @@ class HiveService {
   static const String _tempPartsBox = 'temp_parts';
   static const String _tempFeesBox = 'temp_fees';
   static const String _tempFactorsBox = 'temp_factors';
+  static const String _usersBox = 'users'; // Adding users box
 
   // 初始化数据库
   static Future<void> init() async {
@@ -29,7 +61,13 @@ class HiveService {
     // 注册适配器
     Hive.registerAdapter(VideoAdapter());
     Hive.registerAdapter(TagAdapter());
+    Hive.registerAdapter(UserAdapter());
     registerPriceCalculatorAdapters();
+    
+    // Register temporary adapter for typeId 47 to handle old data
+    if (!Hive.isAdapterRegistered(47)) {
+      Hive.registerAdapter(Type47Adapter());
+    }
 
     // 清理旧的temp_fees和temp_factors数据，由于模型改变导致不兼容
     try {
@@ -52,6 +90,8 @@ class HiveService {
     await Hive.openBox<Part>(_tempPartsBox);
     await Hive.openBox<TempFee>(_tempFeesBox);
     await Hive.openBox<TempFactor>(_tempFactorsBox);
+    // Open users box as well since the error occurs when UserService.init() is called
+    await Hive.openBox<User>(_usersBox);
   }
 
   // 获取视频箱

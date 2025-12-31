@@ -1,0 +1,5 @@
+[error] Target of URI doesn't exist: 'package:otp/otp.dart' (e:\flutter_projects\video_manager_app\lib\services\user_service.dart:4:8)
+[error] Undefined name 'OTP' (e:\flutter_projects\video_manager_app\lib\services\user_service.dart:77:20)
+[error] Undefined name 'OTP' (e:\flutter_projects\video_manager_app\lib\services\user_service.dart:113:21)
+[error] Undefined name 'OTP' (e:\flutter_projects\video_manager_app\lib\services\user_service.dart:218:21)
+[info] The imported package 'otp' isn't a dependency of the importing package (e:\flutter_projects\video_manager_app\lib\services\user_service.dart:4:8)
