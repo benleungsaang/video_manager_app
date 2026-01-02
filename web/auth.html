@@ -4,25 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>登录/绑定TOTP - 视频管理系统</title>
-  <!-- 引入Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入本地Tailwind CSS -->
+  <link rel="stylesheet" href="css/output.css">
   <!-- 引入Font Awesome图标库 -->
   <link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
   
-  <!-- 配置Tailwind自定义颜色 -->
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#64748b',
-          },
-        },
-      }
-    }
-  </script>
+  <!-- 引入QRCode库 -->
+  <script src="qrcode.min.js"></script>
 </head>
 
 <body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
@@ -74,7 +62,19 @@
         
         <div class="border-t my-6 dark:border-gray-700"></div>
         
-        <div id="binding-section">
+        <!-- 绑定TOTP验证器入口 -->
+        <div id="binding-entry-section" class="mb-6">
+          <h3 class="text-xl font-semibold mb-4">绑定TOTP验证器</h3>
+          <div class="text-center">
+            <button id="show-binding-btn" 
+              class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+              点击此处绑定TOTP验证器
+            </button>
+          </div>
+        </div>
+        
+        <!-- 绑定TOTP验证器表单（初始隐藏） -->
+        <div id="binding-section" class="hidden">
           <h3 class="text-xl font-semibold mb-4">绑定TOTP验证器</h3>
           <div class="space-y-4">
             <div>
@@ -164,6 +164,11 @@
       bindVerifyBtn: document.getElementById('bind-verify-btn'),
       bindCancelBtn: document.getElementById('bind-cancel-btn'),
       
+      // 新增元素
+      bindingEntrySection: document.getElementById('binding-entry-section'),
+      showBindingBtn: document.getElementById('show-binding-btn'),
+      bindingSection: document.getElementById('binding-section'),
+      
       themeToggle: document.getElementById('theme-toggle'),
       toast: document.getElementById('toast')
     };
@@ -171,6 +176,231 @@
     // 当前绑定用户和密钥
     let currentBindUser = '';
     let currentBindSecret = '';
+
+    // 生成二维码（使用本地qrcode库）
+    function generateQRCode(data, size = 200) {
+      return new Promise((resolve, reject) => {
+        // 创建一个临时div元素供qrcode库使用
+        const tempDiv = document.createElement('div');
+        tempDiv.style.display = 'inline-block';
+        tempDiv.style.overflow = 'hidden';
+        tempDiv.style.width = size + 'px';
+        tempDiv.style.height = size + 'px';
+        // 将div添加到页面中，以便能够获取其内容
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        document.body.appendChild(tempDiv);
+        
+        try {
+          // 尝试生成二维码，处理可能的数据溢出
+          // 创建QRCode实例
+          const qr = new QRCode(tempDiv, {
+            text: data,
+            width: size,
+            height: size,
+            colorDark: "#000000",
+            colorLight: "#FFFFFF",
+            correctLevel: QRCode.CorrectLevel.H  // 高纠错级别，提供更好的容错能力
+          });
+          
+          // 更新二维码（这会触发生成）
+          qr.makeCode(data);
+          
+          // 等待DOM更新后处理
+          setTimeout(() => {
+            // 查找生成的二维码元素
+            const qrElement = tempDiv.querySelector('canvas') || tempDiv.querySelector('img') || tempDiv.querySelector('table') || tempDiv.querySelector('svg');
+            
+            if (qrElement) {
+              if (qrElement.tagName === 'CANVAS') {
+                // 如果是canvas元素，直接获取data URL
+                const dataUrl = qrElement.toDataURL();
+                document.body.removeChild(tempDiv); // 清理临时元素
+                resolve(dataUrl);
+              } else if (qrElement.tagName === 'SVG') {
+                // 如果是SVG元素，转换为canvas
+                const svgData = new XMLSerializer().serializeToString(qrElement);
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // 设置白色背景
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, size, size);
+                
+                // 创建一个临时的SVG Blob URL
+                const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+                const svgUrl = URL.createObjectURL(svgBlob);
+                
+                const img = new Image();
+                img.onload = function() {
+                  try {
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const dataUrl = canvas.toDataURL();
+                    URL.revokeObjectURL(svgUrl); // 释放对象URL
+                    document.body.removeChild(tempDiv); // 清理临时元素
+                    resolve(dataUrl);
+                  } catch (e) {
+                    console.error('绘制SVG到canvas失败', e);
+                    document.body.removeChild(tempDiv);
+                    reject(e);
+                  }
+                };
+                
+                img.onerror = function() {
+                  console.error('SVG加载失败');
+                  URL.revokeObjectURL(svgUrl);
+                  document.body.removeChild(tempDiv);
+                  reject(new Error('SVG加载失败'));
+                };
+                
+                img.src = svgUrl;
+              } else if (qrElement.tagName === 'IMG') {
+                // 如果是img元素，绘制到canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // 设置白色背景
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, size, size);
+                
+                const img = qrElement;
+                ctx.drawImage(img, 0, 0, size, size);
+                
+                const dataUrl = canvas.toDataURL();
+                document.body.removeChild(tempDiv);
+                resolve(dataUrl);
+              } else {
+                // 如果是表格元素（老版本库可能使用表格）
+                // 创建一个canvas，并将表格内容转换为canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // 设置白色背景
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, size, size);
+                
+                // 由于表格无法直接转换，我们创建一个简单方案
+                // 借助html2canvas库可以实现（不过此处未引入该库）
+                // 因此我们保留DOM结构，获取其尺寸，然后移除
+                document.body.removeChild(tempDiv);
+                
+                // 针对表格格式的QR码，我们用最兼容的方式实现
+                // 首先尝试重新创建一个新的QR码对象并直接用canvas渲染
+                const newTempDiv = document.createElement('div');
+                newTempDiv.style.width = size + 'px';
+                newTempDiv.style.height = size + 'px';
+                newTempDiv.style.position = 'absolute';
+                newTempDiv.style.left = '-9999px';
+                document.body.appendChild(newTempDiv);
+                
+                const newQr = new QRCode(newTempDiv, {
+                  text: data,
+                  width: size,
+                  height: size,
+                  colorDark: "#000000",
+                  colorLight: "#FFFFFF",
+                  correctLevel: QRCode.CorrectLevel.M  // 中等纠错级别
+                });
+                
+                newQr.makeCode(data);
+                
+                // 确保渲染完成后再处理
+                setTimeout(() => {
+                  const newQrElement = newTempDiv.querySelector('canvas, svg, img');
+                  if (newQrElement && newQrElement.tagName === 'CANVAS') {
+                    const dataUrl = newQrElement.toDataURL();
+                    document.body.removeChild(newTempDiv);
+                    resolve(dataUrl);
+                  } else {
+                    // 如果还是不行，创建一个备用的canvas
+                    const fallbackCanvas = document.createElement('canvas');
+                    fallbackCanvas.width = size;
+                    fallbackCanvas.height = size;
+                    const fallbackCtx = fallbackCanvas.getContext('2d');
+                    fallbackCtx.fillStyle = '#FFFFFF';
+                    fallbackCtx.fillRect(0, 0, size, size);
+                    fallbackCtx.fillStyle = '#000000';
+                    fallbackCtx.font = '10px Arial';
+                    fallbackCtx.textAlign = 'center';
+                    fallbackCtx.textBaseline = 'middle';
+                    fallbackCtx.fillText('二维码', size/2, size/2 - 10);
+                    fallbackCtx.fillText('生成中...', size/2, size/2 + 10);
+                    
+                    document.body.removeChild(newTempDiv);
+                    resolve(fallbackCanvas.toDataURL());
+                  }
+                }, 50);
+              }
+            } else {
+              // 如果没有找到二维码元素，创建一个备用的canvas
+              document.body.removeChild(tempDiv);
+              const fallbackCanvas = document.createElement('canvas');
+              fallbackCanvas.width = size;
+              fallbackCanvas.height = size;
+              const fallbackCtx = fallbackCanvas.getContext('2d');
+              fallbackCtx.fillStyle = '#FFFFFF';
+              fallbackCtx.fillRect(0, 0, size, size);
+              fallbackCtx.fillStyle = '#000000';
+              fallbackCtx.font = '10px Arial';
+              fallbackCtx.textAlign = 'center';
+              fallbackCtx.textBaseline = 'middle';
+              fallbackCtx.fillText('二维码', size/2, size/2 - 10);
+              fallbackCtx.fillText('生成中...', size/2, size/2 + 10);
+              resolve(fallbackCanvas.toDataURL());
+            }
+          }, 50); // 短暂延迟以确保DOM更新
+        } catch (error) {
+          // 检查是否是数据长度溢出错误
+          if (error.message && error.message.includes('code length overflow')) {
+            console.warn('二维码数据长度溢出，尝试简化内容');
+            // 对于溢出情况，提供简化处理
+            document.body.removeChild(tempDiv);
+            
+            // 创建一个备用的canvas，并显示简化信息
+            const fallbackCanvas = document.createElement('canvas');
+            fallbackCanvas.width = size;
+            fallbackCanvas.height = size;
+            const fallbackCtx = fallbackCanvas.getContext('2d');
+            fallbackCtx.fillStyle = '#FFFFFF';
+            fallbackCtx.fillRect(0, 0, size, size);
+            fallbackCtx.fillStyle = '#000000';
+            fallbackCtx.font = '10px Arial';
+            fallbackCtx.textAlign = 'center';
+            fallbackCtx.textBaseline = 'middle';
+            fallbackCtx.fillText('二维码数据过长', size/2, size/2 - 15);
+            fallbackCtx.fillText('请手动输入密钥', size/2, size/2);
+            fallbackCtx.fillText('或使用认证应用', size/2, size/2 + 15);
+            
+            resolve(fallbackCanvas.toDataURL());
+          } else {
+            console.error('生成二维码失败:', error);
+            // 确保清理临时元素
+            if (tempDiv.parentNode) {
+              document.body.removeChild(tempDiv);
+            }
+            // 创建一个备用的canvas
+            const fallbackCanvas = document.createElement('canvas');
+            fallbackCanvas.width = size;
+            fallbackCanvas.height = size;
+            const fallbackCtx = fallbackCanvas.getContext('2d');
+            fallbackCtx.fillStyle = '#FFFFFF';
+            fallbackCtx.fillRect(0, 0, size, size);
+            fallbackCtx.fillStyle = '#000000';
+            fallbackCtx.font = '12px Arial';
+            fallbackCtx.textAlign = 'center';
+            fallbackCtx.textBaseline = 'middle';
+            fallbackCtx.fillText('QR生成失败', size/2, size/2);
+            resolve(fallbackCanvas.toDataURL());
+          }
+        }
+      });
+    }
 
     // 初始化函数
     async function init() {
@@ -188,6 +418,42 @@
       elements.bindVerifyBtn.addEventListener('click', verifyBinding);
       elements.bindCancelBtn.addEventListener('click', cancelBinding);
       elements.themeToggle.addEventListener('click', toggleTheme);
+      
+      // 添加回车键导航功能
+      elements.loginUsername.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          elements.loginCode.focus();
+        }
+      });
+      
+      elements.loginCode.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          login();
+        }
+      });
+      
+      // 绑定验证器相关输入框的回车键导航
+      elements.bindUsername.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          elements.bindGenerateBtn.click();
+        }
+      });
+      
+      elements.bindVerificationCode.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          verifyBinding();
+        }
+      });
+      
+      // 绑定显示TOTP绑定功能的按钮
+      elements.showBindingBtn.addEventListener('click', function() {
+        elements.bindingEntrySection.classList.add('hidden');
+        elements.bindingSection.classList.remove('hidden');
+      });
     }
 
     // 登录
@@ -212,9 +478,15 @@
         });
 
         if (result.success && result.data.authenticated) {
+          // 保存会话ID到localStorage
+          if (result.data.sessionId) {
+            localStorage.setItem('sessionId', result.data.sessionId);
+          }
+          // 保存用户名到localStorage
+          localStorage.setItem('username', username);
           showToast('登录成功');
-          // 这里可以重定向到用户主页或其他页面
-          alert('登录成功！您可以访问受保护的资源了。');
+          // 登录成功后重定向到入口页面
+          window.location.href = 'entry.html';
         } else {
           showToast('登录失败：验证码错误或用户状态异常', 'error');
         }
@@ -246,12 +518,14 @@
           // 显示绑定界面和二维码
           elements.bindQrSection.classList.remove('hidden');
           
-          // 生成二维码（这里我们使用一个简化的方法，实际项目中可能需要引入二维码库）
+          // 生成并显示二维码
+          const qrCodeDataUrl = await generateQRCode(result.data.otpAuthUrl, 192);
+          
           const qrCodeHtml = `
             <div class="bg-white p-4 rounded-lg inline-block">
               <p class="text-sm mb-2 font-mono break-all">${result.data.otpAuthUrl}</p>
-              <div class="bg-gray-200 border-2 border-dashed rounded-xl w-48 h-48 flex items-center justify-center">
-                <span class="text-gray-500">二维码预览</span>
+              <div class="flex items-center justify-center">
+                <img src="${qrCodeDataUrl}" alt="TOTP QR Code" class="w-48 h-48 border rounded" />
               </div>
               <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 TOTP密钥: ${result.data.secret}
@@ -317,6 +591,10 @@
       
       // 重置表单
       elements.bindUsername.value = '';
+      
+      // 隐藏完整的绑定界面，显示入口按钮
+      elements.bindingSection.classList.add('hidden');
+      elements.bindingEntrySection.classList.remove('hidden');
     }
 
     // 工具函数：显示操作成功提示框

@@ -1,0 +1,22 @@
+{
+  "name": "video-manager-app",
+  "version": "1.0.0",
+  "description": "视频管理系统Web端",
+  "main": "index.js",
+  "scripts": {
+    "build-css": "tailwindcss build web/css/tailwind-input.css -o web/css/output.css",
+    "watch-css": "tailwindcss build web/css/tailwind-input.css -o web/css/output.css --watch",
+    "dev": "npm run watch-css"
+  },
+  "keywords": [
+    "video",
+    "management",
+    "flutter",
+    "web"
+  ],
+  "author": "Video Manager App",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}

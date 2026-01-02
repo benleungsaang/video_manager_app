@@ -381,6 +381,12 @@ class ServerService with ChangeNotifier {
     router.get('/api/users/pending-approval', _userApiHandler.handleGetPendingApprovalUsers);
     router.post('/api/users/approve', _userApiHandler.handleApproveUser);
     router.post('/api/users/reject', _userApiHandler.handleRejectUser);
+    router.delete('/api/users/<username>', _userApiHandler.handleDeleteUser); // 删除用户
+    router.post('/api/users/<username>/disable', _userApiHandler.handleDisableUser); // 禁用用户
+    router.post('/api/users/<username>/enable', _userApiHandler.handleEnableUser);  // 恢复用户
+    router.post('/api/users/<username>/reset-binding', _userApiHandler.handleResetUserBinding); // 重置绑定
+    router.post('/api/session-validation', _userApiHandler.handleSessionValidation); // 会话验证
+    router.post('/api/current-user-info', _userApiHandler.handleGetCurrentUserInfo); // 获取当前用户信息
 
     // 视频流处理路由 - 支持Range和HEAD请求
     router.get('/videoStream/<videoId>', _handleVideoStream);

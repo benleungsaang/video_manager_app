@@ -4,39 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>视频管理系统 - 入口选择</title>
-  <!-- 引入Tailwind CSS用于快速构建UI -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入本地Tailwind CSS用于快速构建UI -->
+  <link rel="stylesheet" href="css/output.css">
   <!-- 引入Font Awesome图标库 -->
   <link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
-  
-  <!-- 配置Tailwind自定义颜色 -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#64748b',
-          },
-        },
-      }
-    }
-  </script>
-
-  <!-- 配置Tailwind深色模式 -->
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#64748b',
-          },
-        },
-      }
-    }
-  </script>
 </head>
 
 <body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
@@ -49,6 +20,9 @@
       <div class="flex space-x-4">
         <button id="theme-toggle" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="切换深色模式">
           <i class="fa fa-moon-o text-gray-700 dark:text-yellow-300"></i>
+        </button>
+        <button id="logout-btn" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="登出">
+          <i class="fa fa-sign-out text-gray-700 dark:text-gray-300"></i>
         </button>
       </div>
     </div>
@@ -164,20 +138,66 @@
     // 检查用户会话和角色
     async function checkUserSession() {
       try {
-        // 这里可以检查用户是否已登录
-        // 在实际应用中，通常通过检查存储的会话ID来验证用户状态
+        // 检查是否有会话ID
         const sessionId = localStorage.getItem('sessionId');
-        if (sessionId) {
-          // 如果有会话ID，可以验证它是否仍然有效
-          // 这里我们简化处理，只检查是否存储了会话ID
-          const adminSection = document.getElementById('admin-section');
-          if (adminSection) {
-            // 显示管理员功能（在实际应用中，这应该基于用户角色）
-            adminSection.classList.remove('hidden');
+        if (!sessionId) {
+          // 没有会话ID，重定向到登录页面
+          window.location.href = 'auth.html';
+          return;
+        }
+        
+        // 有会话ID，验证会话是否仍然有效
+        // 使用更安全的API端点，只返回当前用户信息
+        try {
+          const response = await fetch('/api/current-user-info', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId: sessionId })
+          });
+          
+          if (!response.ok) {
+            // 如果API返回错误，可能是会话已过期，重定向到登录页面
+            window.location.href = 'auth.html';
+            return;
           }
+          
+          const result = await response.json();
+          if (result.success && result.user) {
+            // 会话有效，检查当前用户角色
+            if (result.user.role === 'admin') {
+              // 如果是管理员，显示管理员功能
+              const adminSection = document.getElementById('admin-section');
+              if (adminSection) {
+                adminSection.classList.remove('hidden');
+              }
+            }
+            
+            // 隐藏身份验证入口（因为用户已登录）
+            hideAuthCard();
+          } else {
+            // 如果获取用户信息失败，也重定向到登录页面
+            window.location.href = 'auth.html';
+            return;
+          }
+        } catch (apiError) {
+          console.error('验证会话失败:', apiError);
+          // API请求失败，重定向到登录页面
+          window.location.href = 'auth.html';
+          return;
         }
       } catch (error) {
         console.error('检查用户会话失败:', error);
+        window.location.href = 'auth.html';
+      }
+    }
+    
+    // 隐藏身份验证入口
+    function hideAuthCard() {
+      const authCard = document.querySelector('.bg-yellow-50 p-6.rounded-lg.border-2.border-yellow-200');
+      if (authCard) {
+        authCard.style.display = 'none';
       }
     }
 
@@ -185,6 +205,35 @@
     function updateTime() {
       const now = new Date();
       document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+    }
+    
+    // 获取当前用户信息
+    async function getCurrentUser() {
+      try {
+        const response = await fetch('/api/users', {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+          const sessionId = localStorage.getItem('sessionId');
+          // 通过sessionId查找当前用户（这里我们简化处理，实际应该通过API验证session）
+          // 暂时通过用户名查找
+          const username = localStorage.getItem('username');
+          if (username) {
+            return result.data.find(user => user.username === username);
+          }
+        }
+      } catch (error) {
+        console.error('获取当前用户信息失败:', error);
+        return null;
+      }
     }
     
     // 初始化时间并设置定时器
@@ -237,28 +286,83 @@
       });
     });
     
-    // 添加身份验证入口
-    const mainGrid = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.gap-6');
-    if (mainGrid) {
-      const authCard = document.createElement('div');
-      authCard.className = 'bg-yellow-50 p-6 rounded-lg border-2 border-yellow-200 hover:border-yellow-400 transition cursor-pointer dark:bg-yellow-900/30 dark:border-yellow-800 dark:hover:border-yellow-600';
-      authCard.innerHTML = `
-        <a href="auth.html" class="">
-          <i class="fa fa-shield text-4xl text-yellow-500 mb-4"></i>
-          <h3 class="text-xl font-semibold mb-2">身份验证</h3>
-          <p class="text-gray-600 mb-4 dark:text-gray-300">
-            登录系统或绑定TOTP验证器
-          </p>
-          <button class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition">
-            进入验证页面
-          </button>
-        </a>
-      `;
-      mainGrid.appendChild(authCard);
-    }
+        
     
-    // 页面加载完成后检查用户会话
-    document.addEventListener('DOMContentLoaded', checkUserSession);
+        // 登出功能
+    
+        async function logout() {
+    
+          try {
+    
+            // 从localStorage中获取sessionId
+    
+            const sessionId = localStorage.getItem('sessionId');
+    
+            
+    
+            if (sessionId) {
+    
+              // 调用后端API登出（可选，清理服务器端会话）
+    
+              await apiClient.request('/users/logout', {
+    
+                method: 'POST',
+    
+                body: JSON.stringify({ sessionId: sessionId })
+    
+              }).catch(error => {
+    
+                // 如果登出API调用失败，也不影响本地登出
+    
+                console.warn('登出API调用失败:', error);
+    
+              });
+    
+            }
+    
+            
+    
+            // 清除本地存储的会话信息
+    
+            localStorage.removeItem('sessionId');
+    
+            localStorage.removeItem('username');
+    
+            
+    
+            // 重定向到登录页面
+    
+            window.location.href = 'auth.html';
+    
+          } catch (error) {
+    
+            console.error('登出过程中发生错误:', error);
+    
+            // 即使出错也清除本地会话并重定向
+    
+            localStorage.removeItem('sessionId');
+    
+            localStorage.removeItem('username');
+    
+            window.location.href = 'auth.html';
+    
+          }
+    
+        }
+    
+        
+    
+        // 绑定登出按钮事件
+    
+        document.getElementById('logout-btn').addEventListener('click', logout);
+    
+    
+    
+        // 页面加载完成后检查用户会话
+        document.addEventListener('DOMContentLoaded', async function() {
+          // 检查用户会话，如果未登录则自动跳转到auth页面
+          await checkUserSession();
+        });
   </script>
 </body>
 </html>

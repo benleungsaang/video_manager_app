@@ -79,13 +79,13 @@ class _UserManagementPageState extends State<UserManagementPage> {
     }
   }
 
-  // 删除用户
+  // 删除用户（真正的删除）
   Future<void> _deleteUser(User user) async {
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除用户 "${user.username}" 吗？'),
+        content: Text('确定要永久删除用户 "${user.username}" 吗？此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -101,14 +101,125 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     if (confirm == true) {
       try {
-        // 在实际应用中，可能需要一个删除用户的方法
-        // 这里暂时将用户状态改为disabled
-        user.status = 'disabled';
-        await user.save();
-        _refreshUsers();
-        _showSuccessDialog('用户已禁用');
+        // 实际删除用户
+        // 由于这是Flutter前端页面，需要调用后端API来完成操作
+        // 这里暂时使用UserService的直接方法，实际应用中应该通过API调用
+        final result = await _userService!.deleteUser(user.username);
+        if (result) {
+          _refreshUsers();
+          _showSuccessDialog('用户已永久删除');
+        } else {
+          _showErrorDialog('删除用户失败');
+        }
+      } catch (e) {
+        _showErrorDialog('删除用户失败: ${e.toString()}');
+      }
+    }
+  }
+  
+  // 禁用用户
+  Future<void> _disableUser(User user) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认禁用'),
+        content: Text('确定要禁用用户 "${user.username}" 吗？该用户将无法登录。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('禁用', style: TextStyle(color: Colors.orange)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final result = await _userService!.disableUser(user.username);
+        if (result) {
+          _refreshUsers();
+          _showSuccessDialog('用户已禁用');
+        } else {
+          _showErrorDialog('禁用用户失败');
+        }
       } catch (e) {
         _showErrorDialog('禁用用户失败: ${e.toString()}');
+      }
+    }
+  }
+  
+  // 重置用户绑定
+  Future<void> _resetUserBinding(User user) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认重置绑定'),
+        content: Text('确定要重置用户 "${user.username}" 的TOTP绑定吗？该用户需要重新绑定验证器。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('重置绑定', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final result = await _userService!.resetUserBinding(user.username);
+        if (result) {
+          _refreshUsers();
+          _showSuccessDialog('用户绑定已重置');
+        } else {
+          _showErrorDialog('重置用户绑定失败');
+        }
+      } catch (e) {
+        _showErrorDialog('重置用户绑定失败: ${e.toString()}');
+      }
+    }
+  }
+  
+  // 恢复被禁用的用户
+  Future<void> _enableUser(User user) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认恢复'),
+        content: Text('确定要恢复用户 "${user.username}" 吗？该用户将可以正常登录。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('恢复', style: TextStyle(color: Colors.green)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        final result = await _userService!.enableUser(user.username);
+        if (result && mounted) {
+          _refreshUsers();
+          _showSuccessDialog('用户已恢复');
+        } else if (mounted) {
+          _showErrorDialog('恢复用户失败');
+        }
+      } catch (e) {
+        if (mounted) {
+          _showErrorDialog('恢复用户失败: ${e.toString()}');
+        }
       }
     }
   }
@@ -456,11 +567,63 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     ],
                   ),
                 ],
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: '删除/禁用',
-                  onPressed: () => _deleteUser(user),
-                ),
+                // 如果是待审批状态的用户，不显示额外的管理操作
+                if (user.status != 'pending_approval' && user.status != 'pending_reset') ...[
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (String action) {
+                      switch (action) {
+                        case 'delete':
+                          _deleteUser(user);
+                          break;
+                        case 'disable':
+                          _disableUser(user);
+                          break;
+                        case 'enable':
+                          _enableUser(user);
+                          break;
+                        case 'reset_binding':
+                          _resetUserBinding(user);
+                          break;
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      if (user.status != 'disabled') ...[
+                        // 非禁用用户显示删除和禁用选项
+                        const PopupMenuItem<String>(
+                          value: 'delete',
+                          child: ListTile(
+                            leading: Icon(Icons.delete, color: Colors.red),
+                            title: Text('删除', style: TextStyle(color: Colors.red)),
+                          ),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'disable',
+                          child: ListTile(
+                            leading: Icon(Icons.block, color: Colors.orange),
+                            title: Text('禁用'),
+                          ),
+                        ),
+                      ] else ...[
+                        // 禁用用户显示恢复选项
+                        const PopupMenuItem<String>(
+                          value: 'enable',
+                          child: ListTile(
+                            leading: Icon(Icons.check_circle, color: Colors.green),
+                            title: Text('恢复', style: TextStyle(color: Colors.green)),
+                          ),
+                        ),
+                      ],
+                      const PopupMenuItem<String>(
+                        value: 'reset_binding',
+                        child: ListTile(
+                          leading: Icon(Icons.refresh, color: Colors.blue),
+                          title: Text('重置绑定'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ],

@@ -4,25 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>用户管理 - 视频管理系统</title>
-  <!-- 引入Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入本地Tailwind CSS -->
+  <link rel="stylesheet" href="css/output.css">
   <!-- 引入Font Awesome图标库 -->
   <link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
-  
-  <!-- 配置Tailwind自定义颜色 -->
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            primary: '#3b82f6',
-            secondary: '#64748b',
-          },
-        },
-      }
-    }
-  </script>
 </head>
 
 <body class="bg-gray-50 min-h-screen dark:bg-gray-900 dark:text-white">
@@ -39,6 +24,9 @@
         <a href="entry.html" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
           <i class="fa fa-home text-gray-700 dark:text-gray-300"></i>
         </a>
+        <button id="logout-btn" class="px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition" aria-label="登出">
+          <i class="fa fa-sign-out text-gray-700 dark:text-gray-300"></i>
+        </button>
       </div>
     </div>
   </header>
@@ -121,6 +109,49 @@
   </div>
 
   <script>
+    // 检查登录状态
+    async function checkAuth() {
+      const sessionId = localStorage.getItem('sessionId');
+      if (!sessionId) {
+        // 未登录，重定向到登录页面
+        alert('请先登录系统');
+        window.location.href = 'auth.html';
+        return false;
+      }
+      
+      // 验证会话是否仍然有效
+      try {
+        // 使用更安全的API端点，只验证会话有效性而不返回用户列表
+        const response = await fetch('/api/session-validation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sessionId: sessionId })
+        });
+        
+        if (!response.ok) {
+          // 如果API返回错误，会话可能已过期，重定向到登录页面
+          window.location.href = 'auth.html';
+          return false;
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+          window.location.href = 'auth.html';
+          return false;
+        }
+      } catch (error) {
+        console.error('验证会话失败:', error);
+        window.location.href = 'auth.html';
+        return false;
+      }
+      
+      return true;
+    }
+    
+    // 认证检查在 DOMContentLoaded 事件中进行，避免重复调用
+    
     // API客户端
     const apiClient = {
       async request(endpoint, options = {}) {
@@ -450,8 +481,54 @@
       updateThemeIcon();
     }
 
+    // 登出功能
+    async function logout() {
+      try {
+        // 从localStorage中获取sessionId
+        const sessionId = localStorage.getItem('sessionId');
+        
+        if (sessionId) {
+          // 调用后端API登出（可选，清理服务器端会话）
+          await apiClient.request('/users/logout', {
+            method: 'POST',
+            body: JSON.stringify({ sessionId: sessionId })
+          }).catch(error => {
+            // 如果登出API调用失败，也不影响本地登出
+            console.warn('登出API调用失败:', error);
+          });
+        }
+        
+        // 清除本地存储的会话信息
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('username');
+        
+        // 重定向到登录页面
+        window.location.href = 'auth.html';
+      } catch (error) {
+        console.error('登出过程中发生错误:', error);
+        // 即使出错也清除本地会话并重定向
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('username');
+        window.location.href = 'auth.html';
+      }
+    }
+    
     // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function() {
+      // 在认证检查通过后再初始化
+      if (checkAuth) {
+        checkAuth().then(isAuthenticated => {
+          if (isAuthenticated) {
+            init();
+          }
+        });
+      } else {
+        init();
+      }
+      
+      // 绑定登出按钮事件
+      document.getElementById('logout-btn')?.addEventListener('click', logout);
+    });
   </script>
 </body>
 </html>

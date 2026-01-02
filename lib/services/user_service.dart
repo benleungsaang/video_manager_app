@@ -87,22 +87,36 @@ class UserService {
       if (user == null) {
         throw Exception('用户不存在');
       }
+      
+      // 检查用户状态，只有待激活状态的用户可以生成TOTP密钥
+      if (user.status != 'pending_activation') {
+        if (user.totpSecret != null && user.totpSecret!.isNotEmpty) {
+          // 如果用户已经有绑定的TOTP密钥，则不允许重新生成（除非是重置操作）
+          if (!isReset) {
+            throw Exception('该账号已注册并绑定，无法重复生成TOTP密钥');
+          }
+          // 如果是重置操作，则允许继续
+        } else {
+          // 如果用户状态不是待激活，也不允许生成TOTP密钥
+          throw Exception('该账号已注册并绑定，无法重复生成TOTP密钥');
+        }
+      }
   
       // 生成新的TOTP密钥 (使用随机字符串作为密钥)
       final secret = _generateRandomSecret();
       
       // 根据角色和操作类型处理
       if (user.role == 'admin' && !isReset) {
-        // 管理员首次绑定，直接激活
-        user.totpSecret = secret;
-        user.status = 'active';
+        // 管理员首次绑定，设置为待绑定状态（pending_activation），验证后直接激活
+        user.pendingSecret = secret;
+        user.status = 'pending_activation';
       } else {
-        // 普通用户或重置操作，设置为待审核状态
+        // 普通用户或重置操作，设置为待绑定状态（pending_activation）
         user.pendingSecret = secret;
         if (isReset) {
           user.status = 'pending_reset';
         } else {
-          user.status = 'pending_approval';
+          user.status = 'pending_activation';
         }
       }
       
@@ -115,8 +129,10 @@ class UserService {
     String _generateRandomSecret() {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
       final random = Random.secure();
+      // 生成16位密钥，这是标准的TOTP密钥长度，符合安全要求
+      // 16位base32密钥提供约64位熵，符合安全要求
       return String.fromCharCodes(
-        Iterable.generate(32, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
+        Iterable.generate(16, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
       );
     }
     
@@ -154,77 +170,155 @@ class UserService {
     
             
     
-                  if (isValid) {
+                                                                        if (isValid) {
     
-                    // 验证成功后，如果是待激活状态，根据角色处理
+            
     
-                    if (user.status == 'pending_activation' && user.pendingSecret != null) {
+                                                                          // 验证成功后，根据用户状态处理
     
-                      // 这种情况不应该发生，因为pending_activation没有pendingSecret
+            
     
-                      // 如果有pendingSecret，应该是pending_approval或pending_reset
+                                                                          if (user.status == 'pending_activation' && user.pendingSecret != null) {
     
-                      if (user.role == 'admin') {
+            
     
-                        // 管理员绑定验证通过，直接激活
+                                                                            // 用户处于待绑定状态，验证后根据角色决定下一步
     
-                        user.totpSecret = user.pendingSecret;
+            
     
-                        user.pendingSecret = null;
+                                                                            user.totpSecret = user.pendingSecret;
     
-                        user.status = 'active';
+            
     
-                      } else {
+                                                                            user.pendingSecret = null;
     
-                        // 普通用户，设置为待审批状态
+            
     
-                        user.totpSecret = user.pendingSecret;
+                                                                            if (user.role == 'admin') {
     
-                        user.pendingSecret = null;
+            
     
-                        user.status = 'pending_approval';
+                                                                              // 管理员用户验证后直接激活
     
-                      }
+            
     
-                    } else if (user.status == 'pending_approval' && user.pendingSecret != null) {
+                                                                              user.status = 'active';
     
-                      // 普通用户绑定验证通过，但需要审批才能激活
+            
     
-                      // 这里只是验证绑定过程，实际激活需要审批流程
+                                                                            } else {
     
-                      user.totpSecret = user.pendingSecret;
+            
     
-                      user.pendingSecret = null;
+                                                                              // 普通用户验证后进入审批流程
     
-                      user.status = 'pending_approval';
+            
     
-                    } else if (user.status == 'pending_reset' && user.pendingSecret != null) {
+                                                                              user.status = 'pending_approval';
     
-                      // 重置验证通过
+            
     
-                      if (user.role == 'admin') {
+                                                                            }
     
-                        // 管理员重置，立即生效
+            
     
-                        user.totpSecret = user.pendingSecret;
+                                                                          } else if (user.status == 'pending_approval' && user.pendingSecret != null) {
     
-                        user.pendingSecret = null;
+            
     
-                        user.status = 'active';
+                                                                            // 审批过程中的验证（如重置审批），根据用户角色决定是否激活
     
-                      } else {
+            
     
-                        // 普通用户重置，需要审批
+                                                                            user.totpSecret = user.pendingSecret;
     
-                        user.totpSecret = user.pendingSecret;
+            
     
-                        user.pendingSecret = null;
+                                                                            user.pendingSecret = null;
     
-                        user.status = 'pending_reset';
+            
     
-                      }
+                                                                            if (user.role == 'admin') {
     
-                    }
+            
+    
+                                                                              // 管理员用户激活
+    
+            
+    
+                                                                              user.status = 'active';
+    
+            
+    
+                                                                            } else {
+    
+            
+    
+                                                                              // 普通用户保持审批状态
+    
+            
+    
+                                                                              user.status = 'pending_approval';
+    
+            
+    
+                                                                            }
+    
+            
+    
+                                                                          } else if (user.status == 'pending_reset' && user.pendingSecret != null) {
+    
+            
+    
+                                                                            // 重置验证通过
+    
+            
+    
+                                                                            if (user.role == 'admin') {
+    
+            
+    
+                                                                              // 管理员重置，立即生效
+    
+            
+    
+                                                                              user.totpSecret = user.pendingSecret;
+    
+            
+    
+                                                                              user.pendingSecret = null;
+    
+            
+    
+                                                                              user.status = 'active';
+    
+            
+    
+                                                                            } else {
+    
+            
+    
+                                                                              // 普通用户重置，需要审批
+    
+            
+    
+                                                                              user.totpSecret = user.pendingSecret;
+    
+            
+    
+                                                                              user.pendingSecret = null;
+    
+            
+    
+                                                                              user.status = 'pending_reset';
+    
+            
+    
+                                                                            }
+    
+            
+    
+                                                                          }
     
                     await user.save();
     
@@ -524,6 +618,25 @@ class UserService {
     return false;
   }
 
+  // 通过会话ID获取用户
+  Future<User?> getUserBySessionId(String sessionId) async {
+    for (final user in _box.values) {
+      if (user.sessions.contains(sessionId)) {
+        // 检查会话是否仍然有效（可添加会话过期逻辑，这里简化处理）
+        if (user.status == 'active') {
+          return user;
+        } else {
+          // 如果用户状态不是活跃的，会话无效
+          // 可选：自动清理无效会话
+          user.sessions.remove(sessionId);
+          await user.save();
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
   // 登出（删除会话）
   Future<void> logout(String sessionId) async {
     for (final user in _box.values) {
@@ -535,11 +648,89 @@ class UserService {
     }
   }
 
+  // 删除用户（真正的删除）
+  Future<bool> deleteUser(String username) async {
+    final user = await getUserByUsername(username);
+    if (user == null) {
+      return false;
+    }
+
+    try {
+      // 从Hive box中删除用户
+      await user.delete();
+      return true;
+    } catch (e) {
+      print('删除用户失败: $e');
+      return false;
+    }
+  }
+
+  // 禁用用户（设置状态为disabled，用户无法登录）
+  Future<bool> disableUser(String username) async {
+    final user = await getUserByUsername(username);
+    if (user == null) {
+      return false;
+    }
+
+    // 设置用户状态为禁用
+    user.status = 'disabled';
+    await user.save();
+    return true;
+  }
+
+  // 重置用户绑定（删除TOTP密钥，用户需要重新绑定）
+  Future<bool> resetUserBinding(String username) async {
+    final user = await getUserByUsername(username);
+    if (user == null) {
+      return false;
+    }
+
+    // 清除现有的TOTP密钥
+    user.totpSecret = null;
+    user.pendingSecret = null;
+    
+    // 如果用户状态是活跃的，重置为待激活状态
+    if (user.status == 'active') {
+      user.status = 'pending_activation';
+    }
+    // 如果用户状态是待审批或重置待审批，也重置为待激活状态
+    else if (user.status == 'pending_approval' || user.status == 'pending_reset') {
+      user.status = 'pending_activation';
+    }
+    
+    await user.save();
+    return true;
+  }
+
   // 获取待审批用户列表
   Future<List<User>> getPendingApprovalUsers() async {
     return _box.values
         .where((user) => user.status == 'pending_approval' || user.status == 'pending_reset')
         .toList();
+  }
+
+  // 恢复被禁用的用户
+  Future<bool> enableUser(String username) async {
+    final user = await getUserByUsername(username);
+    if (user == null) {
+      return false;
+    }
+
+    // 检查用户是否是被禁用状态
+    if (user.status == 'disabled') {
+      // 恢复用户状态，但需要验证用户是否已经有有效的TOTP密钥
+      if (user.totpSecret != null && user.totpSecret!.isNotEmpty) {
+        // 如果用户有TOTP密钥，直接恢复为活跃状态
+        user.status = 'active';
+      } else {
+        // 如果用户没有TOTP密钥，回到待激活状态
+        user.status = 'pending_activation';
+      }
+      await user.save();
+      return true;
+    }
+
+    return false; // 用户不是被禁用状态
   }
 
   // 关闭Hive box
