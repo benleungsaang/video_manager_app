@@ -23,12 +23,41 @@
     
     /* 表格行悬停效果 */
     .hover-row:hover {
-      background-color: #f7fafc;
+      background-color: #f0f9ff !important; /* 使用更明显的蓝色调背景 */
+      color: #1e293b; /* 确保文字颜色在悬停时可见 */
+    }
+    
+    /* 深色模式下的悬停效果 */
+    .dark .hover-row:hover {
+      background-color: #1e3a8a !important; /* 深蓝色背景 */
+      color: #f8fafc; /* 浅色文字 */
+    }
+    
+    /* 标签页活动状态样式 */
+    .active-tab {
+      background-color: #dbeafe !important;
+      color: #1d4ed8 !important;
+    }
+    
+    .dark .active-tab {
+      background-color: #3b82f6 !important;
+      color: white !important;
+    }
+    
+    /* 按钮间距 */
+    .button-group {
+      display: flex;
+      gap: 0.75rem; /* 12px */
     }
     
     /* 模态框背景模糊效果 */
     .modal-backdrop {
       backdrop-filter: blur(4px);
+    }
+    
+    /* 为表格行添加手指指针效果 */
+    .hover-row {
+      cursor: pointer;
     }
   </style>
 </head>
@@ -57,10 +86,10 @@
         <!-- 标签页导航 -->
         <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
           <nav class="flex space-x-8">
-            <button id="machines-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm active-tab border-primary text-primary dark:text-blue-400 dark:border-blue-400 bg-gray-100 dark:bg-gray-700 rounded-t-lg">机器管理</button>
-            <button id="parts-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">部件管理</button>
-            <button id="fees-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">费用管理</button>
-            <button id="factors-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">系数管理</button>
+            <button id="machines-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm active-tab border-primary text-primary bg-blue-100 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-500 rounded-t-lg">机器管理</button>
+            <button id="parts-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">部件管理</button>
+            <button id="fees-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">费用管理</button>
+            <button id="factors-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">系数管理</button>
           </nav>
         </div>
         
@@ -68,12 +97,18 @@
         <div id="machines-content" class="tab-content">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold">机器管理</h2>
-            <div class="flex space-x-3">
+            <div class="button-group">
+              <button id="upload-machine-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition dark:bg-purple-700 dark:hover:bg-purple-800">
+                <i class="fa fa-upload mr-1"></i> 上传数据
+              </button>
               <button id="add-machine-btn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
                 <i class="fa fa-plus mr-1"></i> 添加机器
               </button>
               <button id="delete-selected-machines-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
+              </button>
+              <button id="clear-machines-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+                <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
           </div>
@@ -96,7 +131,7 @@
                     <input type="checkbox" id="select-all-machines" class="rounded">
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">型号</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">名称</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">旧型号</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">基础价格</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">操作</th>
                 </tr>
@@ -115,12 +150,15 @@
         <div id="parts-content" class="tab-content hidden">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold">部件管理</h2>
-            <div class="flex space-x-3">
+            <div class="button-group">
               <button id="add-part-btn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
                 <i class="fa fa-plus mr-1"></i> 添加部件
               </button>
               <button id="delete-selected-parts-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
+              </button>
+              <button id="clear-parts-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+                <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
           </div>
@@ -143,7 +181,6 @@
                     <input type="checkbox" id="select-all-parts" class="rounded">
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">型号</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">名称</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">基础价格</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">操作</th>
                 </tr>
@@ -162,12 +199,15 @@
         <div id="fees-content" class="tab-content hidden">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold">费用管理</h2>
-            <div class="flex space-x-3">
+            <div class="button-group">
               <button id="add-fee-btn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
                 <i class="fa fa-plus mr-1"></i> 添加费用
               </button>
               <button id="delete-selected-fees-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
+              </button>
+              <button id="clear-fees-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+                <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
           </div>
@@ -208,12 +248,15 @@
         <div id="factors-content" class="tab-content hidden">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold">系数管理</h2>
-            <div class="flex space-x-3">
+            <div class="button-group">
               <button id="add-factor-btn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
                 <i class="fa fa-plus mr-1"></i> 添加系数
               </button>
               <button id="delete-selected-factors-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
+              </button>
+              <button id="clear-factors-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+                <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
           </div>
@@ -270,8 +313,8 @@
         </div>
         
         <div>
-          <label for="machine-name" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">名称 <span class="text-red-500">*</span></label>
-          <input type="text" id="machine-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入机器名称">
+          <label for="machine-name" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">旧型号 <span class="text-red-500">*</span></label>
+          <input type="text" id="machine-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入机器旧型号">
         </div>
         
         <div>
@@ -305,11 +348,6 @@
         <div>
           <label for="part-model" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">型号 <span class="text-red-500">*</span></label>
           <input type="text" id="part-model" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入部件型号">
-        </div>
-        
-        <div>
-          <label for="part-name" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">名称 <span class="text-red-500">*</span></label>
-          <input type="text" id="part-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入部件名称">
         </div>
         
         <div>
@@ -395,6 +433,28 @@
     </div>
   </div>
 
+  <!-- 机器详情模态框 -->
+  <div id="machine-detail-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
+    <div class="bg-white rounded-xl w-full max-w-2xl p-6 dark:bg-gray-800 dark:text-white" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="machine-detail-title" class="text-xl font-bold">机器详情</h3>
+        <button id="close-detail-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div id="machine-detail-content" class="dark:text-gray-200">
+        <!-- 详情内容将动态填充 -->
+      </div>
+      
+      <div class="mt-6 flex justify-end space-x-3">
+        <button id="edit-from-detail-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+          <i class="fa fa-edit mr-1"></i> 编辑
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 确认删除模态框 -->
   <div id="confirm-delete-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
     <div class="bg-white rounded-xl w-full max-w-md p-6 dark:bg-gray-800 dark:text-white">
@@ -428,7 +488,24 @@
     // API客户端
     const apiClient = {
       async request(endpoint, options = {}) {
-        const url = `/api${endpoint}`;
+        // 为不同的端点类型使用正确的API前缀
+        let url;
+        if (endpoint.startsWith('/machines')) {
+          // 机器管理使用/machines端点
+          url = `/api/machines${endpoint.substring(9)}`; // 移除/machines并替换为/machines
+        } else if (endpoint.startsWith('/parts')) {
+          // 部件管理使用/parts端点
+          url = `/api${endpoint}`;
+        } else if (endpoint.startsWith('/temp-fees')) {
+          // 费用管理使用/temp-fees端点
+          url = `/api${endpoint}`;
+        } else if (endpoint.startsWith('/temp-factors')) {
+          // 系数管理使用/temp-factors端点
+          url = `/api${endpoint}`;
+        } else {
+          url = `/api${endpoint}`;
+        }
+        
         const config = {
           headers: {
             'Content-Type': 'application/json',
@@ -450,6 +527,103 @@
           console.error(`API请求失败 ${url}:`, error);
           throw error;
         }
+      }
+    };
+    
+    // 扩展API客户端以支持清空数据库功能
+    apiClient.clearMachines = async function() {
+      const url = '/api/machines/clear';
+      const config = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`清空机器数据库失败 ${url}:`, error);
+        throw error;
+      }
+    };
+    
+    apiClient.clearParts = async function() {
+      const url = '/api/parts/clear';
+      const config = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`清空部件数据库失败 ${url}:`, error);
+        throw error;
+      }
+    };
+    
+    apiClient.clearFees = async function() {
+      const url = '/api/temp-fees/clear';
+      const config = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`清空费用数据库失败 ${url}:`, error);
+        throw error;
+      }
+    };
+    
+    apiClient.clearFactors = async function() {
+      const url = '/api/temp-factors/clear';
+      const config = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`清空系数数据库失败 ${url}:`, error);
+        throw error;
       }
     };
     
@@ -637,6 +811,8 @@
       addEditFeeModal: document.getElementById('add-edit-fee-modal'),
       addEditFactorModal: document.getElementById('add-edit-factor-modal'),
       confirmDeleteModal: document.getElementById('confirm-delete-modal'),
+      machineDetailModal: document.getElementById('machine-detail-modal'),
+      machineDetailContent: document.getElementById('machine-detail-content'),
       
       // 机器模态框元素
       machineModalTitle: document.getElementById('machine-modal-title'),
@@ -738,6 +914,196 @@
       }).format(amount);
     }
     
+    // 显示机器详情
+    function showMachineDetail(machine, isEditing = false) {
+      // 保存当前机器数据以供编辑使用
+      state.currentDetailMachine = JSON.parse(JSON.stringify(machine)); // 深拷贝原始数据
+      state.originalDetailMachine = JSON.parse(JSON.stringify(machine)); // 保存原始数据用于取消编辑
+      
+      if (isEditing) {
+        // 编辑模式：显示可编辑的输入框
+        showMachineDetailEditForm();
+      } else {
+        // 查看模式：显示只读的详情
+        showMachineDetailView();
+      }
+    }
+    
+    // 显示机器详情视图
+    function showMachineDetailView() {
+      let fieldsTable = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+      
+      // 遌溉机器的所有属性（除了ID和内部属性）
+      for (const key in state.currentDetailMachine) {
+        if (state.currentDetailMachine.hasOwnProperty(key) && 
+            key !== 'id' && 
+            key !== 'Id' && 
+            key !== '_id' && 
+            key !== '__proto__' && 
+            key !== 'constructor') {
+          // 以只读形式显示字段值
+          fieldsTable += `<div class="border border-gray-200 dark:border-gray-700 p-2 rounded"><strong class="text-gray-700 dark:text-gray-300">${key}:</strong> <span class="text-gray-900 dark:text-gray-100">${state.currentDetailMachine[key]}</span></div>`;
+        }
+      }
+      
+      fieldsTable += '</div>';
+      
+      const detailContent = elements.machineDetailContent;
+      if (detailContent) {
+        detailContent.innerHTML = fieldsTable;
+        
+        // 设置标题
+        const detailTitle = document.getElementById('machine-detail-title');
+        if (detailTitle) {
+          detailTitle.textContent = `机器详情 - ${state.currentDetailMachine.Model || state.currentDetailMachine.model || state.currentDetailMachine.id || '未知'}`;
+        }
+      }
+      
+      // 更新按钮文本为"编辑"
+      const editButton = document.getElementById('edit-from-detail-btn');
+      if (editButton) {
+        editButton.innerHTML = '<i class="fa fa-edit mr-1"></i> 编辑';
+        editButton.onclick = function() {
+          showMachineDetail(state.currentDetailMachine, true); // 切入编辑模式
+        };
+      }
+    }
+    
+    // 显示机器详情编辑表单
+    function showMachineDetailEditForm() {
+      let fieldsForm = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+      
+      // 遍历机器的所有属性（除了ID和内部属性）
+      for (const key in state.currentDetailMachine) {
+        if (state.currentDetailMachine.hasOwnProperty(key) && 
+            key !== 'id' && 
+            key !== 'Id' && 
+            key !== '_id' && 
+            key !== '__proto__' && 
+            key !== 'constructor') {
+          // 以可编辑的输入框形式显示字段值
+          const value = state.currentDetailMachine[key];
+          let inputField;
+          
+          // 根据值的类型决定输入框类型
+          if (typeof value === 'number') {
+            inputField = `<input type="number" class="detail-field-input w-full px-2 py-1 border rounded dark:bg-gray-700 dark:text-white" data-field="${key}" value="${value}" step="0.01">`;
+          } else {
+            inputField = `<input type="text" class="detail-field-input w-full px-2 py-1 border rounded dark:bg-gray-700 dark:text-white" data-field="${key}" value="${value ? value.toString().replace(/"/g, '&quot;') : ''}">`;
+          }
+          
+          fieldsForm += `<div class="border border-gray-200 dark:border-gray-700 p-2 rounded"><strong class="text-gray-700 dark:text-gray-300">${key}:</strong> ${inputField}</div>`;
+        }
+      }
+      
+      fieldsForm += '</div>';
+      
+      const detailContent = elements.machineDetailContent;
+      if (detailContent) {
+        detailContent.innerHTML = fieldsForm;
+        
+        // 设置标题
+        const detailTitle = document.getElementById('machine-detail-title');
+        if (detailTitle) {
+          detailTitle.textContent = `编辑机器 - ${state.currentDetailMachine.Model || state.currentDetailMachine.model || state.currentDetailMachine.id || '未知'}`;
+        }
+      }
+      
+      // 更新按钮文本为"保存"
+      const editButton = document.getElementById('edit-from-detail-btn');
+      if (editButton) {
+        editButton.innerHTML = '<i class="fa fa-save mr-1"></i> 保存';
+        editButton.onclick = function() {
+          saveMachineDetailChanges();
+        };
+      }
+    }
+    
+    // 保存机器详情更改
+    async function saveMachineDetailChanges() {
+      // 获取表单中的所有更改值
+      const inputFields = document.querySelectorAll('.detail-field-input');
+      
+      inputFields.forEach(input => {
+        const fieldName = input.getAttribute('data-field');
+        const value = input.value;
+        
+        // 尝试将数字字段转换为数字类型
+        if (!isNaN(value) && value !== '') {
+          // 检查原来的值是否是数字类型
+          if (typeof state.originalDetailMachine[fieldName] === 'number') {
+            state.currentDetailMachine[fieldName] = parseFloat(value);
+          } else {
+            state.currentDetailMachine[fieldName] = value;
+          }
+        } else {
+          state.currentDetailMachine[fieldName] = value;
+        }
+      });
+      
+      // 检查是否有实际更改
+      let hasChanges = false;
+      for (const key in state.currentDetailMachine) {
+        if (state.currentDetailMachine.hasOwnProperty(key) && 
+            key !== 'id' && 
+            key !== 'Id' && 
+            key !== '_id' && 
+            key !== 'ID' && 
+            key !== '__proto__' && 
+            key !== 'constructor') {
+          if (state.currentDetailMachine[key] !== state.originalDetailMachine[key]) {
+            hasChanges = true;
+            break;
+          }
+        }
+      }
+      
+      if (!hasChanges) {
+        showToast('没有检测到更改，无需保存', 'info');
+        // 切回查看模式
+        showMachineDetail(state.currentDetailMachine, false);
+        return;
+      }
+      
+      try {
+        // 保存到服务器
+        const response = await apiClient.request(`/machines/${encodeURIComponent(state.currentDetailMachine.id || state.currentDetailMachine.Id || state.currentDetailMachine._id || state.currentDetailMachine.ID || '')}`, {
+          method: 'PUT',
+          body: JSON.stringify(state.currentDetailMachine)
+        });
+        
+        if (response.success) {
+          // 更新本地状态
+          const machineIndex = state.machines.findIndex(m => 
+            m.id === state.currentDetailMachine.id || 
+            m.Id === state.currentDetailMachine.Id || 
+            m._id === state.currentDetailMachine._id || 
+            m.ID === state.currentDetailMachine.ID
+          );
+          
+          if (machineIndex !== -1) {
+            state.machines[machineIndex] = { ...state.currentDetailMachine };
+            // 重新渲染机器列表
+            renderMachines();
+          }
+          
+          showToast('机器信息已保存', 'success');
+          // 切回查看模式
+          showMachineDetail(state.currentDetailMachine, false);
+        } else {
+          showToast(`保存失败: ${response.error || '未知错误'}`, 'error');
+        }
+      } catch (error) {
+        console.error('保存机器信息失败:', error);
+        showToast(`保存失败: ${error.message}`, 'error');
+      }
+    }
+    
+    // 关闭详情模态框
+    function closeDetailModal() {
+      elements.machineDetailModal.classList.add('hidden');
+    }
+    
     // 渲染机器列表
     function renderMachines(machines = state.machines) {
       if (!elements.machinesTableBody) return;
@@ -756,36 +1122,67 @@
       machines.forEach(machine => {
         const row = document.createElement('tr');
         row.className = 'hover-row';
-        // 为机器部件显示Model字段，这在机器管理页面中实际对应型号
-        const displayModel = machine.model || machine.Model || machine.originalModel || '';
-        const displayName = machine.name || machine.Name || '';
-        const displayPrice = machine.basePrice || machine.OriginalPrice || 0;
+        // 为机器部件使用标准字段名称，对ID字段也做兼容处理
+        const machineId = machine.id || machine.Id || machine._id || machine.ID || '';
+        const displayModel = machine.Model || machine.model || '';
+        const displayOldModel = machine.OriginalModel || machine.name || ''; // 旧型号现在显示在第二列
+        const displayPrice = machine.ShowPrice || machine.basePrice || 0;
         
         row.innerHTML = `
           <td class="px-6 py-4 whitespace-nowrap">
-            <input type="checkbox" class="machine-checkbox rounded" value="${machine.id}" ${state.selectedItems.machines.includes(machine.id) ? 'checked' : ''}>
+            <input type="checkbox" class="machine-checkbox rounded" value="${machineId}" ${state.selectedItems.machines.includes(machineId) ? 'checked' : ''}>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${displayModel}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${displayName}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${displayOldModel}</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${formatCurrency(displayPrice)}</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-            <button class="edit-machine-btn text-blue-600 hover:text-blue-900 mr-3" data-id="${machine.id}">
+            <button class="edit-machine-btn text-blue-600 hover:text-blue-900 mr-3" data-id="${machineId}">
               <i class="fa fa-edit"></i>
             </button>
-            <button class="delete-machine-btn text-red-600 hover:text-red-900" data-id="${machine.id}">
+            <button class="delete-machine-btn text-red-600 hover:text-red-900" data-id="${machineId}">
               <i class="fa fa-trash"></i>
             </button>
           </td>
         `;
-        // 添加行点击事件，用于编辑
+        // 添加行点击事件，用于显示详情
         row.addEventListener('click', (e) => {
           // 防止点击按钮时触发行点击事件
           if (e.target.closest('.edit-machine-btn, .delete-machine-btn, .machine-checkbox')) {
             return;
           }
-          // 点击行的其他部分时，编辑该项
-          editMachine(machine.id);
+          // 点击行的其他部分时，显示详情
+          showMachineDetail(machine);
         });
+        
+        // 绑定删除按钮事件
+        const deleteBtn = row.querySelector('.delete-machine-btn');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止触发行点击事件
+            const machineId = machine.id || machine.Id || machine._id || machine.ID || '';
+            if (machineId) {
+              deleteMachine(machineId);
+            } else {
+              console.error('机器ID为空或未定义:', machine);
+              showToast('机器ID无效，无法删除', true);
+            }
+          });
+        }
+        
+        // 绑定编辑按钮事件
+        const editBtn = row.querySelector('.edit-machine-btn');
+        if (editBtn) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止触发行点击事件
+            const machineId = machine.id || machine.Id || machine._id || machine.ID || '';
+            if (machineId) {
+              editMachine(machineId);
+            } else {
+              console.error('机器ID为空或未定义:', machine);
+              showToast('机器ID无效，无法编辑', true);
+            }
+          });
+        }
         elements.machinesTableBody.appendChild(row);
       });
       
@@ -831,7 +1228,7 @@
       if (parts.length === 0) {
         elements.partsTableBody.innerHTML = `
           <tr>
-            <td colspan="5" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">暂无数据</td>
+            <td colspan="4" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">暂无数据</td>
           </tr>
         `;
         return;
@@ -841,15 +1238,13 @@
         const row = document.createElement('tr');
         row.className = 'hover-row';
         const displayModel = part.model || part.Model || '';
-        const displayName = part.name || part.Name || '';
-        const displayPrice = part.basePrice || 0;
+        const displayPrice = part.price || part.basePrice || 0;  // 部件通常使用price字段
         
         row.innerHTML = `
           <td class="px-6 py-4 whitespace-nowrap">
             <input type="checkbox" class="part-checkbox rounded" value="${part.id}" ${state.selectedItems.parts.includes(part.id) ? 'checked' : ''}>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${displayModel}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${displayName}</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${formatCurrency(displayPrice)}</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
             <button class="edit-part-btn text-blue-600 hover:text-blue-900 mr-3" data-id="${part.id}">
@@ -924,7 +1319,7 @@
         const row = document.createElement('tr');
         row.className = 'hover-row';
         const displayName = fee.name || fee.Name || '';
-        const displayAmount = fee.amount || 0;
+        const displayAmount = fee.amount || fee.value || 0;  // 费用使用amount字段
         
         row.innerHTML = `
           <td class="px-6 py-4 whitespace-nowrap">
@@ -1070,7 +1465,7 @@
     // 加载机器数据
     async function loadMachines() {
       try {
-        const response = await fetch('/api/machine-parts', {
+        const response = await fetch('/api/machines', {
           headers: {
             'Content-Type': 'application/json',
           }
@@ -1078,13 +1473,9 @@
         
         if (response.ok) {
           const result = await response.json();
-          if (result.success) {
-            state.machines = result.data || [];
-            renderMachines();
-          } else {
-            console.error('获取机器数据失败:', result.error);
-            showToast('获取机器数据失败', true);
-          }
+          // 直接使用result.data，因为服务器返回的数据格式是 {data: [...], timestamp: ...}
+          state.machines = result.data || [];
+          renderMachines();
         } else {
           console.error('获取机器数据失败:', response.status, response.statusText);
           showToast('获取机器数据失败', true);
@@ -1106,13 +1497,9 @@
         
         if (response.ok) {
           const result = await response.json();
-          if (result.success) {
-            state.parts = result.data || [];
-            renderParts();
-          } else {
-            console.error('获取部件数据失败:', result.error);
-            showToast('获取部件数据失败', true);
-          }
+          // 直接使用result.data，因为服务器返回的数据格式是 {data: [...], timestamp: ...}
+          state.parts = result.data || [];
+          renderParts();
         } else {
           console.error('获取部件数据失败:', response.status, response.statusText);
           showToast('获取部件数据失败', true);
@@ -1134,13 +1521,9 @@
         
         if (response.ok) {
           const result = await response.json();
-          if (result.success) {
-            state.fees = result.data || [];
-            renderFees();
-          } else {
-            console.error('获取费用数据失败:', result.error);
-            showToast('获取费用数据失败', true);
-          }
+          // 直接使用result.data，因为服务器返回的数据格式是 {data: [...], timestamp: ...}
+          state.fees = result.data || [];
+          renderFees();
         } else {
           console.error('获取费用数据失败:', response.status, response.statusText);
           showToast('获取费用数据失败', true);
@@ -1162,13 +1545,9 @@
         
         if (response.ok) {
           const result = await response.json();
-          if (result.success) {
-            state.factors = result.data || [];
-            renderFactors();
-          } else {
-            console.error('获取系数数据失败:', result.error);
-            showToast('获取系数数据失败', true);
-          }
+          // 直接使用result.data，因为服务器返回的数据格式是 {data: [...], timestamp: ...}
+          state.factors = result.data || [];
+          renderFactors();
         } else {
           console.error('获取系数数据失败:', response.status, response.statusText);
           showToast('获取系数数据失败', true);
@@ -1203,9 +1582,9 @@
       if (state.currentEditItem) {
         state.currentEditType = 'machine';
         elements.machineModalTitle.textContent = '编辑机器';
-        elements.machineModel.value = state.currentEditItem.model || '';
-        elements.machineName.value = state.currentEditItem.name || '';
-        elements.machinePrice.value = state.currentEditItem.basePrice || '';
+        elements.machineModel.value = state.currentEditItem.Model || state.currentEditItem.model || '';
+        elements.machineName.value = state.currentEditItem.OriginalModel || state.currentEditItem.name || '';
+        elements.machinePrice.value = state.currentEditItem.ShowPrice || state.currentEditItem.basePrice || '';
         elements.addEditMachineModal.classList.remove('hidden');
       }
     }
@@ -1221,16 +1600,17 @@
       }
       
       const machineData = {
-        model: model,
-        name: name,
-        basePrice: price
+        Model: model,        // 使用Machine的标准字段
+        OriginalModel: name, // 使用Machine的标准字段
+        ShowPrice: price,    // 使用Machine的标准字段
+        id: state.currentEditItem ? state.currentEditItem.id : null  // 保留原始ID或为新项目设置为null（服务器将生成）
       };
       
       try {
         let response;
         if (state.currentEditItem) {
           // 编辑现有机器
-          response = await apiClient.request(`/machines/${state.currentEditItem.id}`, {
+          response = await apiClient.request(`/machines/${encodeURIComponent(state.currentEditItem.id)}`, {
             method: 'PUT',
             body: JSON.stringify(machineData)
           });
@@ -1256,9 +1636,16 @@
     }
     
     async function deleteMachine(id) {
+      // 验证ID是否有效
+      if (!id || id === '') {
+        showToast('无效的机器ID，无法删除', true);
+        console.error('删除机器时ID为空或未定义:', id);
+        return;
+      }
+      
       if (confirm('确定要删除这个机器吗？此操作无法撤销。')) {
         try {
-          const response = await apiClient.request(`/machines/${id}`, {
+          const response = await apiClient.request(`/machines/${encodeURIComponent(id)}`, {
             method: 'DELETE'
           });
           
@@ -1281,7 +1668,6 @@
       state.currentEditType = 'part';
       elements.partModalTitle.textContent = '添加部件';
       elements.partModel.value = '';
-      elements.partName.value = '';
       elements.partPrice.value = '';
       elements.addEditPartModal.classList.remove('hidden');
     }
@@ -1291,34 +1677,31 @@
       if (state.currentEditItem) {
         state.currentEditType = 'part';
         elements.partModalTitle.textContent = '编辑部件';
-        elements.partModel.value = state.currentEditItem.model || '';
-        elements.partName.value = state.currentEditItem.name || '';
-        elements.partPrice.value = state.currentEditItem.basePrice || '';
+        elements.partModel.value = state.currentEditItem.model || state.currentEditItem.Model || '';
+        elements.partPrice.value = state.currentEditItem.price || state.currentEditItem.basePrice || '';
         elements.addEditPartModal.classList.remove('hidden');
       }
     }
     
     async function savePart() {
       const model = elements.partModel.value.trim();
-      const name = elements.partName.value.trim();
       const price = parseFloat(elements.partPrice.value);
       
-      if (!model || !name || isNaN(price) || price < 0) {
+      if (!model || isNaN(price) || price < 0) {
         showToast('请填写完整且有效的信息', true);
         return;
       }
       
       const partData = {
         model: model,
-        name: name,
-        basePrice: price
+        price: price    // 部件通常使用price字段而不是basePrice
       };
       
       try {
         let response;
         if (state.currentEditItem) {
           // 编辑现有部件
-          response = await apiClient.request(`/parts/${state.currentEditItem.id}`, {
+          response = await apiClient.request(`/parts/${encodeURIComponent(state.currentEditItem.id)}`, {
             method: 'PUT',
             body: JSON.stringify(partData)
           });
@@ -1346,7 +1729,7 @@
     async function deletePart(id) {
       if (confirm('确定要删除这个部件吗？此操作无法撤销。')) {
         try {
-          const response = await apiClient.request(`/parts/${id}`, {
+          const response = await apiClient.request(`/parts/${encodeURIComponent(id)}`, {
             method: 'DELETE'
           });
           
@@ -1378,8 +1761,8 @@
       if (state.currentEditItem) {
         state.currentEditType = 'fee';
         elements.feeModalTitle.textContent = '编辑费用';
-        elements.feeName.value = state.currentEditItem.name || '';
-        elements.feeAmount.value = state.currentEditItem.amount || '';
+        elements.feeName.value = state.currentEditItem.name || state.currentEditItem.Name || '';
+        elements.feeAmount.value = state.currentEditItem.amount || state.currentEditItem.value || '';
         elements.addEditFeeModal.classList.remove('hidden');
       }
     }
@@ -1402,7 +1785,7 @@
         let response;
         if (state.currentEditItem) {
           // 编辑现有费用
-          response = await apiClient.request(`/temp-fees/${state.currentEditItem.id}`, {
+          response = await apiClient.request(`/temp-fees/${encodeURIComponent(state.currentEditItem.id)}`, {
             method: 'PUT',
             body: JSON.stringify(feeData)
           });
@@ -1430,7 +1813,7 @@
     async function deleteFee(id) {
       if (confirm('确定要删除这个费用吗？此操作无法撤销。')) {
         try {
-          const response = await apiClient.request(`/temp-fees/${id}`, {
+          const response = await apiClient.request(`/temp-fees/${encodeURIComponent(id)}`, {
             method: 'DELETE'
           });
           
@@ -1462,7 +1845,7 @@
       if (state.currentEditItem) {
         state.currentEditType = 'factor';
         elements.factorModalTitle.textContent = '编辑系数';
-        elements.factorName.value = state.currentEditItem.name || '';
+        elements.factorName.value = state.currentEditItem.name || state.currentEditItem.Name || '';
         elements.factorValue.value = state.currentEditItem.value || '';
         elements.addEditFactorModal.classList.remove('hidden');
       }
@@ -1486,7 +1869,7 @@
         let response;
         if (state.currentEditItem) {
           // 编辑现有系数
-          response = await apiClient.request(`/temp-factors/${state.currentEditItem.id}`, {
+          response = await apiClient.request(`/temp-factors/${encodeURIComponent(state.currentEditItem.id)}`, {
             method: 'PUT',
             body: JSON.stringify(factorData)
           });
@@ -1514,7 +1897,7 @@
     async function deleteFactor(id) {
       if (confirm('确定要删除这个系数吗？此操作无法撤销。')) {
         try {
-          const response = await apiClient.request(`/temp-factors/${id}`, {
+          const response = await apiClient.request(`/temp-factors/${encodeURIComponent(id)}`, {
             method: 'DELETE'
           });
           
@@ -1542,7 +1925,7 @@
         try {
           // 批量删除选中的机器
           for (const id of state.selectedItems.machines) {
-            await apiClient.request(`/machines/${id}`, {
+            await apiClient.request(`/machines/${encodeURIComponent(id)}`, {
               method: 'DELETE'
             });
           }
@@ -1568,7 +1951,7 @@
         try {
           // 批量删除选中的部件
           for (const id of state.selectedItems.parts) {
-            await apiClient.request(`/parts/${id}`, {
+            await apiClient.request(`/parts/${encodeURIComponent(id)}`, {
               method: 'DELETE'
             });
           }
@@ -1594,7 +1977,7 @@
         try {
           // 批量删除选中的费用
           for (const id of state.selectedItems.fees) {
-            await apiClient.request(`/temp-fees/${id}`, {
+            await apiClient.request(`/temp-fees/${encodeURIComponent(id)}`, {
               method: 'DELETE'
             });
           }
@@ -1620,7 +2003,7 @@
         try {
           // 批量删除选中的系数
           for (const id of state.selectedItems.factors) {
-            await apiClient.request(`/temp-factors/${id}`, {
+            await apiClient.request(`/temp-factors/${encodeURIComponent(id)}`, {
               method: 'DELETE'
             });
           }
@@ -1636,6 +2019,83 @@
       }
     }
     
+    // 清空数据库操作
+    async function clearMachinesDatabase() {
+      if (confirm('确定要清空所有机器数据吗？此操作将删除所有机器记录且无法撤销！')) {
+        try {
+          const response = await apiClient.clearMachines();
+          if (response.success) {
+            showToast(response.message || '成功清空机器数据库');
+            state.selectedItems.machines = []; // 清空选中项
+            await loadMachines(); // 重新加载数据
+            elements.selectAllMachines.checked = false; // 取消全选
+          } else {
+            showToast(response.error || '清空机器数据库失败', true);
+          }
+        } catch (error) {
+          console.error('清空机器数据库时出错:', error);
+          showToast(`清空机器数据库时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
+    async function clearPartsDatabase() {
+      if (confirm('确定要清空所有部件数据吗？此操作将删除所有部件记录且无法撤销！')) {
+        try {
+          const response = await apiClient.clearParts();
+          if (response.success) {
+            showToast(response.message || '成功清空部件数据库');
+            state.selectedItems.parts = []; // 清空选中项
+            await loadParts(); // 重新加载数据
+            elements.selectAllParts.checked = false; // 取消全选
+          } else {
+            showToast(response.error || '清空部件数据库失败', true);
+          }
+        } catch (error) {
+          console.error('清空部件数据库时出错:', error);
+          showToast(`清空部件数据库时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
+    async function clearFeesDatabase() {
+      if (confirm('确定要清空所有费用数据吗？此操作将删除所有费用记录且无法撤销！')) {
+        try {
+          const response = await apiClient.clearFees();
+          if (response.success) {
+            showToast(response.message || '成功清空费用数据库');
+            state.selectedItems.fees = []; // 清空选中项
+            await loadFees(); // 重新加载数据
+            elements.selectAllFees.checked = false; // 取消全选
+          } else {
+            showToast(response.error || '清空费用数据库失败', true);
+          }
+        } catch (error) {
+          console.error('清空费用数据库时出错:', error);
+          showToast(`清空费用数据库时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
+    async function clearFactorsDatabase() {
+      if (confirm('确定要清空所有系数数据吗？此操作将删除所有系数记录且无法撤销！')) {
+        try {
+          const response = await apiClient.clearFactors();
+          if (response.success) {
+            showToast(response.message || '成功清空系数数据库');
+            state.selectedItems.factors = []; // 清空选中项
+            await loadFactors(); // 重新加载数据
+            elements.selectAllFactors.checked = false; // 取消全选
+          } else {
+            showToast(response.error || '清空系数数据库失败', true);
+          }
+        } catch (error) {
+          console.error('清空系数数据库时出错:', error);
+          showToast(`清空系数数据库时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
     // 搜索功能
     function initSearch() {
       // 机器搜索
@@ -1647,7 +2107,9 @@
         }
         
         const filtered = state.machines.filter(machine => 
+          (machine.Model && machine.Model.toLowerCase().includes(searchTerm)) || 
           (machine.model && machine.model.toLowerCase().includes(searchTerm)) || 
+          (machine.OriginalModel && machine.OriginalModel.toLowerCase().includes(searchTerm)) ||
           (machine.name && machine.name.toLowerCase().includes(searchTerm))
         );
         renderMachines(filtered);
@@ -1776,20 +2238,25 @@
       initSelectAll();
       
       // 机器操作按钮
+      document.getElementById('upload-machine-btn').addEventListener('click', showUploadModal);
       elements.addMachineBtn.addEventListener('click', addMachine);
       elements.deleteSelectedMachinesBtn.addEventListener('click', deleteSelectedMachines);
+      document.getElementById('clear-machines-btn').addEventListener('click', clearMachinesDatabase);
       
       // 部件操作按钮
       elements.addPartBtn.addEventListener('click', addPart);
       elements.deleteSelectedPartsBtn.addEventListener('click', deleteSelectedParts);
+      document.getElementById('clear-parts-btn').addEventListener('click', clearPartsDatabase);
       
       // 费用操作按钮
       elements.addFeeBtn.addEventListener('click', addFee);
       elements.deleteSelectedFeesBtn.addEventListener('click', deleteSelectedFees);
+      document.getElementById('clear-fees-btn').addEventListener('click', clearFeesDatabase);
       
       // 系数操作按钮
       elements.addFactorBtn.addEventListener('click', addFactor);
       elements.deleteSelectedFactorsBtn.addEventListener('click', deleteSelectedFactors);
+      document.getElementById('clear-factors-btn').addEventListener('click', clearFactorsDatabase);
       
       // 机器模态框操作
       elements.closeMachineModal.addEventListener('click', () => {
@@ -1858,6 +2325,18 @@
           window.location.href = 'auth.html';
         }
       });
+      
+      // 机器详情模态框操作
+      document.getElementById('close-detail-modal').addEventListener('click', () => {
+        closeDetailModal();
+      });
+      
+      document.getElementById('edit-from-detail-btn').addEventListener('click', () => {
+        if (state.currentDetailMachine) {
+          editMachine(state.currentDetailMachine.id || state.currentDetailMachine.Id || state.currentDetailMachine._id || state.currentDetailMachine.ID || '');
+          closeDetailModal();
+        }
+      });
     }
     
     // 初始化页面
@@ -1877,6 +2356,80 @@
     
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', init);
+    
+    // 上传数据功能
+    function showUploadModal() {
+      document.getElementById('uploadModal').style.display = 'block';
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').style.display = 'none';
+    }
+
+    async function uploadFile() {
+      const fileInput = document.getElementById('uploadFile');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        showToast('请选择要上传的文件', true);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        // 显示上传进度信息
+        showToast('正在上传文件...', false);
+
+        // 发送文件到服务器
+        const response = await fetch('/api/upload-machines', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showToast('文件上传成功');
+          closeUploadModal();
+
+          // 重新加载数据以显示新上传的内容
+          await loadMachines();
+        } else {
+          showToast(`上传失败: ${result.error || '未知错误'}`, true);
+        }
+      } catch (error) {
+        console.error('上传文件时出错:', error);
+        showToast(`上传失败: ${error.message}`, true);
+      }
+    }
   </script>
+  
+  <!-- 上传数据模态框 -->
+  <div id="uploadModal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
+    <div class="bg-white rounded-xl w-full max-w-lg p-6 dark:bg-gray-800 dark:text-white">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">上传机器数据</h3>
+        <button id="close-upload-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="section">
+        <div class="form-group">
+          <label for="uploadFile">选择文件:</label>
+          <input type="file" id="uploadFile" accept=".json,.csv,.xlsx,.xls" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+        </div>
+        <div class="mt-6 flex justify-end space-x-3">
+          <button onclick="uploadFile()" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+            上传
+          </button>
+          <button onclick="closeUploadModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

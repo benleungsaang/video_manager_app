@@ -27,7 +27,7 @@ import '../utils/file_utils.dart'; // 新增导入
 import 'database_export_service.dart'; // 新增导入
 import '../repositories/video_repository.dart'; // 新增导入
 import '../repositories/tag_repository.dart'; // 新增导入
-import '../models/machine_part.dart'; // 新增导入
+import '../models/machine.dart'; // 新增导入
 import '../models/part.dart'; // 新增导入
 import '../models/temp_fee.dart'; // 新增导入
 import '../models/temp_factor.dart'; // 新增导入
@@ -68,22 +68,22 @@ class ServerService with ChangeNotifier {
   // bool _isInitialized = false; // 新增初始化标记
   // bool get isInitialized => _isInitialized;
 
-  // 数据版本时间戳 - 追踪机器部件、部件、费用和系数的最后修改时间
-  int _lastMachinePartsUpdate = DateTime.now().millisecondsSinceEpoch;
+  // 数据版本时间戳 - 追踪机器、部件、费用和系数的最后修改时间
+  int _lastMachinesUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastPartsUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastFeesUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastFactorsUpdate = DateTime.now().millisecondsSinceEpoch;
 
-  int get lastMachinePartsUpdate => _lastMachinePartsUpdate;
+  int get lastMachinesUpdate => _lastMachinesUpdate;
   int get lastPartsUpdate => _lastPartsUpdate;
   int get lastFeesUpdate => _lastFeesUpdate;
   int get lastFactorsUpdate => _lastFactorsUpdate;
 
-  // 更新机器部件最后修改时间
-  void updateMachinePartsTimestamp() {
-    _lastMachinePartsUpdate = DateTime.now().millisecondsSinceEpoch;
+  // 更新机器最后修改时间
+  void updateMachinesTimestamp() {
+    _lastMachinesUpdate = DateTime.now().millisecondsSinceEpoch;
     print(
-        '机器部件数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastMachinePartsUpdate)}');
+        '机器数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastMachinesUpdate)}');
   }
 
   // 更新部件最后修改时间
@@ -334,10 +334,12 @@ class ServerService with ChangeNotifier {
     router.get('/api/thumbnails/<id>', _videoApiHandler.handleGetThumbnail);
 
     // HTTP API端点 - 价格计算器相关
-    router.get('/api/machine-parts', _priceCalculatorApiHandler.handleGetMachineParts);
-    router.post('/api/machine-parts', _priceCalculatorApiHandler.handleCreateMachinePart);
-    router.put('/api/machine-parts/<id>', _priceCalculatorApiHandler.handleUpdateMachinePart);
-    router.delete('/api/machine-parts/<id>', _priceCalculatorApiHandler.handleDeleteMachinePart);
+    router.get('/api/machines', _priceCalculatorApiHandler.handleGetMachines);
+    router.post('/api/machines', _priceCalculatorApiHandler.handleCreateMachine);
+    router.put('/api/machines/<id>', _priceCalculatorApiHandler.handleUpdateMachine);
+    // 清空机器数据库 - 放在更通用的路由之前
+    router.delete('/api/machines/clear', _priceCalculatorApiHandler.handleClearMachineParts);
+    router.delete('/api/machines/<id>', _priceCalculatorApiHandler.handleDeleteMachine);
 
     // HTTP API端点 - 视频信息
     router.get('/api/videos/<id>/url', _videoApiHandler.handleGetVideoUrl);
@@ -347,6 +349,8 @@ class ServerService with ChangeNotifier {
     router.get('/api/parts', _priceCalculatorApiHandler.handleGetParts);
     router.post('/api/parts', _priceCalculatorApiHandler.handleCreatePart);
     router.put('/api/parts/<id>', _priceCalculatorApiHandler.handleUpdatePart);
+    // 清空部件数据库 - 放在更通用的路由之前
+    router.delete('/api/parts/clear', _priceCalculatorApiHandler.handleClearParts);
     router.delete('/api/parts/<id>', _priceCalculatorApiHandler.handleDeletePart);
 
     // HTTP API端点 - 统计信息（价格计算器）
@@ -356,12 +360,16 @@ class ServerService with ChangeNotifier {
     router.get('/api/temp-fees', _priceCalculatorApiHandler.handleGetTempFees);
     router.post('/api/temp-fees', _priceCalculatorApiHandler.handleCreateTempFee);
     router.put('/api/temp-fees/<id>', _priceCalculatorApiHandler.handleUpdateTempFee);
+    // 清空费用数据库 - 放在更通用的路由之前
+    router.delete('/api/temp-fees/clear', _priceCalculatorApiHandler.handleClearTempFees);
     router.delete('/api/temp-fees/<id>', _priceCalculatorApiHandler.handleDeleteTempFee);
     
     // HTTP API端点 - 系数相关（价格计算器）
     router.get('/api/temp-factors', _priceCalculatorApiHandler.handleGetTempFactors);
     router.post('/api/temp-factors', _priceCalculatorApiHandler.handleCreateTempFactor);
     router.put('/api/temp-factors/<id>', _priceCalculatorApiHandler.handleUpdateTempFactor);
+    // 清空系数数据库 - 放在更通用的路由之前
+    router.delete('/api/temp-factors/clear', _priceCalculatorApiHandler.handleClearTempFactors);
     router.delete('/api/temp-factors/<id>', _priceCalculatorApiHandler.handleDeleteTempFactor);
 
     // HTTP API端点 - 常用项目相关（价格计算器）
@@ -369,6 +377,9 @@ class ServerService with ChangeNotifier {
     router.get('/api/top-used/fees', _priceCalculatorApiHandler.handleGetTopUsedFees);
     router.get('/api/top-used/factors', _priceCalculatorApiHandler.handleGetTopUsedFactors);
 
+    // HTTP API端点 - 机器数据上传（价格计算器）
+    router.post('/api/upload-machines', _priceCalculatorApiHandler.handleUploadMachines);
+    
     // HTTP API端点 - 数据更新检查（价格计算器）
     router.get('/api/check-data-update', _priceCalculatorApiHandler.handleCheckDataUpdate);
 
@@ -589,26 +600,26 @@ class ServerService with ChangeNotifier {
     }
   }
 
-  // 检查是否仅仅是addedCount字段发生了变化
-  bool _isOnlyAddedCountChanged(MachinePart part, Map<String, dynamic> params) {
+  // 检查机器是否仅仅是addedCount字段发生了变化
+  bool _isOnlyAddedCountChangedForMachine(Machine machine, Map<String, dynamic> params) {
     // 检查除了addedCount之外的其他字段是否发生变化
-    if ((params['Model'] != null && params['Model'] != part.model) ||
+    if ((params['Model'] != null && params['Model'] != machine.model) ||
         (params['OriginalModel'] != null &&
-            params['OriginalModel'] != part.originalModel) ||
+            params['OriginalModel'] != machine.originalModel) ||
         (params['OriginalPrice'] != null &&
             (params['OriginalPrice'] as num).toDouble() !=
-                part.originalPrice) ||
+                machine.originalPrice) ||
         (params['ShowPrice'] != null &&
-            (params['ShowPrice'] as num).toDouble() != part.showPrice) ||
-        (params['image'] != null && params['image'] != part.image) ||
+            (params['ShowPrice'] as num).toDouble() != machine.showPrice) ||
+        (params['image'] != null && params['image'] != machine.image) ||
         (params['createdAt'] != null &&
-            params['createdAt'] != part.createdAt.toIso8601String()) ||
+            params['createdAt'] != machine.createdAt.toIso8601String()) ||
         (params['updatedAt'] != null &&
-            params['updatedAt'] != part.updatedAt.toIso8601String()) ||
+            params['updatedAt'] != machine.updatedAt.toIso8601String()) ||
         (params['createdBy'] != null &&
-            params['createdBy'] != part.createdBy) ||
+            params['createdBy'] != machine.createdBy) ||
         (params['updatedBy'] != null &&
-            params['updatedBy'] != part.updatedBy)) {
+            params['updatedBy'] != machine.updatedBy)) {
       // 检查otherProperties中的字段是否发生变化
       for (final key in params.keys) {
         if (![
@@ -624,10 +635,10 @@ class ServerService with ChangeNotifier {
           'updatedBy',
           'action'
         ].contains(key)) {
-          if (part.otherProperties.containsKey(key) &&
-              part.otherProperties[key] != params[key]) {
+          if (machine.otherProperties.containsKey(key) &&
+              machine.otherProperties[key] != params[key]) {
             return false; // 发现otherProperties中的字段变化
-          } else if (!part.otherProperties.containsKey(key) &&
+          } else if (!machine.otherProperties.containsKey(key) &&
               params[key] != null) {
             return false; // 发现新增的otherProperties字段
           }
@@ -656,7 +667,7 @@ class ServerService with ChangeNotifier {
       }
     }
 
-    if (part.otherProperties.length != paramsOtherPropsCount) {
+    if (machine.otherProperties.length != paramsOtherPropsCount) {
       return false; // otherProperties的长度变化
     }
 

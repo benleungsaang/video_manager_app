@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/price_calculator_provider.dart';
-import '../../models/machine_part.dart';
+import '../../models/machine.dart'; // 导入Machine模型
 
 // 价格计算器相关的通用组件
 class SearchBarWidget extends StatelessWidget {
@@ -31,11 +31,11 @@ class SearchBarWidget extends StatelessWidget {
   }
 }
 
-class MachinePartItem extends StatelessWidget {
-  final MachinePart part;
+class MachineItem extends StatelessWidget {
+  final Machine part;
   final VoidCallback? onTap;
 
-  const MachinePartItem({
+  const MachineItem({
     Key? key,
     required this.part,
     this.onTap,
@@ -105,7 +105,7 @@ class MachinePartItem extends StatelessWidget {
 }
 
 class AddToCartButton extends StatelessWidget {
-  final MachinePart part;
+  final Machine part;
   final String type;
 
   const AddToCartButton({
@@ -130,7 +130,7 @@ class AddToCartButton extends StatelessWidget {
               actualPrice: part.showPrice,
               image: part.image,
             );
-            provider.updateMachinePartAddedCount(part.model);
+            provider.updateMachineAddedCount(part.model);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${part.model} 已添加到购物车'),

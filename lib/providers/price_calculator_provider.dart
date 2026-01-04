@@ -3,16 +3,16 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:uuid/uuid.dart';
-import '../models/machine_part.dart';
+import '../models/machine.dart';
 import '../models/cart_item.dart';
 import '../models/part.dart';
 import '../models/temp_fee.dart';
 import '../models/temp_factor.dart';
 
 class PriceCalculatorProvider extends ChangeNotifier {
-  // 机器部件基础数据
-  List<MachinePart> _baseData = [];
-  List<MachinePart> _filteredData = [];
+  // 机器基础数据
+  List<Machine> _baseData = [];
+  List<Machine> _filteredData = [];
   String _searchTerm = '';
   
   // 购物车项目
@@ -28,8 +28,8 @@ class PriceCalculatorProvider extends ChangeNotifier {
   bool _showUnitPrice = true; // 是否显示单价
   
   // 获取器
-  List<MachinePart> get baseData => _baseData;
-  List<MachinePart> get filteredData => _searchTerm.isEmpty 
+  List<Machine> get baseData => _baseData;
+  List<Machine> get filteredData => _searchTerm.isEmpty 
     ? _baseData.take(5).toList() // 显示热门商品（被添加次数最多的前5个）
     : _filteredData;
   String get searchTerm => _searchTerm;
@@ -117,25 +117,25 @@ class PriceCalculatorProvider extends ChangeNotifier {
   // 机器部件基础数据管理
   Future<void> _loadBaseData() async {
     try {
-      final box = await Hive.openBox<MachinePart>('machine_parts');
+      final box = await Hive.openBox<Machine>('machines');
       _baseData = box.values.toList();
       // 注意：不关闭box，让Hive管理box的生命周期
     } catch (e) {
       print('加载机器部件数据失败: $e');
-      _baseData = [];
+      // 不清空现有数据，保持原有数据
     }
   }
   
-  Future<void> saveMachinePart(MachinePart part) async {
+  Future<void> saveMachine(Machine part) async {
     try {
-      final box = await Hive.openBox<MachinePart>('machine_parts');
+      final box = await Hive.openBox<Machine>('machines');
       
       // 如果是更新现有项目，先找到并更新
       final existingIndex = _baseData.indexWhere((item) => item.model == part.model);
       if (existingIndex != -1) {
         _baseData[existingIndex] = part;
         // 重建整个box以确保数据一致性
-        await _rebuildMachinePartsBox();
+        await _rebuildMachinesBox();
       } else {
         // 如果是新项目，添加到列表
         _baseData.add(part);
@@ -147,7 +147,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
     } catch (e) {
       print('保存机器部件失败: $e');
       // 如果保存失败，尝试重建box
-      await _rebuildMachinePartsBox();
+      await _rebuildMachinesBox();
     }
   }
   
@@ -170,7 +170,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
             allProperties[key] = value?.toString() ?? '';
           });
           
-          final machinePart = MachinePart(
+          final machine = Machine(
             model: item['Model']?.toString() ?? '',
             originalModel: item['OriginalModel']?.toString() ?? '',
             originalPrice: (item['OriginalPrice'] as num?)?.toDouble() ?? 0.0,
@@ -179,6 +179,9 @@ class PriceCalculatorProvider extends ChangeNotifier {
             addedCount: item['addedCount']?.toInt() ?? 0,
             otherProperties: allProperties // 包含所有其他属性
               ..removeWhere((key, value) => 
+                key == 'id' ||
+                key == 'Id' ||
+                key == '_id' ||
                 key == 'Model' || 
                 key == 'OriginalModel' || 
                 key == 'OriginalPrice' || 
@@ -189,14 +192,15 @@ class PriceCalculatorProvider extends ChangeNotifier {
             updatedAt: now,
             createdBy: 'system',
             updatedBy: 'system',
+            id: item['id']?.toString() ?? item['Id']?.toString() ?? item['_id']?.toString() ?? '',
           );
           
-          _baseData.add(machinePart);
+          _baseData.add(machine);
         }
       }
       
       // 将数据保存到Hive
-      await _rebuildMachinePartsBox();
+      await _rebuildMachinesBox();
       
       _performSearch(); // 更新搜索结果
       notifyListeners();
@@ -206,7 +210,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
     }
   }
   
-  Future<void> updateMachinePartAddedCount(String model) async {
+  Future<void> updateMachineAddedCount(String model) async {
     final index = _baseData.indexWhere((item) => item.model == model);
     if (index != -1) {
       final part = _baseData[index];
@@ -220,7 +224,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
       
       // 更新Hive存储 - 重建整个box以确保数据一致性
       try {
-        await _rebuildMachinePartsBox();
+        await _rebuildMachinesBox();
       } catch (e) {
         print('更新机器部件添加次数失败: $e');
         // 如果重建失败，尝试重新加载数据
@@ -230,26 +234,26 @@ class PriceCalculatorProvider extends ChangeNotifier {
   }
   
   // 用于重建机器部件box的辅助方法
-  Future<void> _rebuildMachinePartsBox() async {
+  Future<void> _rebuildMachinesBox() async {
     try {
-      final box = await Hive.openBox<MachinePart>('machine_parts');
+      final box = await Hive.openBox<Machine>('machines');
       await box.clear();
       for (final item in _baseData) {
         await box.add(item);
       }
     } catch (e) {
-      print('重建机器部件box失败: $e');
+      print('重建机器box失败: $e');
       // 如果重建失败，尝试重新初始化数据
       await _loadBaseData();
     }
   }
   
-  MachinePart? findMachinePartByModel(String model) {
+  Machine? findMachineByModel(String model) {
     final index = _baseData.indexWhere((item) => item.model == model);
     return index != -1 ? _baseData[index] : null;
   }
   
-  MachinePart? findMachinePartByOriginalModel(String originalModel) {
+  Machine? findMachineByOriginalModel(String originalModel) {
     final index = _baseData.indexWhere((item) => item.originalModel == originalModel);
     return index != -1 ? _baseData[index] : null;
   }
@@ -262,7 +266,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
       // 注意：不关闭box，让Hive管理box的生命周期
     } catch (e) {
       print('加载购物车数据失败: $e');
-      _cartItems = [];
+      // 不清空现有数据，保持原有数据
     }
   }
   
@@ -375,7 +379,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
       // 注意：不关闭box，让Hive管理box的生命周期
     } catch (e) {
       print('加载临时部件数据失败: $e');
-      _tempParts = [];
+      // 不清空现有数据，保持原有数据
     }
   }
   
@@ -386,7 +390,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
       // 注意：不关闭box，让Hive管理box的生命周期
     } catch (e) {
       print('加载临时费用数据失败: $e');
-      _tempFees = [];
+      // 不清空现有数据，保持原有数据
     }
   }
   
@@ -397,7 +401,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
       // 注意：不关闭box，让Hive管理box的生命周期
     } catch (e) {
       print('加载临时系数数据失败: $e');
-      _tempFactors = [];
+      // 不清空现有数据，保持原有数据
     }
   }
   
@@ -419,6 +423,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
   // 添加临时费用
   Future<void> addTempFee(String name, double defaultAmount) async {
     final newFee = TempFee(
+      id: Uuid().v4(),
       name: name,
       value: defaultAmount,
       addedCount: 1, // 新添加的项目被添加次数为1
@@ -432,6 +437,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
   // 添加临时系数
   Future<void> addTempFactor(String name, double defaultValue) async {
     final newFactor = TempFactor(
+      id: Uuid().v4(),
       name: name,
       value: defaultValue,
       addedCount: 1, // 新添加的项目被添加次数为1
@@ -591,7 +597,7 @@ class PriceCalculatorProvider extends ChangeNotifier {
   Future<void> closeAllBoxes() async {
     try {
       if (Hive.isBoxOpen('machine_parts')) {
-        await Hive.box<MachinePart>('machine_parts').close();
+        await Hive.box<Machine>('machines').close();
       }
       if (Hive.isBoxOpen('cart_items')) {
         await Hive.box<CartItem>('cart_items').close();

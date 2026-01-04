@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/price_calculator_provider.dart';
-import '../../models/machine_part.dart';
+import '../../models/machine.dart'; // 导入Machine模型
 import '../../models/temp_fee.dart';
 import '../../models/temp_factor.dart';
 import 'package:file_picker/file_picker.dart';
@@ -23,7 +23,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
   bool _showTempFactorModal = false;
   bool _showAddPartModal = false;
   bool _showQuotePage = false;
-  MachinePart? _selectedItem;
+  Machine? _selectedItem;
   Map<String, TextEditingController> _editingControllers = {};
   bool _showQuoteUnitPrice = true; // 控制报价单中是否显示单价
 
@@ -399,7 +399,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
                             actualPrice: item.showPrice,
                             image: item.image,
                           );
-                          provider.updateMachinePartAddedCount(item.model);
+                          provider.updateMachineAddedCount(item.model);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('${item.model} 已添加到购物车'),
@@ -630,7 +630,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
                                     
                                     // 更新 provider 中的数据
                                     Provider.of<PriceCalculatorProvider>(context, listen: false)
-                                        .saveMachinePart(updatedItem);
+                                        .saveMachine(updatedItem);
                                     
                                     // 更新本地变量
                                     _selectedItem = updatedItem;
@@ -680,7 +680,7 @@ class _PriceCalculatorPageState extends State<PriceCalculatorPage> {
                               actualPrice: _selectedItem!.showPrice,
                               image: _selectedItem!.image,
                             );
-                            provider.updateMachinePartAddedCount(
+                            provider.updateMachineAddedCount(
                                 _selectedItem!.model);
                             setState(() {
                               _showDetailModal = false;

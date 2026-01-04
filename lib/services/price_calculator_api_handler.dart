@@ -1,28 +1,30 @@
-import 'dart:convert';
 import 'package:shelf/shelf.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/machine_part.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import '../models/machine.dart';
 import '../models/part.dart';
 import '../models/temp_fee.dart';
 import '../models/temp_factor.dart';
 
 class PriceCalculatorApiHandler {
-  // 数据版本时间戳 - 追踪机器部件、部件、费用和系数的最后修改时间
-  int _lastMachinePartsUpdate = DateTime.now().millisecondsSinceEpoch;
+  // 数据版本时间戳 - 追踪机器、部件、费用和系数的最后修改时间
+  int _lastMachinesUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastPartsUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastFeesUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastFactorsUpdate = DateTime.now().millisecondsSinceEpoch;
 
-  int get lastMachinePartsUpdate => _lastMachinePartsUpdate;
+  int get lastMachinesUpdate => _lastMachinesUpdate;
   int get lastPartsUpdate => _lastPartsUpdate;
   int get lastFeesUpdate => _lastFeesUpdate;
   int get lastFactorsUpdate => _lastFactorsUpdate;
 
-  // 更新机器部件最后修改时间
-  void updateMachinePartsTimestamp() {
-    _lastMachinePartsUpdate = DateTime.now().millisecondsSinceEpoch;
+  // 更新机器最后修改时间
+  void updateMachinesTimestamp() {
+    _lastMachinesUpdate = DateTime.now().millisecondsSinceEpoch;
     print(
-        '机器部件数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastMachinePartsUpdate)}');
+        '机器数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastMachinesUpdate)}');
   }
 
   // 更新部件最后修改时间
@@ -46,62 +48,71 @@ class PriceCalculatorApiHandler {
         '系数数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastFactorsUpdate)}');
   }
 
-  // 获取所有机器部件
-  Future<Response> handleGetMachineParts(Request request) async {
+      // 获取所有机器
+  Future<Response> handleGetMachines(Request request) async {
     try {
-      // 从Hive数据库中获取机器部件数据
-      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
-      final machineParts = machinePartsBox.values.toList();
+      // 从Hive数据库中获取机器数据
+      final machinesBox = Hive.box<Machine>('machines');
+      final machines = machinesBox.values.toList();
 
-      // 将MachinePart对象转换为Map格式
-      final parts = <Map<String, dynamic>>[];
-      for (final part in machineParts) {
+      // 将Machine对象转换为Map格式
+      final machinesList = <Map<String, dynamic>>[];
+
+      for (final machine in machines) {
         // 首先获取基本属性
-        final partMap = <String, dynamic>{
-          'Model': part.model,
-          'OriginalModel': part.originalModel,
-          'OriginalPrice': part.originalPrice,
-          'ShowPrice': part.showPrice,
-          'image': part.image,
-          'addedCount': part.addedCount,
+        final machineMap = <String, dynamic>{
+          'id': machine.id, // ID现在是必需的，不会为null
+          'Model': machine.model,
+          'OriginalModel': machine.originalModel,
+          'OriginalPrice': machine.originalPrice,
+          'ShowPrice': machine.showPrice,
+          'image': machine.image,
+          'addedCount': machine.addedCount,
         };
 
         // 添加otherProperties中的所有属性
-        part.otherProperties.forEach((key, value) {
-          partMap[key] = value;
+        machine.otherProperties.forEach((key, value) {
+          machineMap[key] = value;
         });
 
-        parts.add(partMap);
+        machinesList.add(machineMap);
       }
 
+      // 更新时间戳
+      updateMachinesTimestamp();
+
+      // 生成响应数据，包含数据和时间戳
+      final responseData = {
+        'data': machinesList,
+        'timestamp': _lastMachinesUpdate, // 添加时间戳信息
+      };
+
       return Response.ok(
-        json.encode({
-          'success': true, 
-          'data': parts,
-          'timestamp': _lastMachinePartsUpdate  // 返回当前机器部件数据的时间戳
-        }),
+        json.encode(responseData),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      print('获取机器部件失败: $e');
+      print('获取机器数据失败: $e');
       return Response.internalServerError(
-        body: json.encode({'success': false, 'error': e.toString()}),
+        body: json.encode({'error': '获取机器数据失败'}),
         headers: {'Content-Type': 'application/json'},
       );
     }
   }
 
-  // 创建机器部件
-  Future<Response> handleCreateMachinePart(Request request) async {
+
+
+  // 创建机器
+  Future<Response> handleCreateMachine(Request request) async {
     try {
       final body = await request.readAsString();
       final params = json.decode(body);
 
-      // 需要实现实际的机器部件创建逻辑
-      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+      // 需要实现实际的机器创建逻辑
+      final machinesBox = Hive.box<Machine>('machines');
       
-      // 创建MachinePart对象
-      final newPart = MachinePart(
+      // 创建Machine对象，ID将自动生成
+      final newMachine = Machine(
         model: params['Model']?.toString() ?? params['model']?.toString() ?? '',
         originalModel: params['OriginalModel']?.toString() ?? '',
         originalPrice: (params['OriginalPrice'] as num?)?.toDouble() ?? 0.0,
@@ -116,17 +127,17 @@ class PriceCalculatorApiHandler {
       );
       
       // 保存到Hive数据库
-      await machinePartsBox.add(newPart);
+      await machinesBox.add(newMachine);
       
-      // 更新机器部件数据版本时间戳
-      updateMachinePartsTimestamp();
+      // 更新机器数据版本时间戳
+      updateMachinesTimestamp();
       
-      // 返回成功响应，包括部件数据和时间戳信息
+      // 返回成功响应，包括机器数据和时间戳信息
       return Response.ok(
         json.encode({
           'success': true, 
-          'data': newPart.toJson(),
-          'timestamp': _lastMachinePartsUpdate  // 返回当前机器部件数据的时间戳
+          'data': newMachine.toJson(),
+          'timestamp': _lastMachinesUpdate  // 返回当前机器数据的时间戳
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -138,122 +149,127 @@ class PriceCalculatorApiHandler {
     }
   }
 
-  // 更新机器部件
-  Future<Response> handleUpdateMachinePart(Request request, String id) async {
+  // 更新机器
+  Future<Response> handleUpdateMachine(Request request, String id) async {
     try {
       final body = await request.readAsString();
       final params = json.decode(body);
+
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
 
       // 检查是否是incrementAddedCount操作
       if (params['action'] == 'incrementAddedCount' &&
           params['model'] != null) {
         final model = params['model'] as String;
+        final decodedModel = Uri.decodeComponent(model);
 
-        final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+        final machinesBox = Hive.box<Machine>('machines');
 
         // 遍历box中的所有项目找到匹配的model
-        for (final key in machinePartsBox.keys) {
-          final part = machinePartsBox.get(key)!;
+        for (final key in machinesBox.keys) {
+          final machine = machinesBox.get(key)!;
 
-          if (part.model == model) {
-            // 创建更新后的MachinePart对象，增加addedCount
-            final updatedPart = MachinePart(
-              model: part.model,
-              originalModel: part.originalModel,
-              originalPrice: part.originalPrice,
-              showPrice: part.showPrice,
-              image: part.image,
-              addedCount: part.addedCount + 1, // 增加被添加次数
-              otherProperties: part.otherProperties,
-              createdAt: part.createdAt, // 保持原始创建时间
+          if (machine.model == decodedModel) {
+            // 创建更新后的Machine对象，增加addedCount
+            final updatedMachine = Machine(
+              model: machine.model,
+              originalModel: machine.originalModel,
+              originalPrice: machine.originalPrice,
+              showPrice: machine.showPrice,
+              image: machine.image,
+              addedCount: machine.addedCount + 1, // 增加被添加次数
+              otherProperties: machine.otherProperties,
+              createdAt: machine.createdAt, // 保持原始创建时间
               updatedAt: DateTime.now(), // 更新最后修改时间
-              createdBy: part.createdBy, // 保持原始创建人
+              createdBy: machine.createdBy, // 保持原始创建人
               updatedBy: 'system', // 使用系统作为更新人
             );
 
             // 更新到Hive数据库
-            await machinePartsBox.put(key, updatedPart);
+            await machinesBox.put(key, updatedMachine);
 
-            // 更新机器部件数据版本时间戳
-            updateMachinePartsTimestamp();
+            // 更新机器数据版本时间戳
+            updateMachinesTimestamp();
             
             return Response.ok(
               json.encode({
                 'success': true, 
                 'message': 'addedCount已更新',
-                'timestamp': _lastMachinePartsUpdate  // 返回当前机器部件数据的时间戳
+                'timestamp': _lastMachinesUpdate  // 返回当前机器数据的时间戳
               }),
               headers: {'Content-Type': 'application/json'},
             );
           }
         }
 
-        // 如果没有找到对应的机器部件
+        // 如果没有找到对应的机器
         return Response.notFound(
-          json.encode({'success': false, 'error': '未找到对应的机器部件'}),
+          json.encode({'success': false, 'error': '未找到对应的机器'}),
           headers: {'Content-Type': 'application/json'},
         );
       } else {
         // 处理普通的更新操作
 
         // 从URL参数获取ID（模型名称）
-        final model = id; // URL中的id参数实际上是模型名称
+        final model = decodedId; // URL中的id参数实际上是模型名称
 
-        final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+        final machinesBox = Hive.box<Machine>('machines');
 
         // 遍历box中的所有项目找到匹配的model
-        for (final key in machinePartsBox.keys) {
-          final part = machinePartsBox.get(key)!;
+        for (final key in machinesBox.keys) {
+          final machine = machinesBox.get(key)!;
 
-          if (part.model == model) {
+          if (machine.model == model) {
             // 注意：如果只是addedCount变化，不更新时间戳；其他字段变化则更新时间戳
             bool isOnlyAddedCountChange =
-                _isOnlyAddedCountChanged(part, params);
+                _isOnlyAddedCountChangedForMachine(machine, params);
 
-            // 根据参数创建更新后的MachinePart对象
-            final updatedPart = MachinePart(
-              model: params['Model'] ?? part.model,
-              originalModel: params['OriginalModel'] ?? part.originalModel,
+            // 根据参数创建更新后的Machine对象
+            final updatedMachine = Machine(
+              model: params['Model'] ?? machine.model,
+              originalModel: params['OriginalModel'] ?? machine.originalModel,
               originalPrice: (params['OriginalPrice'] as num)?.toDouble() ??
-                  part.originalPrice,
+                  machine.originalPrice,
               showPrice:
-                  (params['ShowPrice'] as num)?.toDouble() ?? part.showPrice,
-              image: params['image'] ?? part.image,
-              addedCount: params['addedCount'] ?? part.addedCount,
+                  (params['ShowPrice'] as num)?.toDouble() ?? machine.showPrice,
+              image: params['image'] ?? machine.image,
+              addedCount: params['addedCount'] ?? machine.addedCount,
               otherProperties:
-                  _extractOtherProperties(params, part.otherProperties),
-              createdAt: part.createdAt, // 保持原始创建时间
+                  _extractOtherProperties(params, machine.otherProperties),
+              createdAt: machine.createdAt, // 保持原始创建时间
               updatedAt: DateTime.now(), // 更新最后修改时间
-              createdBy: part.createdBy, // 保持原始创建人
+              createdBy: machine.createdBy, // 保持原始创建人
               updatedBy: params['updatedBy'] ?? 'system', // 使用指定的更新人或默认为system
             );
 
             // 更新到Hive数据库
-            await machinePartsBox.put(key, updatedPart);
+            await machinesBox.put(key, updatedMachine);
 
-            // 如果不是仅addedCount的变化，则更新数据版本时间戳
+            // 如果不是仅addedCount的变化，则更新数据版本戳
             if (!isOnlyAddedCountChange) {
-              updateMachinePartsTimestamp();
-              print('机器部件数据已更新: ${updatedPart.model}');
+              updateMachinesTimestamp();
+              print('机器数据已更新: ${updatedMachine.model}');
             } else {
-              print('仅addedCount更新，不更新数据版本: ${updatedPart.model}');
+              print('仅addedCount更新，不更新数据版本: ${updatedMachine.model}');
             }
 
             // 返回更新后的数据
             final partMap = <String, dynamic>{
-              'Model': updatedPart.model,
-              'OriginalModel': updatedPart.originalModel,
-              'OriginalPrice': updatedPart.originalPrice,
-              'ShowPrice': updatedPart.showPrice,
-              'image': updatedPart.image,
-              'addedCount': updatedPart.addedCount,
-              'createdAt': updatedPart.createdAt.toIso8601String(),
-              'updatedAt': updatedPart.updatedAt.toIso8601String(),
-              'createdBy': updatedPart.createdBy,
-              'updatedBy': updatedPart.updatedBy,
+              'id': updatedMachine.id,
+              'Model': updatedMachine.model,
+              'OriginalModel': updatedMachine.originalModel,
+              'OriginalPrice': updatedMachine.originalPrice,
+              'ShowPrice': updatedMachine.showPrice,
+              'image': updatedMachine.image,
+              'addedCount': updatedMachine.addedCount,
+              'createdAt': updatedMachine.createdAt.toIso8601String(),
+              'updatedAt': updatedMachine.updatedAt.toIso8601String(),
+              'createdBy': updatedMachine.createdBy,
+              'updatedBy': updatedMachine.updatedBy,
             };
 
-            updatedPart.otherProperties.forEach((key, value) {
+            updatedMachine.otherProperties.forEach((key, value) {
               partMap[key] = value;
             });
 
@@ -261,21 +277,21 @@ class PriceCalculatorApiHandler {
               json.encode({
                 'success': true, 
                 'data': partMap,
-                'timestamp': _lastMachinePartsUpdate  // 返回当前机器部件数据的时间戳
+                'timestamp': _lastMachinesUpdate  // 返回当前机器数据的时间戳
               }),
               headers: {'Content-Type': 'application/json'},
             );
           }
         }
 
-        // 如果没有找到对应的机器部件
+        // 如果没有找到对应的机器
         return Response.notFound(
-          json.encode({'success': false, 'error': '未找到对应的机器部件'}),
+          json.encode({'success': false, 'error': '未找到对应的机器'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
     } catch (e) {
-      print('更新机器部件失败: $e');
+      print('更新机器失败: $e');
 
       return Response.internalServerError(
         body: json.encode({'success': false, 'error': e.toString()}),
@@ -284,38 +300,41 @@ class PriceCalculatorApiHandler {
     }
   }
 
-  // 删除机器部件
-  Future<Response> handleDeleteMachinePart(Request request, String id) async {
+  // 删除机器
+  Future<Response> handleDeleteMachine(Request request, String id) async {
     try {
-      // 从Hive数据库删除机器部件
+      // 从Hive数据库删除机器
       // 这里需要实现实际的删除逻辑
-      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+      final machinesBox = Hive.box<Machine>('machines');
+      
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
       
       bool found = false;
-      for (final key in machinePartsBox.keys) {
-        final part = machinePartsBox.get(key)!;
+      for (final key in machinesBox.keys) {
+        final machine = machinesBox.get(key)!;
         
-        if (part.model == id) { // 机器部件使用model作为标识
-          await machinePartsBox.delete(key);
+        if (machine.model == decodedId) { // 机器使用model作为标识
+          await machinesBox.delete(key);
           found = true;
           break;
         }
       }
       
       if (found) {
-        // 更新机器部件数据版本时间戳
-        updateMachinePartsTimestamp();
+        // 更新机器数据版本时间戳
+        updateMachinesTimestamp();
         
         return Response.ok(
           json.encode({
             'success': true,
-            'timestamp': _lastMachinePartsUpdate  // 返回当前机器部件数据的时间戳
+            'timestamp': _lastMachinesUpdate  // 返回当前机器数据的时间戳
           }),
           headers: {'Content-Type': 'application/json'},
         );
       } else {
         return Response.notFound(
-          json.encode({'success': false, 'error': '未找到对应的机器部件'}),
+          json.encode({'success': false, 'error': '未找到对应的机器'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -330,18 +349,18 @@ class PriceCalculatorApiHandler {
   // 获取部件统计信息
   Future<Response> handleGetPartsStats(Request request) async {
     try {
-      // 从Hive数据库中获取机器部件和部件的数量
-      final machinePartsBox = Hive.box<MachinePart>('machine_parts');
+      // 从Hive数据库中获取机器和部件的数量
+      final machinesBox = Hive.box<Machine>('machines');
       final partsBox = Hive.box<Part>('temp_parts');
 
-      final machinePartsCount = machinePartsBox.length;
+      final machinesCount = machinesBox.length;
       final partsCount = partsBox.length;
 
       return Response.ok(
         json.encode({
           'success': true,
           'data': {
-            'machinePartsCount': machinePartsCount,
+            'machinesCount': machinesCount,
             'partsCount': partsCount,
           }
         }),
@@ -364,7 +383,7 @@ class PriceCalculatorApiHandler {
       final lastUpdateStr = queryParams['lastUpdate'];
 
       // 使用服务器维护的数据版本时间戳
-      final lastMachinePartsUpdate = _lastMachinePartsUpdate;
+      final lastMachinesUpdate = _lastMachinesUpdate;
       final lastPartsUpdate = _lastPartsUpdate;
       final lastFeesUpdate = _lastFeesUpdate;
       final lastFactorsUpdate = _lastFactorsUpdate;
@@ -373,7 +392,7 @@ class PriceCalculatorApiHandler {
       if (lastUpdateStr != null) {
         final lastUpdate = int.tryParse(lastUpdateStr) ?? 0;
         hasUpdates =
-            lastMachinePartsUpdate > lastUpdate || 
+            lastMachinesUpdate > lastUpdate || 
             lastPartsUpdate > lastUpdate ||
             lastFeesUpdate > lastUpdate ||
             lastFactorsUpdate > lastUpdate;
@@ -385,7 +404,7 @@ class PriceCalculatorApiHandler {
         json.encode({
           'success': true,
           'hasUpdates': hasUpdates,
-          'lastMachinePartsUpdate': lastMachinePartsUpdate,
+          'lastMachinesUpdate': lastMachinesUpdate,
           'lastPartsUpdate': lastPartsUpdate,
           'lastFeesUpdate': lastFeesUpdate,
           'lastFactorsUpdate': lastFactorsUpdate,
@@ -482,7 +501,8 @@ class PriceCalculatorApiHandler {
         await partsBox.put(existingPartKey, resultPart);
       } else {
         // 创建新部件
-        final id = 'part_${DateTime.now().millisecondsSinceEpoch}_${model.isEmpty ? 'unknown' : model}';
+        final uuid = Uuid();
+        final id = uuid.v4(); // 生成UUID
         
         resultPart = Part(
           id: id,
@@ -526,16 +546,20 @@ class PriceCalculatorApiHandler {
       // 从Hive数据库获取部件
       final partsBox = Hive.box<Part>('temp_parts');
       
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
+      
       // 检查是否是incrementAddedCount操作
       if (params['action'] == 'incrementAddedCount' &&
           params['model'] != null) {
         final model = params['model'] as String;
+        final decodedModel = Uri.decodeComponent(model);
 
         // 遍历box中的所有项目找到匹配的model
         for (final key in partsBox.keys) {
           final part = partsBox.get(key)!;
 
-          if (part.model == model) {
+          if (part.model == decodedModel) {
             // 创建更新后的Part对象，增加addedCount
             final updatedPart = Part(
               id: part.id,
@@ -574,7 +598,7 @@ class PriceCalculatorApiHandler {
       for (final key in partsBox.keys) {
         final part = partsBox.get(key)!;
         
-        if (part.id == id) {
+        if (part.id == decodedId) {
           // 创建更新后的Part对象
           final updatedPart = Part(
             id: part.id,
@@ -621,12 +645,15 @@ class PriceCalculatorApiHandler {
       // 从Hive数据库删除部件
       final partsBox = Hive.box<Part>('temp_parts');
       
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
+      
       // 遍历box中的所有项目找到匹配的id
       bool found = false;
       for (final key in partsBox.keys) {
         final part = partsBox.get(key)!;
         
-        if (part.id == id) {
+        if (part.id == decodedId) {
           await partsBox.delete(key);
           found = true;
           break;
@@ -767,26 +794,26 @@ class PriceCalculatorApiHandler {
     }
   }
 
-  // 检查是否仅仅是addedCount字段发生了变化
-  bool _isOnlyAddedCountChanged(MachinePart part, Map<String, dynamic> params) {
+  // 检查机器是否仅仅是addedCount字段发生了变化
+  bool _isOnlyAddedCountChangedForMachine(Machine machine, Map<String, dynamic> params) {
     // 检查除了addedCount之外的其他字段是否发生变化
-    if ((params['Model'] != null && params['Model'] != part.model) ||
+    if ((params['Model'] != null && params['Model'] != machine.model) ||
         (params['OriginalModel'] != null &&
-            params['OriginalModel'] != part.originalModel) ||
+            params['OriginalModel'] != machine.originalModel) ||
         (params['OriginalPrice'] != null &&
             (params['OriginalPrice'] as num).toDouble() !=
-                part.originalPrice) ||
+                machine.originalPrice) ||
         (params['ShowPrice'] != null &&
-            (params['ShowPrice'] as num).toDouble() != part.showPrice) ||
-        (params['image'] != null && params['image'] != part.image) ||
+            (params['ShowPrice'] as num).toDouble() != machine.showPrice) ||
+        (params['image'] != null && params['image'] != machine.image) ||
         (params['createdAt'] != null &&
-            params['createdAt'] != part.createdAt.toIso8601String()) ||
+            params['createdAt'] != machine.createdAt.toIso8601String()) ||
         (params['updatedAt'] != null &&
-            params['updatedAt'] != part.updatedAt.toIso8601String()) ||
+            params['updatedAt'] != machine.updatedAt.toIso8601String()) ||
         (params['createdBy'] != null &&
-            params['createdBy'] != part.createdBy) ||
+            params['createdBy'] != machine.createdBy) ||
         (params['updatedBy'] != null &&
-            params['updatedBy'] != part.updatedBy)) {
+            params['updatedBy'] != machine.updatedBy)) {
       // 检查otherProperties中的字段是否发生变化
       for (final key in params.keys) {
         if (![
@@ -802,10 +829,10 @@ class PriceCalculatorApiHandler {
           'updatedBy',
           'action'
         ].contains(key)) {
-          if (part.otherProperties.containsKey(key) &&
-              part.otherProperties[key] != params[key]) {
+          if (machine.otherProperties.containsKey(key) &&
+              machine.otherProperties[key] != params[key]) {
             return false; // 发现otherProperties中的字段变化
-          } else if (!part.otherProperties.containsKey(key) &&
+          } else if (!machine.otherProperties.containsKey(key) &&
               params[key] != null) {
             return false; // 发现新增的otherProperties字段
           }
@@ -834,7 +861,7 @@ class PriceCalculatorApiHandler {
       }
     }
 
-    if (part.otherProperties.length != paramsOtherPropsCount) {
+    if (machine.otherProperties.length != paramsOtherPropsCount) {
       return false; // otherProperties的长度变化
     }
 
@@ -912,6 +939,7 @@ class PriceCalculatorApiHandler {
       final feesData = <Map<String, dynamic>>[];
       for (final fee in fees) {
         feesData.add({
+          'id': fee.id,
           'name': fee.name,
           'value': fee.value,
           'addedCount': fee.addedCount,
@@ -967,6 +995,7 @@ class PriceCalculatorApiHandler {
       if (existingFee != null && existingFeeKey != null) {
         // 更新现有费用，增加addedCount
         resultFee = TempFee(
+          id: existingFee.id,
           name: name,
           value: value != 0.0 ? value : existingFee.value,
           addedCount: existingFee.addedCount + 1,  // 增加被添加次数（而不是使用传入的参数）
@@ -976,7 +1005,11 @@ class PriceCalculatorApiHandler {
         await feesBox.put(existingFeeKey, resultFee);
       } else {
         // 创建新费用
+        final uuid = Uuid();
+        final id = uuid.v4(); // 生成UUID
+        
         resultFee = TempFee(
+          id: id,
           name: name,
           value: value,
           addedCount: addedCount,
@@ -1016,18 +1049,22 @@ class PriceCalculatorApiHandler {
 
       final feesBox = Hive.box<TempFee>('temp_fees');
       
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
+      
       // 检查是否是incrementAddedCount操作
       if (params['action'] == 'incrementAddedCount' &&
           params['name'] != null) {
         final name = params['name'] as String;
+        final decodedName = Uri.decodeComponent(name);
 
-        // 在Hive中，TempFee没有ID，所以我们需要通过name来匹配
         for (final key in feesBox.keys) {
           final fee = feesBox.get(key)!;
 
-          if (fee.name == name) {
+          if (fee.id == decodedId || fee.name == decodedName) {
             // 创建更新后的TempFee对象，增加addedCount
             final updatedFee = TempFee(
+              id: fee.id,
               name: fee.name,
               value: fee.value,
               addedCount: fee.addedCount + 1, // 增加被添加次数
@@ -1058,16 +1095,13 @@ class PriceCalculatorApiHandler {
         );
       }
 
-      // 在Hive中，TempFee没有ID，所以我们需要通过name来匹配
-      // 这里我们假设URL参数id实际上是name
+      // 遍历box中的所有项目找到匹配的ID或name
       for (final key in feesBox.keys) {
         final fee = feesBox.get(key)!;
         
-        // 检查name是否匹配（兼容多种可能的字段名）
-        if (fee.name == id || 
-            fee.name == params['name']?.toString() || 
-            fee.name == params['Model']?.toString()) {
+        if (fee.id == decodedId) {
           final updatedFee = TempFee(
+            id: fee.id,
             name: params['name'] ?? params['Model'] ?? fee.name,
             value: (params['value'] as num?)?.toDouble() ?? (params['defaultAmount'] as num?)?.toDouble() ?? (params['price'] as num?)?.toDouble() ?? fee.value,
             addedCount: params['addedCount'] ?? params['usageCount'] ?? fee.addedCount,
@@ -1115,13 +1149,15 @@ class PriceCalculatorApiHandler {
     try {
       final feesBox = Hive.box<TempFee>('temp_fees');
       
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
+      
       bool found = false;
       for (final key in feesBox.keys) {
         final fee = feesBox.get(key)!;
         
-        // 检查name是否匹配
-        if (fee.name == id || 
-            fee.name == Uri.decodeComponent(id)) {  // 解码URL参数
+        // 检查ID是否匹配
+        if (fee.id == decodedId) {
           await feesBox.delete(key);
           found = true;
           break;
@@ -1163,6 +1199,7 @@ class PriceCalculatorApiHandler {
       final factorsData = <Map<String, dynamic>>[];
       for (final factor in factors) {
         factorsData.add({
+          'id': factor.id,
           'name': factor.name,
           'value': factor.value,
           'addedCount': factor.addedCount,
@@ -1218,6 +1255,7 @@ class PriceCalculatorApiHandler {
       if (existingFactor != null && existingFactorKey != null) {
         // 更新现有系数，增加addedCount
         resultFactor = TempFactor(
+          id: existingFactor.id,
           name: name,
           value: value != 0.0 ? value : existingFactor.value,
           addedCount: existingFactor.addedCount + 1,  // 增加被添加次数（而不是使用传入的参数）
@@ -1227,7 +1265,11 @@ class PriceCalculatorApiHandler {
         await factorsBox.put(existingFactorKey, resultFactor);
       } else {
         // 创建新系数
+        final uuid = Uuid();
+        final id = uuid.v4(); // 生成UUID
+        
         resultFactor = TempFactor(
+          id: id,
           name: name,
           value: value,
           addedCount: addedCount,
@@ -1267,18 +1309,22 @@ class PriceCalculatorApiHandler {
 
       final factorsBox = Hive.box<TempFactor>('temp_factors');
       
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
+      
       // 检查是否是incrementAddedCount操作
       if (params['action'] == 'incrementAddedCount' &&
           params['name'] != null) {
         final name = params['name'] as String;
+        final decodedName = Uri.decodeComponent(name);
 
-        // 在Hive中，TempFactor没有ID，所以我们需要通过name来匹配
         for (final key in factorsBox.keys) {
           final factor = factorsBox.get(key)!;
 
-          if (factor.name == name) {
+          if (factor.id == decodedId || factor.name == decodedName) {
             // 创建更新后的TempFactor对象，增加addedCount
             final updatedFactor = TempFactor(
+              id: factor.id,
               name: factor.name,
               value: factor.value,
               addedCount: factor.addedCount + 1, // 增加被添加次数
@@ -1309,15 +1355,13 @@ class PriceCalculatorApiHandler {
         );
       }
 
-      // 在Hive中，TempFactor没有ID，所以我们需要通过name来匹配
+      // 遍历box中的所有项目找到匹配的ID或name
       for (final key in factorsBox.keys) {
         final factor = factorsBox.get(key)!;
         
-        // 检查name是否匹配（兼容多种可能的字段名）
-        if (factor.name == id || 
-            factor.name == params['name']?.toString() || 
-            factor.name == params['Model']?.toString()) {
+        if (factor.id == decodedId) {
           final updatedFactor = TempFactor(
+            id: factor.id,
             name: params['name'] ?? params['Model'] ?? factor.name,
             value: (params['value'] as num?)?.toDouble() ?? (params['defaultValue'] as num?)?.toDouble() ?? (params['price'] as num?)?.toDouble() ?? factor.value,
             addedCount: params['addedCount'] ?? params['usageCount'] ?? factor.addedCount,
@@ -1365,13 +1409,15 @@ class PriceCalculatorApiHandler {
     try {
       final factorsBox = Hive.box<TempFactor>('temp_factors');
       
+      // 解码URL参数，处理空格和特殊字符
+      String decodedId = Uri.decodeComponent(id);
+      
       bool found = false;
       for (final key in factorsBox.keys) {
         final factor = factorsBox.get(key)!;
         
-        // 检查name是否匹配
-        if (factor.name == id || 
-            factor.name == Uri.decodeComponent(id)) {  // 解码URL参数
+        // 检查ID是否匹配
+        if (factor.id == decodedId) {
           await factorsBox.delete(key);
           found = true;
           break;
@@ -1402,5 +1448,333 @@ class PriceCalculatorApiHandler {
         headers: {'Content-Type': 'application/json'},
       );
     }
+  }
+
+  // 清空机器部件数据库
+  Future<Response> handleClearMachineParts(Request request) async {
+    try {
+      final machinesBox = Hive.box<Machine>('machines');
+      
+      // 清空Box中的所有数据
+      await machinesBox.clear();
+      
+      // 更新机器数据版本时间戳
+      updateMachinesTimestamp();
+      
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '机器数据库已清空',
+          'timestamp': _lastMachinesUpdate
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('清空机器部件数据库失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 清空部件数据库
+  Future<Response> handleClearParts(Request request) async {
+    try {
+      final partsBox = Hive.box<Part>('temp_parts');
+      
+      // 清空Box中的所有数据
+      await partsBox.clear();
+      
+      // 更新部件数据版本时间戳
+      updatePartsTimestamp();
+      
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '部件数据库已清空',
+          'timestamp': _lastPartsUpdate
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('清空部件数据库失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 清空费用数据库
+  Future<Response> handleClearTempFees(Request request) async {
+    try {
+      final feesBox = Hive.box<TempFee>('temp_fees');
+      
+      // 清空Box中的所有数据
+      await feesBox.clear();
+      
+      // 更新费用数据版本时间戳
+      updateFeesTimestamp();
+      
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '费用数据库已清空',
+          'timestamp': _lastFeesUpdate
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('清空费用数据库失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 处理机器数据上传
+  Future<Response> handleUploadMachines(Request request) async {
+    try {
+      // 检查Content-Type是否为multipart/form-data
+      final contentType = request.headers['content-type'];
+      if (contentType == null || !contentType.contains('multipart/form-data')) {
+        return Response.badRequest(
+          body: json.encode({'success': false, 'error': 'Content-Type必须为multipart/form-data'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // 解析multipart/form-data请求
+      final boundary = contentType.split('boundary=').last;
+      final bodyBytes = await request.read().toList();
+      final flattenedBytes = <int>[];
+      for (final byteList in bodyBytes) {
+        flattenedBytes.addAll(byteList);
+      }
+      final body = Uint8List.fromList(flattenedBytes);
+
+      // 手动解析multipart数据 - 简化版
+      final parts = <Map<String, dynamic>>[];
+      final boundaryBytes = utf8.encode('\r\n--$boundary');
+      var start = 0;
+      final firstBoundary = utf8.encode('--$boundary');
+      var pos = this._findBytes(body, firstBoundary, start);
+      if (pos == -1) {
+        return Response.badRequest(
+          body: json.encode({'success': false, 'error': '无效的multipart格式'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+      pos += firstBoundary.length;
+
+      while (pos < body.length - 2) {
+        final nextBoundary = this._findBytes(body, boundaryBytes, pos);
+        if (nextBoundary == -1) {
+          // 最后一部分
+          final partData = body.sublist(pos, body.length - 2); // -2 for \r\n
+          parts.add(this._parseMultipartPart(partData));
+          break;
+        }
+
+        final partData = body.sublist(pos, nextBoundary);
+        parts.add(this._parseMultipartPart(partData));
+        pos = nextBoundary + boundaryBytes.length;
+
+        // 如果遇到结束标记
+        if (pos < body.length &&
+            body[pos] == 45 &&
+            pos + 1 < body.length &&
+            body[pos + 1] == 45) {
+          // '--' 结束标记
+          break;
+        }
+      }
+
+      // 查找文件部分
+      Uint8List? fileData;
+      String? fileName;
+
+      for (final part in parts) {
+        final headers = part['headers'] as Map<String, String>;
+        final content = part['content'] as Uint8List;
+
+        final contentDisposition = headers['content-disposition'];
+        if (contentDisposition != null) {
+          final filenameMatch = RegExp(r'filename="([^"}]+)"').firstMatch(contentDisposition);
+          if (filenameMatch != null) {
+            fileName = filenameMatch.group(1);
+            fileData = content;
+            break;
+          }
+        }
+      }
+
+      if (fileData == null) {
+        return Response.badRequest(
+          body: json.encode({'success': false, 'error': '未找到上传的文件'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // 解码文件内容并解析JSON
+      final fileContent = utf8.decode(fileData);
+      final List<dynamic> jsonData = json.decode(fileContent);
+
+      // 验证数据格式
+      if (jsonData.isEmpty) {
+        return Response.badRequest(
+          body: json.encode({'success': false, 'error': '上传的文件为空'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // 清空现有的机器数据
+      final machinesBox = Hive.box<Machine>('machines');
+      await machinesBox.clear();
+
+      // 遍历并保存机器数据
+      for (final item in jsonData) {
+        if (item is Map<String, dynamic>) {
+          // 为每个机器生成UUID
+          final id = const Uuid().v4();
+          
+          // 创建Machine对象
+          final machine = Machine(
+            id: id,
+            model: item['Model']?.toString() ?? '',
+            originalModel: item['OriginalModel']?.toString() ?? '',
+            originalPrice: (item['OriginalPrice'] as num?)?.toDouble() ?? 0.0,
+            showPrice: (item['ShowPrice'] as num?)?.toDouble() ?? 0.0,
+            image: item['image']?.toString() ?? '',
+            addedCount: item['addedCount']?.toInt() ?? 0,
+            otherProperties: _extractOtherProperties(item, {}),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            createdBy: 'system',
+            updatedBy: 'system',
+          );
+
+          // 保存到Hive
+          await machinesBox.put(id, machine);
+        }
+      }
+
+      // 更新机器数据版本时间戳
+      updateMachinesTimestamp();
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '机器数据上传成功',
+          'count': jsonData.length,
+          'timestamp': _lastMachinesUpdate
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('上传机器数据失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 清空系数数据库
+  Future<Response> handleClearTempFactors(Request request) async {
+    try {
+      final factorsBox = Hive.box<TempFactor>('temp_factors');
+      
+      // 清空Box中的所有数据
+      await factorsBox.clear();
+      
+      // 更新系数数据版本时间戳
+      updateFactorsTimestamp();
+      
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '系数数据库已清空',
+          'timestamp': _lastFactorsUpdate
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('清空系数数据库失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 辅助方法：查找字节数组中的子序列（从FileUploadHandler复制）
+  int _findBytes(Uint8List data, List<int> pattern, int startIndex) {
+    for (int i = startIndex; i <= data.length - pattern.length; i++) {
+      bool found = true;
+      for (int j = 0; j < pattern.length; j++) {
+        if (data[i + j] != pattern[j]) {
+          found = false;
+          break;
+        }
+      }
+      if (found) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // 辅助方法：解析multipart部分（从FileUploadHandler复制）
+  Map<String, dynamic> _parseMultipartPart(Uint8List data) {
+    // 查找头部和内容的分界（\r\n\r\n）
+    int headerEnd = -1;
+    for (int i = 0; i < data.length - 3; i++) {
+      if (data[i] == 13 &&
+          data[i + 1] == 10 &&
+          data[i + 2] == 13 &&
+          data[i + 3] == 10) {
+        headerEnd = i + 4;
+        break;
+      }
+    }
+
+    final headers = <String, String>{};
+    Uint8List content;
+
+    if (headerEnd != -1) {
+      // 解析头部
+      final headerData = utf8.decode(data.sublist(0, headerEnd - 2)); // -2 to remove \r\n
+      final headerLines = headerData.split('\r\n');
+
+      for (final line in headerLines) {
+        if (line.contains(':')) {
+          final parts = line.split(':');
+          headers[parts[0].trim().toLowerCase()] = parts.sublist(1).join(':').trim();
+        }
+      }
+
+      content = data.sublist(headerEnd);
+    } else {
+      content = data;
+    }
+
+    // 移除内容前后的\r\n
+    int start = 0;
+    while (start < content.length && (content[start] == 13 || content[start] == 10)) {
+      start++;
+    }
+
+    int end = content.length;
+    while (end > start && (content[end - 1] == 13 || content[end - 1] == 10)) {
+      end--;
+    }
+
+    return {
+      'headers': headers,
+      'content': content.sublist(start, end),
+    };
   }
 }

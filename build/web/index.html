@@ -307,11 +307,7 @@
       return true;
     }
     
-    // 在页面加载时检查认证
-    if (!checkAuth()) {
-      // 如果未通过认证检查，不继续加载页面功能
-      throw new Error('未通过认证检查');
-    }
+    // 认证检查在 DOMContentLoaded 事件中进行，避免重复调用
     
     // HTTP API通信模块
     const apiClient = {

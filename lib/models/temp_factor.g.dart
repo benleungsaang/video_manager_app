@@ -17,21 +17,24 @@ class TempFactorAdapter extends TypeAdapter<TempFactor> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return TempFactor(
-      name: fields[0] as String,
-      value: fields[1] as double,
-      addedCount: fields[2] as int,
+      id: fields[0] as String,
+      name: fields[1] as String,
+      value: fields[2] as double,
+      addedCount: fields[3] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, TempFactor obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
-      ..write(obj.name)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.value)
+      ..write(obj.name)
       ..writeByte(2)
+      ..write(obj.value)
+      ..writeByte(3)
       ..write(obj.addedCount);
   }
 

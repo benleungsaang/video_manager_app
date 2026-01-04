@@ -1,9 +1,10 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
 
-part 'machine_part.g.dart';
+part 'machine.g.dart';
 
 @HiveType(typeId: 10)
-class MachinePart {
+class Machine {
   @HiveField(0)
   final String model;             // 型号 (必填) - 对应JSON中的"Model"
 
@@ -37,7 +38,10 @@ class MachinePart {
   @HiveField(10)
   final String updatedBy;         // 最后修改人 (必填)
   
-  MachinePart({
+  @HiveField(11)
+  final String id;                // ID (必选) - 对应JSON中的"id"
+
+  Machine({
     required this.model,
     required this.originalModel,
     required this.originalPrice,
@@ -49,9 +53,10 @@ class MachinePart {
     required this.updatedAt,
     required this.createdBy,
     required this.updatedBy,
-  });
+    String? id,
+  }) : this.id = id ?? Uuid().v4(); // 如果未提供ID，则自动生成UUID
   
-  factory MachinePart.fromJson(Map<String, dynamic> json) {
+  factory Machine.fromJson(Map<String, dynamic> json) {
     // 提取通用属性
     String model = json['Model']?.toString() ?? '';
     String originalModel = json['OriginalModel']?.toString() ?? '';
@@ -66,6 +71,9 @@ class MachinePart {
     String createdBy = json['createdBy']?.toString() ?? 'system';
     String updatedBy = json['updatedBy']?.toString() ?? 'system';
     
+    // 提取ID，如果不存在则使用空字符串（后续会自动生成）
+    String? id = json['id']?.toString();
+    
     // 提取其他所有属性并转换为字符串
     Map<String, String> otherProperties = {};
     json.forEach((key, value) {
@@ -78,12 +86,14 @@ class MachinePart {
           key != 'createdAt' &&
           key != 'updatedAt' &&
           key != 'createdBy' &&
-          key != 'updatedBy') {
+          key != 'updatedBy' &&
+          key != 'id') {
         otherProperties[key] = value?.toString() ?? '';
       }
     });
     
-    return MachinePart(
+    return Machine(
+      id: id?.isNotEmpty == true ? id : null, // 如果ID存在且非空则使用，否则传入null以触发自动生成
       model: model,
       originalModel: originalModel,
       originalPrice: originalPrice,
@@ -100,6 +110,7 @@ class MachinePart {
   
   Map<String, dynamic> toJson() {
     Map<String, dynamic> json = {
+      'id': id,
       'Model': model,
       'OriginalModel': originalModel,
       'OriginalPrice': originalPrice,
@@ -121,7 +132,7 @@ class MachinePart {
   }
   
   // 用于更新记录的方法
-  MachinePart copyWith({
+  Machine copyWith({
     String? model,
     String? originalModel,
     double? originalPrice,
@@ -131,8 +142,10 @@ class MachinePart {
     Map<String, String>? otherProperties,
     DateTime? updatedAt,
     String? updatedBy,
+    String? id,
   }) {
-    return MachinePart(
+    return Machine(
+      id: id ?? this.id,
       model: model ?? this.model,
       originalModel: originalModel ?? this.originalModel,
       originalPrice: originalPrice ?? this.originalPrice,

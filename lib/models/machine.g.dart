@@ -1,22 +1,22 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'machine_part.dart';
+part of 'machine.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class MachinePartAdapter extends TypeAdapter<MachinePart> {
+class MachineAdapter extends TypeAdapter<Machine> {
   @override
   final int typeId = 10;
 
   @override
-  MachinePart read(BinaryReader reader) {
+  Machine read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return MachinePart(
+    return Machine(
       model: fields[0] as String,
       originalModel: fields[1] as String,
       originalPrice: fields[2] as double,
@@ -28,13 +28,14 @@ class MachinePartAdapter extends TypeAdapter<MachinePart> {
       updatedAt: fields[8] as DateTime,
       createdBy: fields[9] as String,
       updatedBy: fields[10] as String,
+      id: fields[11] as String?,
     );
   }
 
   @override
-  void write(BinaryWriter writer, MachinePart obj) {
+  void write(BinaryWriter writer, Machine obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.model)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class MachinePartAdapter extends TypeAdapter<MachinePart> {
       ..writeByte(9)
       ..write(obj.createdBy)
       ..writeByte(10)
-      ..write(obj.updatedBy);
+      ..write(obj.updatedBy)
+      ..writeByte(11)
+      ..write(obj.id);
   }
 
   @override
@@ -65,7 +68,7 @@ class MachinePartAdapter extends TypeAdapter<MachinePart> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MachinePartAdapter &&
+      other is MachineAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
