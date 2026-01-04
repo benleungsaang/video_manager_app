@@ -759,7 +759,8 @@
         factors: []
       },
       currentEditItem: null,
-      currentEditType: null
+      currentEditType: null,
+      deletingMachineId: null
     };
     
     // DOM元素引用
@@ -1643,8 +1644,17 @@
         return;
       }
       
+      // 添加防重复提交标志
+      if (state.deletingMachineId === id) {
+        // 正在删除同一个机器，忽略重复点击
+        return;
+      }
+      
       if (confirm('确定要删除这个机器吗？此操作无法撤销。')) {
         try {
+          // 设置删除标志
+          state.deletingMachineId = id;
+          
           const response = await apiClient.request(`/machines/${encodeURIComponent(id)}`, {
             method: 'DELETE'
           });
@@ -1658,6 +1668,9 @@
         } catch (error) {
           console.error('删除机器时出错:', error);
           showToast(`删除机器时出错: ${error.message}`, true);
+        } finally {
+          // 清除删除标志
+          state.deletingMachineId = null;
         }
       }
     }
