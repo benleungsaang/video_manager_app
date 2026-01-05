@@ -1,0 +1,10 @@
+{
+  "printWidth": 120,
+  "tabWidth": 2,
+  "useTabs": false,
+  "singleQuote": false,
+  "wrapAttributes": "auto",
+  "endOfLine": "lf",
+  "trailingEmptyLines": 0,
+  "htmlWhitespaceSensitivity": "css"
+}
