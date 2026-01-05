@@ -79,9 +79,8 @@ function renderCart() {
                   <tr>
                       <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
                       <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
-                          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${
-                            item.model
-                          }" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ddd;">
+                          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.model
+        }" style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #ddd;">
                       </td>
                       <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                           <strong>${item.model}</strong>
@@ -103,8 +102,8 @@ function renderCart() {
                                  style="width: 60px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; text-align: center;">
                       </td>
                       <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold;">${formatCurrency(
-                        subtotal
-                      )}</td>
+          subtotal
+        )}</td>
                       <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                           <button class="danger" onclick="removeCartItem(${index})" title="删除">🗑️</button>
                       </td>
@@ -125,8 +124,8 @@ function renderCart() {
               <tr style="background-color: #f0f8ff; font-weight: bold;">
                   <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">商品小计</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(
-                    baseTotal
-                  )}</td>
+      baseTotal
+    )}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">-</td>
               </tr>
           `;
@@ -148,9 +147,8 @@ function renderCart() {
       const itemIndex = tempItems.findIndex((i) => i.id === item.id);
       html += `
               <tr style="background-color: #f9f9f9;">
-                  <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${
-                    item.name
-                  }</strong></td>
+                  <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name
+        }</strong></td>
                   <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                       <input type="number"
                              value="${item.actualAmount.toFixed(2)}"
@@ -160,8 +158,8 @@ function renderCart() {
                              style="width: 100px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; text-align: center;">
                   </td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-weight: bold;">${formatCurrency(
-                    item.actualAmount
-                  )}</td>
+          item.actualAmount
+        )}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                       <button class="danger" onclick="removeTempItemFromCart(${itemIndex})">删除</button>
                   </td>
@@ -218,8 +216,8 @@ function renderCart() {
                       <tr style="background-color: #e8f5e9; font-weight: bold;">
                           <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计 (${currencyCode})</td>
                           <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(
-                            total
-                          )}</td>
+      total
+    )}</td>
                           <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">-</td>
                       </tr>
                   `;
@@ -313,7 +311,7 @@ async function addTempFeeToCart() {
   const apiCallFn = async (inputs) => {
     const newFee = {
       name: inputs.name,
-      amount: parseFloat(inputs.amount) || 0,
+      value: parseFloat(inputs.amount) || 0,  // 使用 value 字段而不是 amount
       addedCount: 1, // 初始添加次数为1
       action: "createTempFee", // 操作类型
     };
@@ -533,11 +531,22 @@ async function addToCartGeneric(
     tempItems.push(cartItem);
   }
 
-  // 记录使用次数
-  recordItemUsageForBatchUpdate(
-    inputs.name || inputs.model,
-    recordUsageType
-  );
+  // 记录使用次数 - 使用创建的购物车项目ID
+  if (cartItem.id) {
+    recordItemUsageForBatchUpdate(
+      cartItem.id,
+      recordUsageType
+    );
+  } else {
+    // 如果购物车项目没有ID，尝试使用inputs中的name或model字段作为后备
+    const itemId = inputs['id'] || inputs['name'] || inputs['model'] || inputs['tempFeeNameCart'] || inputs['tempFactorNameCart'] || inputs['partModel'];
+    if (itemId) {
+      recordItemUsageForBatchUpdate(
+        itemId,
+        recordUsageType
+      );
+    }
+  }
 
   // 调用API
   try {
@@ -603,10 +612,9 @@ async function addToCartGeneric(
 
         // 更新localStorage中的完整数据缓存
         localStorage.setItem(
-          `cached${
-            type === "parts"
-              ? "Parts"
-              : type === "fees"
+          `cached${type === "parts"
+            ? "Parts"
+            : type === "fees"
               ? "Fees"
               : "Factors"
           }`,
@@ -621,13 +629,12 @@ async function addToCartGeneric(
             .slice(0, 5);
 
           // 更新localStorage中的最常用项目缓存
-          const topUsedKey = `cachedTopUsed${
-            type === "parts"
-              ? "Parts"
-              : type === "fees"
+          const topUsedKey = `cachedTopUsed${type === "parts"
+            ? "Parts"
+            : type === "fees"
               ? "Fees"
               : "Factors"
-          }`;
+            }`;
           localStorage.setItem(topUsedKey, JSON.stringify(topItems));
         }
       }

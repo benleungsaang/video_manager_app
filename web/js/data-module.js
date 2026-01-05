@@ -86,8 +86,7 @@ async function loadData() {
         JSON.stringify(window.partsData)
       );
       console.log(
-        `部件数据已更新，共 ${
-          window.partsData ? window.partsData.length : 0
+        `部件数据已更新，共 ${window.partsData ? window.partsData.length : 0
         } 条`
       );
     } else {
@@ -127,8 +126,7 @@ async function loadData() {
       // 保存完整的费用数据到localStorage缓存
       localStorage.setItem("cachedFees", JSON.stringify(window.feesData));
       console.log(
-        `费用数据已更新，共 ${
-          window.feesData ? window.feesData.length : 0
+        `费用数据已更新，共 ${window.feesData ? window.feesData.length : 0
         } 条`
       );
     } else {
@@ -162,8 +160,7 @@ async function loadData() {
         JSON.stringify(window.factorsData)
       );
       console.log(
-        `系数数据已更新，共 ${
-          window.factorsData ? window.factorsData.length : 0
+        `系数数据已更新，共 ${window.factorsData ? window.factorsData.length : 0
         } 条`
       );
     } else {

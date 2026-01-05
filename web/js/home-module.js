@@ -4,12 +4,7 @@
 // 搜索功能相关函数
 let searchTimeout = null;
 
-// 搜索功能 - 只在回车时进行搜索
-document.getElementById("searchInput").addEventListener("keypress", function (event) {
-  if (event.key === "Enter") {
-    performSearch();
-  }
-});
+
 
 // 防抖搜索函数 - 现在使用缓存数据进行本地搜索
 function performSearch() {
@@ -56,23 +51,22 @@ function performSearch() {
       filteredItems.forEach((item) => {
         html += `
                       <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(
-                        item
-                      ).replace(/"/g, "&quot;")})">
-                          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${
-                            item.Model
-                          }" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;">
+          item
+        ).replace(/"/g, "&quot;")})">
+                          <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.Model
+          }" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;">
                           <div style="flex: 1;">
                               <div><strong>${item.Model}</strong></div>
                               <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(
-                                item.ShowPrice
-                              )}</span></div>
+            item.ShowPrice
+          )}</span></div>
                           </div>
                           <button class="secondary" onclick="event.stopPropagation(); addToCart(${JSON.stringify(
-                            item
-                          ).replace(
-                            /"/g,
-                            "&quot;"
-                          )})" title="添加到购物车">🛒</button>
+            item
+          ).replace(
+            /"/g,
+            "&quot;"
+          )})" title="添加到购物车">🛒</button>
                       </div>
                   `;
       });
@@ -102,32 +96,29 @@ function showPopularItems() {
     popularItems.forEach((item) => {
       html += `
               <div class="item-row" style="display: flex; align-items: center; padding: 10px; border: 1px solid #eee; border-radius: 4px; background-color: #fff; margin-bottom: 10px; cursor: pointer;" onclick="showItemDetail(${JSON.stringify(
-                      item
-                  ).replace(
-                      /"/g,
-                      "&quot;"
-                  )})">
-                  <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${
-                      item.Model
-                  }" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;">
+        item
+      ).replace(
+        /"/g,
+        "&quot;"
+      )})">
+                  <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.Model
+        }" style="width: 80px; height: 80px; object-fit: cover; margin-right: 15px; border: 1px solid #ddd; border-radius: 4px;">
                   <div style="flex: 1;">
-                      <div><strong>${
-                      item.Model
-                  }</strong></div>
+                      <div><strong>${item.Model
+        }</strong></div>
                       <div style="color: #666; font-size: 0.9em;">价格: <span style="color: #e74c3c; font-weight: bold;">${formatCurrency(
-                      item.ShowPrice
-                  )}</span></div>
-                      <div style="color: #999; font-size: 0.8em;">被添加 ${
-                      item.addedCount ||
-                      0
-                  } 次</div>
+          item.ShowPrice
+        )}</span></div>
+                      <div style="color: #999; font-size: 0.8em;">被添加 ${item.addedCount ||
+        0
+        } 次</div>
                   </div>
                   <button class="secondary" onclick="event.stopPropagation(); addToCart(${JSON.stringify(
-                      item
-                  ).replace(
-                      /"/g,
-                      "&quot;"
-                  )})" title="添加到购物车">🛒</button>
+          item
+        ).replace(
+          /"/g,
+          "&quot;"
+        )})" title="添加到购物车">🛒</button>
               </div>
           `;
     });
@@ -163,8 +154,8 @@ async function addToCart(item) {
   }
 
   // 记录需要更新使用次数的项目（在生成报价单时统一更新）
-  recordItemUsageForBatchUpdate(item.Model, "machine_parts");
-
+      const itemId = item.id || item.Id || item._id || item.ID || encodeURIComponent(item.Model);
+      recordItemUsageForBatchUpdate(itemId, "machines");
   // 更新购物车计数
   updateCartCount();
 
@@ -214,16 +205,15 @@ async function showItemDetail(item) {
   detailContent.innerHTML = `
           <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
               <div style="position: relative; display: inline-block;">
-                  <img id="detailImage" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${
-                    item.Model
-                  }" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
+                  <img id="detailImage" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><line x1='8' y1='12' x2='16' y2='12'/><line x1='12' y1='8' x2='12' y2='16'/></svg>" alt="${item.Model
+    }" style="width: 150px; height: 150px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
                   <button id="changeImageButton" onclick="changeImage()" style="position: absolute; bottom: 5px; right: 5px; background-color: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 25px; height: 25px; font-size: 14px; cursor: pointer; z-index: 10;" title="更换图片">+</button>
               </div>
               <div style="margin-left: 20px;">
                   <h3>${item.Model}</h3>
                   <p><strong>价格:</strong> <span id="detailShowPriceDisplay">${formatCurrency(
-                    item.ShowPrice
-                  )}</span></p>
+      item.ShowPrice
+    )}</span></p>
                   <div style="margin-top: 10px;">
                       <button class="secondary" onclick="addToCartFromDetail()" style="margin-right: 10px;" title="添加到购物车">🛒 添加到购物车</button>
                       ${editButtonHtml}
@@ -519,9 +509,12 @@ async function saveDetailChanges() {
 // 向服务器更新项目
 async function updateItemOnServer(item) {
   try {
+    // 使用ID作为主键进行更新，尝试多种ID字段格式
+    const itemId = item.id || item.Id || item._id || item.ID || encodeURIComponent(item.Model);
+
     // 从原始API客户端复制请求方法
     const response = await fetch(
-      `/api/machines/${encodeURIComponent(item.Model)}`,
+      `/api/machines/${itemId}`,
       {
         method: "PUT",
         headers: {
@@ -589,7 +582,7 @@ async function addTempFee() {
     // 创建一个费用记录对象并发送到服务器
     const newFee = {
       name: name,
-      amount: amount,
+      value: amount,  // 使用 value 字段而不是 amount
       addedCount: 1, // 初始添加次数为1
       action: "createTempFee", // 操作类型
     };
@@ -919,39 +912,38 @@ function renderDetailedSummary(baseTotal, tempFees, factor) {
 
     row.innerHTML = `
               <td style="border: 1px solid #ddd; padding: 10px;">${itemIndex}</td>
-              <td style="border: 1px solid #ddd; padding: 10px;">${
-                item.type
-              } - ${item.model} (${item.name})</td>
+              <td style="border: 1px solid #ddd; padding: 10px;">${item.type
+      } - ${item.model} (${item.name})</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <input type="number"
                          value="${item.quantity}"
                          onchange="updateSummaryItemQuantity(${selectedItems.indexOf(
-                           item
-                         )}, 'selected', this.value)"
+        item
+      )}, 'selected', this.value)"
                          min="1"
                          step="1"
                          style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
               </td>
               <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(
-                item.basePrice
-              )}</td>
+        item.basePrice
+      )}</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <input type="number"
                          value="${item.actualPrice}"
                          onchange="updateSummaryItemPrice(${selectedItems.indexOf(
-                           item
-                         )}, 'selected', this.value)"
+        item
+      )}, 'selected', this.value)"
                          min="0"
                          step="0.01"
                          style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
               </td>
               <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(
-                subtotal
-              )}</td>
+        subtotal
+      )}</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <button class="danger" onclick="removeSummaryItem(${selectedItems.indexOf(
-                    item
-                  )}, 'selected')">删除</button>
+        item
+      )}, 'selected')">删除</button>
               </td>
           `;
 
@@ -967,30 +959,29 @@ function renderDetailedSummary(baseTotal, tempFees, factor) {
 
       row.innerHTML = `
               <td style="border: 1px solid #ddd; padding: 10px;">${itemIndex}</td>
-              <td style="border: 1px solid #ddd; padding: 10px;">其它费用 - ${
-                item.name
-              }</td>
+              <td style="border: 1px solid #ddd; padding: 10px;">其它费用 - ${item.name
+        }</td>
               <td style="border: 1px solid #ddd; padding: 10px;">-</td>
               <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(
-                item.baseAmount
-              )}</td>
+          item.baseAmount
+        )}</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <input type="number"
                          value="${item.actualAmount}"
                          onchange="updateSummaryItemPrice(${tempItems.indexOf(
-                           item
-                         )}, 'fee', this.value)"
+          item
+        )}, 'fee', this.value)"
                          min="0"
                          step="0.01"
                          style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
               </td>
               <td style="border: 1px solid #ddd; padding: 10px;">${formatCurrency(
-                item.actualAmount
-              )}</td>
+          item.actualAmount
+        )}</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <button class="danger" onclick="removeSummaryItem(${tempItems.indexOf(
-                    item
-                  )}, 'temp')">删除</button>
+          item
+        )}, 'temp')">删除</button>
               </td>
           `;
 
@@ -1006,30 +997,27 @@ function renderDetailedSummary(baseTotal, tempFees, factor) {
 
       row.innerHTML = `
               <td style="border: 1px solid #ddd; padding: 10px;">${itemIndex}</td>
-              <td style="border: 1px solid #ddd; padding: 10px;">系数 - ${
-                item.name
-              }</td>
+              <td style="border: 1px solid #ddd; padding: 10px;">系数 - ${item.name
+        }</td>
               <td style="border: 1px solid #ddd; padding: 10px;">-</td>
-              <td style="border: 1px solid #ddd; padding: 10px;">x ${
-                item.value
-              }</td>
+              <td style="border: 1px solid #ddd; padding: 10px;">x ${item.value
+        }</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <input type="number"
                          value="${item.value}"
                          onchange="updateSummaryItemPrice(${tempItems.indexOf(
-                           item
-                         )}, 'factor', this.value)"
+          item
+        )}, 'factor', this.value)"
                          min="0"
                          step="0.01"
                          style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
               </td>
-              <td style="border: 1px solid #ddd; padding: 10px;">x ${
-                item.value
-              }</td>
+              <td style="border: 1px solid #ddd; padding: 10px;">x ${item.value
+        }</td>
               <td style="border: 1px solid #ddd; padding: 10px;">
                   <button class="danger" onclick="removeSummaryItem(${tempItems.indexOf(
-                    item
-                  )}, 'temp')">删除</button>
+          item
+        )}, 'temp')">删除</button>
               </td>
           `;
 
@@ -1227,20 +1215,18 @@ async function showTopUsedItems(type) {
   topItems.forEach((item) => {
     html += `
               <button type="button" class="secondary"
-                   onclick="${
-                     type === "parts"
-                       ? "fillPartForm"
-                       : type === "fees"
-                       ? "fillTempFeeForm"
-                       : "fillTempFactorForm"
-                   }(${JSON.stringify(item).replace(/"/g, "&quot;")})"
-                   style="background-color: ${
-                     type === "parts"
-                       ? "#2196F3"
-                       : type === "fees"
-                       ? "#4CAF50"
-                       : "#FF9800"
-                   }; color: white; margin-right: 5px; margin-bottom: 5px;"
+                   onclick="${type === "parts"
+        ? "fillPartForm"
+        : type === "fees"
+          ? "fillTempFeeForm"
+          : "fillTempFactorForm"
+      }(${JSON.stringify(item).replace(/"/g, "&quot;")})"
+                   style="background-color: ${type === "parts"
+        ? "#2196F3"
+        : type === "fees"
+          ? "#4CAF50"
+          : "#FF9800"
+      }; color: white; margin-right: 5px; margin-bottom: 5px;"
                    title="${item.name || item.model}">
                   ${item.name || item.model}
               </button>
@@ -1293,9 +1279,9 @@ function partSearchInput(searchTerm) {
     html += `
               <button type="button" class="secondary"
                    onclick="fillPartForm(${JSON.stringify(part).replace(
-                     /"/g,
-                     "&quot;"
-                   )})"
+      /"/g,
+      "&quot;"
+    )})"
                    style="background-color: #FF9800; color: white; margin-right: 5px; margin-bottom: 5px; white-space: nowrap;"
                    title="${part.model}">
                   ${part.model}
@@ -1355,9 +1341,9 @@ function tempFeeSearchInput(searchTerm) {
     html += `
               <button type="button" class="secondary"
                    onclick="fillTempFeeForm(${JSON.stringify(fee).replace(
-                     /"/g,
-                     "&quot;"
-                   )})"
+      /"/g,
+      "&quot;"
+    )})"
                    style="background-color: #4CAF50; color: white; margin-right: 5px; margin-bottom: 5px; white-space: nowrap;"
                    title="${fee.name}">
                   ${fee.name}
@@ -1372,8 +1358,7 @@ function tempFeeSearchInput(searchTerm) {
 // 填充其它费用表单
 function fillTempFeeForm(fee) {
   document.getElementById("tempFeeNameCart").value = fee.name || "";
-  document.getElementById("tempFeeAmountCart").value = fee.value || "";
-
+  document.getElementById("tempFeeAmountCart").value = fee.value || fee.amount || "";
   // 保留搜索框的内容，这样用户可以继续搜索或从结果中选择其他项目
   // 搜索结果仍然可见，用户可以继续交互
 }
@@ -1417,8 +1402,8 @@ function tempFactorSearchInput(searchTerm) {
     html += `
               <button type="button" class="secondary"
                    onclick="fillTempFactorForm(${JSON.stringify(
-                     factor
-                   ).replace(/"/g, "&quot;")})"
+      factor
+    ).replace(/"/g, "&quot;")})"
                    style="background-color: #2196F3; color: white; margin-right: 5px; margin-bottom: 5px; white-space: nowrap;"
                    title="${factor.name}">
                   ${factor.name}
@@ -1484,20 +1469,17 @@ function localSearch(type, searchTerm) {
     html += `
               <div class="top-item" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; background-color: #f9f9f9; cursor: pointer;"
                    onclick="fillItemForm(${JSON.stringify(item).replace(
-                     /"/g,
-                     "&quot;"
-                   )}, '${type}')">
+      /"/g,
+      "&quot;"
+    )}, '${type}')">
                   <div><strong>${item.name || item.model}</strong></div>
-                  <div style="font-size: 0.8em; color: #666;">被添加次数: ${
-                    item.addedCount || item.useCount || 1
-                  }</div>
-                  ${
-                    type === "parts"
-                      ? `<div style="font-size: 0.8em; color: #888;">价格: ${
-                          item.price || 0
-                        }</div>`
-                      : ""
-                  }
+                  <div style="font-size: 0.8em; color: #666;">被添加次数: ${item.addedCount || item.useCount || 1
+      }</div>
+                  ${type === "parts"
+        ? `<div style="font-size: 0.8em; color: #888;">价格: ${item.price || 0
+        }</div>`
+        : ""
+      }
               </div>
           `;
   });
@@ -1530,5 +1512,18 @@ function fillItemForm(item, type) {
     document.getElementById("tempFactorValueCart").value =
       item.ShowPrice || item.value || "";
     showTempFactorForm();
+  }
+}
+
+// 初始化函数，包含需要在DOM加载完成后执行的事件绑定
+function initializeHomeModule() {
+  // 搜索功能 - 只在回车时进行搜索
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) {
+    searchInput.addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        performSearch();
+      }
+    });
   }
 }

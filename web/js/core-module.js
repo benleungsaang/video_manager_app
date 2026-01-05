@@ -33,7 +33,7 @@ const apiClient = {
           const errorData = await response.json();
           throw new Error(
             errorData.error ||
-              `HTTP ${response.status}: ${response.statusText}`
+            `HTTP ${response.status}: ${response.statusText}`
           );
         } catch (parseError) {
           // 如果响应不是JSON，直接使用状态文本
@@ -522,12 +522,12 @@ let itemsForBatchUpdate = [];
 
 // 记录需要批量更新使用次数的项目
 function recordItemUsageForBatchUpdate(
-  itemModel,
-  type = "machine_parts"
+  itemId,
+  type = "machines"
 ) {
-  // 检查项目是否已在记录列表中
+  // 检查项目是否已在记录列表中（同时比较ID和类型）
   const existingIndex = itemsForBatchUpdate.findIndex(
-    (item) => item.model === itemModel && item.type === type
+    (item) => item.id === itemId && item.type === type
   );
 
   if (existingIndex !== -1) {
@@ -536,7 +536,7 @@ function recordItemUsageForBatchUpdate(
   } else {
     // 如果不存在，添加新记录
     itemsForBatchUpdate.push({
-      model: itemModel,
+      id: itemId,
       type: type,
       count: 1,
     });
@@ -550,18 +550,51 @@ async function batchUpdateItemUsage() {
   }
 
   try {
+    // 准备批量更新数据
+    const batchData = {
+      items: itemsForBatchUpdate.map(item => ({
+        type: item.type,
+        id: item.id, // 使用ID字段进行更新
+        count: item.count || 1
+      }))
+    };
+
+    // 尝试使用批量更新API
+    const batchResponse = await apiClient.request('/batch-update-added-count', {
+      method: 'POST',
+      body: JSON.stringify(batchData)
+    });
+
+    if (batchResponse.success) {
+      console.log(`批量更新完成: ${batchResponse.machinesUpdated}个机器, ${batchResponse.partsUpdated}个部件, ${batchResponse.feesUpdated}个费用, ${batchResponse.factorsUpdated}个系数`);
+    } else {
+      console.error('批量更新失败:', batchResponse.error);
+      throw new Error('批量更新失败');
+    }
+
+    // 更新本地缓存中的addedCount字段
+    await updateLocalCacheAfterBatchUpdate();
+
+    // 清空记录列表
+    itemsForBatchUpdate = [];
+  } catch (error) {
+    console.error("批量更新项目使用次数失败:", error);
+    // 批量更新失败，回退到逐个更新
+    console.warn('回退到逐个更新模式');
+
+    // 逐个更新每个项目
     for (const item of itemsForBatchUpdate) {
       // 根据不同类型调用不同的API
       let response;
       switch (item.type) {
-        case "machine_parts":
+        case "machines":
           response = await apiClient.request(
-            `/machines/${encodeURIComponent(item.model)}`,
+            `/machines/${encodeURIComponent(item.id)}`,
             {
               method: "PUT",
               body: JSON.stringify({
                 action: "incrementAddedCount",
-                model: item.model,
+                id: item.id,
               }),
             }
           );
@@ -569,36 +602,36 @@ async function batchUpdateItemUsage() {
         case "parts":
           // 对于incrementAddedCount操作，使用request方法直接调用API
           response = await apiClient.request(
-            `/parts/${encodeURIComponent(item.model)}`,
+            `/parts/${encodeURIComponent(item.id)}`,
             {
               method: "PUT",
               body: JSON.stringify({
                 action: "incrementAddedCount",
-                model: item.model,
+                id: item.id,
               }),
             }
           );
           break;
         case "fees":
           response = await apiClient.request(
-            `/temp-fees/${encodeURIComponent(item.model)}`,
+            `/temp-fees/${encodeURIComponent(item.id)}`,
             {
               method: "PUT",
               body: JSON.stringify({
                 action: "incrementAddedCount",
-                name: item.model,
+                id: item.id,
               }),
             }
           );
           break;
         case "factors":
           response = await apiClient.request(
-            `/temp-factors/${encodeURIComponent(item.model)}`,
+            `/temp-factors/${encodeURIComponent(item.id)}`,
             {
               method: "PUT",
               body: JSON.stringify({
                 action: "incrementAddedCount",
-                name: item.model,
+                id: item.id,
               }),
             }
           );
@@ -609,10 +642,10 @@ async function batchUpdateItemUsage() {
       }
 
       if (response && response.success) {
-        console.log(`${item.type} ${item.model} 使用次数已更新`);
+        console.log(`${item.type} ${item.id} 使用次数已更新`);
       } else {
         console.error(
-          `${item.type} ${item.model} 更新失败:`,
+          `${item.type} ${item.id} 更新失败:`,
           response?.error
         );
       }
@@ -623,8 +656,6 @@ async function batchUpdateItemUsage() {
 
     // 清空记录列表
     itemsForBatchUpdate = [];
-  } catch (error) {
-    console.error("批量更新项目使用次数失败:", error);
   }
 }
 
@@ -847,14 +878,13 @@ function updateCartSummary() {
                       <strong>${item.model}</strong>
                   </td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(
-                    item.actualPrice
-                  )}</td>
-                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${
-                    item.quantity
-                  }</td>
+      item.actualPrice
+    )}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity
+      }</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(
-                    subtotal
-                  )}</td>
+        subtotal
+      )}</td>
               </tr>
           `;
   });
@@ -906,8 +936,8 @@ function updateCartSummary() {
 
   html += `
               <div style="margin-top: 10px; font-size: 1.2em; color: #e74c3c;">总计: ${formatCurrency(
-                total
-              )}</div>
+    total
+  )}</div>
           </div>
       `;
 

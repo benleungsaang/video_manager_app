@@ -1342,7 +1342,7 @@
         const row = document.createElement('tr');
         row.className = 'hover-row';
         const displayName = fee.name || fee.Name || '';
-        const displayAmount = fee.amount || fee.value || 0;  // 费用使用amount字段
+        const displayAmount = fee.value || fee.amount || 0;  // 费用使用value字段，兼容旧的amount字段
         
         row.innerHTML = `
           <td class="px-6 py-4 whitespace-nowrap">
@@ -1817,7 +1817,7 @@
         state.currentEditType = 'fee';
         elements.feeModalTitle.textContent = '编辑费用';
         elements.feeName.value = state.currentEditItem.name || state.currentEditItem.Name || '';
-        elements.feeAmount.value = state.currentEditItem.amount || state.currentEditItem.value || '';
+        elements.feeAmount.value = state.currentEditItem.value || state.currentEditItem.amount || '';
         elements.addEditFeeModal.classList.remove('hidden');
       }
     }
@@ -1833,7 +1833,8 @@
       
       const feeData = {
         name: name,
-        amount: amount
+        value: amount,  // 使用 value 字段而不是 amount
+        addedCount: 1  // 添加 addedCount 字段
       };
       
       try {

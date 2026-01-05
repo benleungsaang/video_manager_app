@@ -1772,4 +1772,181 @@ class PriceCalculatorApiHandler {
       'content': content.sublist(start, end),
     };
   }
+  
+  // 批量更新添加次数
+  Future<Response> handleBatchUpdateAddedCount(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final params = json.decode(body);
+
+      // 验证参数
+      if (params['items'] == null || params['items'] is! List) {
+        return Response.badRequest(
+          body: json.encode({
+            'success': false, 
+            'error': '缺少items参数或items不是数组'
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final items = params['items'] as List;
+      
+      // 初始化统计
+      int machinesUpdated = 0;
+      int partsUpdated = 0;
+      int feesUpdated = 0;
+      int factorsUpdated = 0;
+      
+      // 处理机器
+      final machinesBox = Hive.box<Machine>('machines');
+      for (final item in items) {
+        if (item['type'] == 'machines') {
+          final id = item['id']?.toString();
+          if (id != null) {
+            for (final key in machinesBox.keys) {
+              final machine = machinesBox.get(key)!;
+              
+              if (machine.id == id) {
+                // 创建更新后的Machine对象，增加addedCount
+                final updatedMachine = Machine(
+                  id: machine.id,
+                  model: machine.model,
+                  originalModel: machine.originalModel,
+                  originalPrice: machine.originalPrice,
+                  showPrice: machine.showPrice,
+                  image: machine.image,
+                  addedCount: machine.addedCount + (item['count'] as int? ?? 1), // 增加指定的次数
+                  otherProperties: machine.otherProperties,
+                  createdAt: machine.createdAt, // 保持原始创建时间
+                  updatedAt: DateTime.now(), // 更新最后修改时间
+                  createdBy: machine.createdBy, // 保持原始创建人
+                  updatedBy: 'system', // 使用系统作为更新人
+                );
+
+                // 更新到Hive数据库
+                await machinesBox.put(key, updatedMachine);
+                machinesUpdated++;
+                break; // 找到并更新后跳出内循环
+              }
+            }
+          }
+        }
+      }
+      
+      // 处理部件
+      final partsBox = Hive.box<Part>('temp_parts');
+      for (final item in items) {
+        if (item['type'] == 'parts') {
+          final id = item['id']?.toString();
+          if (id != null) {
+            for (final key in partsBox.keys) {
+              final part = partsBox.get(key)!;
+              
+              if (part.id == id) {
+                // 创建更新后的Part对象，增加addedCount
+                final updatedPart = Part(
+                  id: part.id,
+                  model: part.model,
+                  price: part.price,
+                  remark: part.remark,
+                  addedCount: part.addedCount + (item['count'] as int? ?? 1), // 增加指定的次数
+                );
+
+                // 更新到Hive数据库
+                await partsBox.put(key, updatedPart);
+                partsUpdated++;
+                break; // 找到并更新后跳出内循环
+              }
+            }
+          }
+        }
+      }
+      
+      // 处理费用
+      final feesBox = Hive.box<TempFee>('temp_fees');
+      for (final item in items) {
+        if (item['type'] == 'fees') {
+          final id = item['id']?.toString();
+          if (id != null) {
+            for (final key in feesBox.keys) {
+              final fee = feesBox.get(key)!;
+              
+              if (fee.id == id) {
+                // 创建更新后的TempFee对象，增加addedCount
+                final updatedFee = TempFee(
+                  id: fee.id,
+                  name: fee.name,
+                  value: fee.value,
+                  addedCount: fee.addedCount + (item['count'] as int? ?? 1), // 增加指定的次数
+                );
+
+                // 更新到Hive数据库
+                await feesBox.put(key, updatedFee);
+                feesUpdated++;
+                break; // 找到并更新后跳出内循环
+              }
+            }
+          }
+        }
+      }
+      
+      // 处理系数
+      final factorsBox = Hive.box<TempFactor>('temp_factors');
+      for (final item in items) {
+        if (item['type'] == 'factors') {
+          final id = item['id']?.toString();
+          if (id != null) {
+            for (final key in factorsBox.keys) {
+              final factor = factorsBox.get(key)!;
+              
+              if (factor.id == id) {
+                // 创建更新后的TempFactor对象，增加addedCount
+                final updatedFactor = TempFactor(
+                  id: factor.id,
+                  name: factor.name,
+                  value: factor.value,
+                  addedCount: factor.addedCount + (item['count'] as int? ?? 1), // 增加指定的次数
+                );
+
+                // 更新到Hive数据库
+                await factorsBox.put(key, updatedFactor);
+                factorsUpdated++;
+                break; // 找到并更新后跳出内循环
+              }
+            }
+          }
+        }
+      }
+
+      // 更新相应的时间戳
+      if (machinesUpdated > 0) updateMachinesTimestamp();
+      if (partsUpdated > 0) updatePartsTimestamp();
+      if (feesUpdated > 0) updateFeesTimestamp();
+      if (factorsUpdated > 0) updateFactorsTimestamp();
+
+      return Response.ok(
+        json.encode({
+          'success': true,
+          'message': '批量更新完成',
+          'machinesUpdated': machinesUpdated,
+          'partsUpdated': partsUpdated,
+          'feesUpdated': feesUpdated,
+          'factorsUpdated': factorsUpdated,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'lastMachinesUpdate': _lastMachinesUpdate,
+          'lastPartsUpdate': _lastPartsUpdate,
+          'lastFeesUpdate': _lastFeesUpdate,
+          'lastFactorsUpdate': _lastFactorsUpdate,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('批量更新添加次数失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
 }

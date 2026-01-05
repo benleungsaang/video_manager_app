@@ -1,7 +1,9 @@
-当前的@server_service.dart文件太过臃肿了，不利于管理使用，请合理地拆分文件
+检查@web/js/ 中关于记录机器、部件、费用、系数的使用次数相关，均应使用其对应的唯一ID，而不是以前的model, name,type等字段，需要更新全部代码
+另外原来使用的 machine_parts 早已更换成 machines，有类似字段引用及相关引用，均应更新
 
 处理完前述要求后执行以下操作：
-1、对本次修改过的html文件做node -e语法检查，如本次无处理过html文件则跳过；
+1、对本次修改过的html/js文件做node -e语法检查，如本次无处理过html/js文件则跳过；
 2、html文件修改过后非必要不执行flutter build web，影响执行效率；
 3、有修改过的html文件在./web中的文件覆盖到./build/web中，如本次无处理过html文件则跳过；
-4、对本次修改过的dart文件做dart analyze语法检查，如本次无处理过dart文件则跳过；
+4、有修改过的js文件在./web/js中的文件覆盖到./build/web/js中，如本次无处理过js文件则跳过；
+5、对本次修改过的dart文件做dart analyze语法检查，如本次无处理过dart文件则跳过；

@@ -96,8 +96,7 @@ class ServerService with ChangeNotifier {
   // 更新费用最后修改时间
   void updateFeesTimestamp() {
     _lastFeesUpdate = DateTime.now().millisecondsSinceEpoch;
-    print(
-        '费用数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastFeesUpdate)}');
+    print('费用数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastFeesUpdate)}');
   }
 
   // 更新系数最后修改时间
@@ -335,11 +334,15 @@ class ServerService with ChangeNotifier {
 
     // HTTP API端点 - 价格计算器相关
     router.get('/api/machines', _priceCalculatorApiHandler.handleGetMachines);
-    router.post('/api/machines', _priceCalculatorApiHandler.handleCreateMachine);
-    router.put('/api/machines/<id>', _priceCalculatorApiHandler.handleUpdateMachine);
+    router.post(
+        '/api/machines', _priceCalculatorApiHandler.handleCreateMachine);
+    router.put(
+        '/api/machines/<id>', _priceCalculatorApiHandler.handleUpdateMachine);
     // 清空机器数据库 - 放在更通用的路由之前
-    router.delete('/api/machines/clear', _priceCalculatorApiHandler.handleClearMachineParts);
-    router.delete('/api/machines/<id>', _priceCalculatorApiHandler.handleDeleteMachine);
+    router.delete('/api/machines/clear',
+        _priceCalculatorApiHandler.handleClearMachineParts);
+    router.delete(
+        '/api/machines/<id>', _priceCalculatorApiHandler.handleDeleteMachine);
 
     // HTTP API端点 - 视频信息
     router.get('/api/videos/<id>/url', _videoApiHandler.handleGetVideoUrl);
@@ -350,54 +353,84 @@ class ServerService with ChangeNotifier {
     router.post('/api/parts', _priceCalculatorApiHandler.handleCreatePart);
     router.put('/api/parts/<id>', _priceCalculatorApiHandler.handleUpdatePart);
     // 清空部件数据库 - 放在更通用的路由之前
-    router.delete('/api/parts/clear', _priceCalculatorApiHandler.handleClearParts);
-    router.delete('/api/parts/<id>', _priceCalculatorApiHandler.handleDeletePart);
+    router.delete(
+        '/api/parts/clear', _priceCalculatorApiHandler.handleClearParts);
+    router.delete(
+        '/api/parts/<id>', _priceCalculatorApiHandler.handleDeletePart);
 
     // HTTP API端点 - 统计信息（价格计算器）
-    router.get('/api/parts-stats', _priceCalculatorApiHandler.handleGetPartsStats);
+    router.get(
+        '/api/parts-stats', _priceCalculatorApiHandler.handleGetPartsStats);
 
     // HTTP API端点 - 费用相关（价格计算器）
     router.get('/api/temp-fees', _priceCalculatorApiHandler.handleGetTempFees);
-    router.post('/api/temp-fees', _priceCalculatorApiHandler.handleCreateTempFee);
-    router.put('/api/temp-fees/<id>', _priceCalculatorApiHandler.handleUpdateTempFee);
+    router.post(
+        '/api/temp-fees', _priceCalculatorApiHandler.handleCreateTempFee);
+    router.put(
+        '/api/temp-fees/<id>', _priceCalculatorApiHandler.handleUpdateTempFee);
     // 清空费用数据库 - 放在更通用的路由之前
-    router.delete('/api/temp-fees/clear', _priceCalculatorApiHandler.handleClearTempFees);
-    router.delete('/api/temp-fees/<id>', _priceCalculatorApiHandler.handleDeleteTempFee);
-    
+    router.delete(
+        '/api/temp-fees/clear', _priceCalculatorApiHandler.handleClearTempFees);
+    router.delete(
+        '/api/temp-fees/<id>', _priceCalculatorApiHandler.handleDeleteTempFee);
+
     // HTTP API端点 - 系数相关（价格计算器）
-    router.get('/api/temp-factors', _priceCalculatorApiHandler.handleGetTempFactors);
-    router.post('/api/temp-factors', _priceCalculatorApiHandler.handleCreateTempFactor);
-    router.put('/api/temp-factors/<id>', _priceCalculatorApiHandler.handleUpdateTempFactor);
+    router.get(
+        '/api/temp-factors', _priceCalculatorApiHandler.handleGetTempFactors);
+    router.post(
+        '/api/temp-factors', _priceCalculatorApiHandler.handleCreateTempFactor);
+    router.put('/api/temp-factors/<id>',
+        _priceCalculatorApiHandler.handleUpdateTempFactor);
     // 清空系数数据库 - 放在更通用的路由之前
-    router.delete('/api/temp-factors/clear', _priceCalculatorApiHandler.handleClearTempFactors);
-    router.delete('/api/temp-factors/<id>', _priceCalculatorApiHandler.handleDeleteTempFactor);
+    router.delete('/api/temp-factors/clear',
+        _priceCalculatorApiHandler.handleClearTempFactors);
+    router.delete('/api/temp-factors/<id>',
+        _priceCalculatorApiHandler.handleDeleteTempFactor);
 
     // HTTP API端点 - 常用项目相关（价格计算器）
-    router.get('/api/top-used/parts', _priceCalculatorApiHandler.handleGetTopUsedParts);
-    router.get('/api/top-used/fees', _priceCalculatorApiHandler.handleGetTopUsedFees);
-    router.get('/api/top-used/factors', _priceCalculatorApiHandler.handleGetTopUsedFactors);
+    router.get('/api/top-used/parts',
+        _priceCalculatorApiHandler.handleGetTopUsedParts);
+    router.get(
+        '/api/top-used/fees', _priceCalculatorApiHandler.handleGetTopUsedFees);
+    router.get('/api/top-used/factors',
+        _priceCalculatorApiHandler.handleGetTopUsedFactors);
 
     // HTTP API端点 - 机器数据上传（价格计算器）
-    router.post('/api/upload-machines', _priceCalculatorApiHandler.handleUploadMachines);
-    
+    router.post('/api/upload-machines',
+        _priceCalculatorApiHandler.handleUploadMachines);
+
     // HTTP API端点 - 数据更新检查（价格计算器）
-    router.get('/api/check-data-update', _priceCalculatorApiHandler.handleCheckDataUpdate);
+    router.get('/api/check-data-update',
+        _priceCalculatorApiHandler.handleCheckDataUpdate);
+
+    // HTTP API端点 - 批量更新添加次数（价格计算器）
+    router.post('/api/batch-update-added-count',
+        _priceCalculatorApiHandler.handleBatchUpdateAddedCount);
 
     // HTTP API端点 - 用户管理相关
     router.get('/api/users', _userApiHandler.handleGetUsers);
     router.post('/api/users', _userApiHandler.handleCreateUser);
-    router.post('/api/users/generate-totp', _userApiHandler.handleGenerateTotpSecret);
+    router.post(
+        '/api/users/generate-totp', _userApiHandler.handleGenerateTotpSecret);
     router.post('/api/users/verify-totp', _userApiHandler.handleVerifyTotpCode);
-    router.post('/api/users/authenticate', _userApiHandler.handleAuthenticateUser);
-    router.get('/api/users/pending-approval', _userApiHandler.handleGetPendingApprovalUsers);
+    router.post(
+        '/api/users/authenticate', _userApiHandler.handleAuthenticateUser);
+    router.get('/api/users/pending-approval',
+        _userApiHandler.handleGetPendingApprovalUsers);
     router.post('/api/users/approve', _userApiHandler.handleApproveUser);
     router.post('/api/users/reject', _userApiHandler.handleRejectUser);
-    router.delete('/api/users/<username>', _userApiHandler.handleDeleteUser); // 删除用户
-    router.post('/api/users/<username>/disable', _userApiHandler.handleDisableUser); // 禁用用户
-    router.post('/api/users/<username>/enable', _userApiHandler.handleEnableUser);  // 恢复用户
-    router.post('/api/users/<username>/reset-binding', _userApiHandler.handleResetUserBinding); // 重置绑定
-    router.post('/api/session-validation', _userApiHandler.handleSessionValidation); // 会话验证
-    router.post('/api/current-user-info', _userApiHandler.handleGetCurrentUserInfo); // 获取当前用户信息
+    router.delete(
+        '/api/users/<username>', _userApiHandler.handleDeleteUser); // 删除用户
+    router.post('/api/users/<username>/disable',
+        _userApiHandler.handleDisableUser); // 禁用用户
+    router.post('/api/users/<username>/enable',
+        _userApiHandler.handleEnableUser); // 恢复用户
+    router.post('/api/users/<username>/reset-binding',
+        _userApiHandler.handleResetUserBinding); // 重置绑定
+    router.post('/api/session-validation',
+        _userApiHandler.handleSessionValidation); // 会话验证
+    router.post('/api/current-user-info',
+        _userApiHandler.handleGetCurrentUserInfo); // 获取当前用户信息
 
     // 视频流处理路由 - 支持Range和HEAD请求
     router.get('/videoStream/<videoId>', _handleVideoStream);
@@ -601,7 +634,8 @@ class ServerService with ChangeNotifier {
   }
 
   // 检查机器是否仅仅是addedCount字段发生了变化
-  bool _isOnlyAddedCountChangedForMachine(Machine machine, Map<String, dynamic> params) {
+  bool _isOnlyAddedCountChangedForMachine(
+      Machine machine, Map<String, dynamic> params) {
     // 检查除了addedCount之外的其他字段是否发生变化
     if ((params['Model'] != null && params['Model'] != machine.model) ||
         (params['OriginalModel'] != null &&
@@ -675,16 +709,17 @@ class ServerService with ChangeNotifier {
   }
 
   // 检查费用是否仅仅是addedCount字段发生了变化
-  bool _isOnlyAddedCountChangedForFee(TempFee fee, Map<String, dynamic> params) {
+  bool _isOnlyAddedCountChangedForFee(
+      TempFee fee, Map<String, dynamic> params) {
     // 检查除了addedCount之外的其他字段是否发生变化
     if ((params['name'] != null && params['name'] != fee.name) ||
         (params['Model'] != null && params['Model'] != fee.name) ||
         (params['model'] != null && params['model'] != fee.name) ||
-        (params['value'] != null && 
+        (params['value'] != null &&
             (params['value'] as num).toDouble() != fee.value) ||
-        (params['defaultAmount'] != null && 
+        (params['defaultAmount'] != null &&
             (params['defaultAmount'] as num).toDouble() != fee.value) ||
-        (params['price'] != null && 
+        (params['price'] != null &&
             (params['price'] as num).toDouble() != fee.value)) {
       return false; // 有其他字段变化
     }
@@ -692,16 +727,17 @@ class ServerService with ChangeNotifier {
   }
 
   // 检查系数是否仅仅是addedCount字段发生了变化
-  bool _isOnlyAddedCountChangedForFactor(TempFactor factor, Map<String, dynamic> params) {
+  bool _isOnlyAddedCountChangedForFactor(
+      TempFactor factor, Map<String, dynamic> params) {
     // 检查除了addedCount之外的其他字段是否发生变化
     if ((params['name'] != null && params['name'] != factor.name) ||
         (params['Model'] != null && params['Model'] != factor.name) ||
         (params['model'] != null && params['model'] != factor.name) ||
-        (params['value'] != null && 
+        (params['value'] != null &&
             (params['value'] as num).toDouble() != factor.value) ||
-        (params['defaultValue'] != null && 
+        (params['defaultValue'] != null &&
             (params['defaultValue'] as num).toDouble() != factor.value) ||
-        (params['price'] != null && 
+        (params['price'] != null &&
             (params['price'] as num).toDouble() != factor.value)) {
       return false; // 有其他字段变化
     }
