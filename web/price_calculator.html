@@ -735,9 +735,36 @@
         </div>
         <!-- 报价单浮动按钮 -->
         <div class="floating-quote-buttons">
+            <button class="floating-quote-btn currency-settings-btn" onclick="toggleCurrencySettings()" title="外币设置">💱</button>
             <button class="floating-quote-btn unit-price-btn" onclick="toggleShowUnitPrice()" title="切换是否显示单价">💰</button>
             <button class="floating-quote-btn cart-btn" onclick="backToCart()" title="返回购物车">🛒</button>
             <button class="floating-quote-btn home-btn" onclick="backToMain()" title="返回主页">🏠</button>
+        </div>
+
+        <!-- 外币设置框 -->
+        <div id="currencySettingsBox" class="floating-quote-buttons" style="display: none; flex-direction: column; width: 250px; background-color: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1001; bottom: 110px;">
+            <h4 style="margin: 0 0 10px 0; text-align: center;" id="currencySettingsTitle">当前币种：CNY</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px;">内置汇率:</label>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <button type="button" onclick="selectCurrency('CNY', 1)" style="background-color: #f0f0f0; color: black; border: 1px solid #ccc; border-radius: 3px; padding: 5px; cursor: pointer; text-align: left;">中国 - 人民币(CNY) 1</button>
+                        <button type="button" onclick="selectCurrency('USD', 0.14)" style="background-color: #f0f0f0; color: black; border: 1px solid #ccc; border-radius: 3px; padding: 5px; cursor: pointer; text-align: left;">美国 - 美元(USD) 0.14</button>
+                        <button type="button" onclick="selectCurrency('IDR', 2400)" style="background-color: #f0f0f0; color: black; border: 1px solid #ccc; border-radius: 3px; padding: 5px; cursor: pointer; text-align: left;">印尼 - 卢比(IDR Rp) 2400</button>
+                        <button type="button" onclick="selectCurrency('AED', 0.53)" style="background-color: #f0f0f0; color: black; border: 1px solid #ccc; border-radius: 3px; padding: 5px; cursor: pointer; text-align: left;">迪拜 - 迪拉姆(AED) 0.53</button>
+                        <button type="button" onclick="selectCurrency('SAR', 0.54)" style="background-color: #f0f0f0; color: black; border: 1px solid #ccc; border-radius: 3px; padding: 5px; cursor: pointer; text-align: left;">沙特 - 里亚尔(SAR) 0.54</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="currencyCodeInput" style="display: block; margin-bottom: 5px;">币种代码:</label>
+                    <input type="text" id="currencyCodeInput" placeholder="例如: USD, EUR" value="USD" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" onkeypress="handleCurrencyInputKeyPress(event)" onblur="handleCurrencyInputBlur()">
+                </div>
+                <div>
+                    <label for="exchangeRateInput" style="display: block; margin-bottom: 5px;">汇率:</label>
+                    <input type="number" id="exchangeRateInput" step="0.0001" placeholder="例如: 0.14" value="0.14" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;" onkeypress="handleCurrencyInputKeyPress(event)" onblur="handleCurrencyInputBlur()">
+                </div>
+                <button onclick="toggleLanguageDisplay()" style="background-color: #4CAF50; color: white; border: none; border-radius: 4px; padding: 8px; cursor: pointer;">中英报价单</button>
+            </div>
         </div>
     </div>
 
@@ -840,11 +867,11 @@
           return null;
         }
 
-        // 控制零件管理按钮和上传按钮的显示（统一函数，避免重复API调用）
+        // 控制零件管理按钮、上传按钮和编辑按钮的显示（统一函数，避免重复API调用）
         async function controlButtonsVisibility() {
           // 获取用户角色（只调用一次）
           const userRole = await checkUserRole();
-          
+
           // 控制零件管理按钮的显示
           const partsManagementBtn = document.getElementById('parts-management-btn');
           if (partsManagementBtn) {
@@ -871,6 +898,18 @@
             }
           } else {
             console.error('找不到上传按钮');
+          }
+
+          // 控制编辑按钮的显示
+          const editButton = document.getElementById('editButton');
+          if (editButton) {
+            if (userRole !== 'admin') {
+              // 如果不是管理员，隐藏编辑按钮
+              editButton.style.display = 'none';
+            } else {
+              // 如果是管理员，显示编辑按钮
+              editButton.style.display = 'block';
+            }
           }
         }
 
@@ -2737,7 +2776,10 @@
         }
 
         // 显示产品详情
-        function showItemDetail(item) {
+        async function showItemDetail(item) {
+            // 获取用户角色
+            const userRole = await checkUserRole();
+
             // 构建所有字段的表格，以只读形式显示
             let fieldsTable = '<div style="max-height: 70vh; overflow-y: auto;"><table style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom:35px;">';
             fieldsTable += '<tbody>';
@@ -2745,6 +2787,10 @@
             // 遍历item的所有属性（除了image，因为我们要单独处理）
             for (const key in item) {
                 if (item.hasOwnProperty(key) && key !== 'image') {
+                    // 非管理员跳过id、OriginalPrice、ShowPrice字段
+                    if (userRole !== 'admin' && (key === 'id' || key === 'Id' || key === '_id' || key === 'OriginalPrice' || key === 'ShowPrice')) {
+                        continue; // 跳过这些字段
+                    }
                     // 以只读形式显示字段值
                     fieldsTable += `<tr><td style="border: 1px solid #ddd; padding: 10px;"><strong>${key}</strong></td><td id="detail-field-${key}" style="border: 1px solid #ddd; padding: 10px;">${item[key]}</td></tr>`;
                 }
@@ -2753,6 +2799,12 @@
             fieldsTable += '</tbody></table></div>';
 
             const detailContent = document.getElementById('detailContent');
+
+            // 根据用户角色决定是否显示编辑按钮
+            const editButtonHtml = userRole === 'admin'
+                ? '<button id="editButton" class="secondary" onclick="toggleEditDetail()" style="background-color: #2196F3; color: white;" title="编辑">✏️ 编辑</button>'
+                : ''; // 非管理员不显示编辑按钮
+
             detailContent.innerHTML = `
                 <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
                     <div style="position: relative; display: inline-block;">
@@ -2764,7 +2816,7 @@
                         <p><strong>价格:</strong> <span id="detailShowPriceDisplay">${formatCurrency(item.ShowPrice)}</span></p>
                         <div style="margin-top: 10px;">
                             <button class="secondary" onclick="addToCartFromDetail()" style="margin-right: 10px;" title="添加到购物车">🛒 添加到购物车</button>
-                            <button id="editButton" class="secondary" onclick="toggleEditDetail()" style="background-color: #2196F3; color: white;" title="编辑">✏️ 编辑</button>
+                            ${editButtonHtml}
                         </div>
                     </div>
                 </div>
@@ -2822,7 +2874,23 @@
         }
 
         // 保存详情页的修改
-        function saveDetailChanges() {
+        async function saveDetailChanges() {
+            // 检查用户角色
+            const userRole = await checkUserRole();
+            if (userRole !== 'admin') {
+                showMessage('只有管理员才能保存更改', 'error');
+                // 切换回查看模式
+                viewFields();
+
+                const editButton = document.getElementById('editButton');
+                editButton.innerHTML = '✏️ 编辑';
+                editButton.onclick = toggleEditDetail;
+
+                const editControls = document.getElementById('editControls');
+                editControls.style.display = 'none';
+                return;
+            }
+
             if (!window.currentDetailItem) {
                 showMessage('没有可保存的数据', 'error');
                 return;
@@ -2929,7 +2997,14 @@
         }
 
         // 切换编辑模式
-        function toggleEditDetail() {
+        async function toggleEditDetail() {
+            // 检查用户角色
+            const userRole = await checkUserRole();
+            if (userRole !== 'admin') {
+                alert('只有管理员才能编辑项目信息');
+                return; // 非管理员不能编辑
+            }
+
             const fieldsContainer = document.getElementById('fieldsContainer');
             const editControls = document.getElementById('editControls');
             const editButton = document.getElementById('editButton');
@@ -2938,8 +3013,8 @@
                 // 切换到编辑模式
                 editFields();
                 editButton.innerHTML = '💾 保存';
-                editButton.onclick = function() {
-                    saveDetailChanges(); // saveDetailChanges函数内部会处理界面切换
+                editButton.onclick = async function() {
+                    await saveDetailChanges(); // saveDetailChanges函数内部会处理界面切换
                 };
                 editControls.style.display = 'block';
             } else {
@@ -3161,7 +3236,7 @@
                             </td>
                             <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                                 <input type="number"
-                                       value="${item.actualPrice}"
+                                       value="${item.actualPrice.toFixed(2)}"
                                        onchange="updateCartItemPrice(${index}, this.value)"
                                        min="0"
                                        step="0.01"
@@ -3215,7 +3290,7 @@
                         <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
                         <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: center;">
                             <input type="number"
-                                   value="${item.actualAmount}"
+                                   value="${item.actualAmount.toFixed(2)}"
                                    onchange="updateTempFeeAmount(${itemIndex}, this.value)"
                                    min="0"
                                    step="0.01"
@@ -3267,9 +3342,10 @@
                 let total = (baseTotal + tempFees) * factor;
 
                 // 添加总计行
+                const currencyCode = window.currentCurrencyCode || 'CNY'; // 使用当前币种代码
                 html += `
                             <tr style="background-color: #e8f5e9; font-weight: bold;">
-                                <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计</td>
+                                <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计 (${currencyCode})</td>
                                 <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
                                 <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">-</td>
                             </tr>
@@ -3463,7 +3539,7 @@
 
                                                                                                                                                                                                     };
 
-                                                                                                                                
+
 
                                                                                                                                                                                                     const validationFn = (inputs) => {
 
@@ -3471,7 +3547,7 @@
 
                                                                                                                                                                                                         const price = parseFloat(inputs.price) || 0;
 
-                                                                                                                                
+
 
                                                                                                                                                                                                         if (!model) {
 
@@ -3489,7 +3565,7 @@
 
                                                                                                                                                                                                     };
 
-                                                                                                                                
+
 
                                                                                                                                                                                                     const createCartObjectFn = (inputs) => {
 
@@ -3519,7 +3595,7 @@
 
                                                                                                                                                                                                     };
 
-                                                                                                                                
+
 
                                                                                                                                                                                                     const apiCallFn = async (inputs) => {
 
@@ -3541,7 +3617,7 @@
 
                                                                                                                                                                                                     };
 
-                                                                                                                                
+
 
                                                                                                                                                                                                     await addToCartGeneric(
 
@@ -3563,7 +3639,7 @@
 
                                                                                                                                                                                                     );
 
-                                                                                                                                                                                                    
+
 
                                                                                                                                                                                                     updateCartCount(); // 更新计数
 
@@ -3596,7 +3672,7 @@
 
             // 创建购物车项目
             const cartItem = createCartObjectFn(inputs);
-            
+
             // 添加到购物车
             if (type === 'parts') {
                 cartItems.push(cartItem);
@@ -3620,12 +3696,12 @@
                     } else if (type === 'factors') {
                         dataKey = 'factorsData';
                     }
-                    
+
                     if (response.data && response.timestamp && window[dataKey]) {
                         // 更新本地缓存的时间戳
                         if (response.timestamp > (lastUpdateTime || 0)) {
                             lastUpdateTime = response.timestamp;
-                            
+
                             let timestampKey = '';
                             if (type === 'parts') {
                                 timestampKey = 'lastPartsTimestamp';
@@ -3644,11 +3720,11 @@
                         if (!window[dataKey]) {
                             window[dataKey] = [];
                         }
-                        
+
                         // 查找并更新或添加项目
                         const itemKey = type === 'parts' ? 'model' : 'name';
                         const itemValue = inputs[itemKey];
-                        
+
                         const existingIndex = window[dataKey].findIndex(p => p[itemKey] === itemValue);
                         if (existingIndex !== -1) {
                             // 更新现有项
@@ -3729,199 +3805,1552 @@
 
 
 
-        // 生成报价单
-        function generateQuote() {
-            // 在生成报价单前，批量更新所有使用过的项目次数
-            batchUpdateItemUsage();
+                                                // 生成报价单
 
-            // 使用当前的显示状态，默认为false（不显示单价）
-            const showUnitPrice = window.currentShowUnitPrice !== undefined ? window.currentShowUnitPrice : false;
-            closeCartModal();
 
-            // 切换到报价单页面
-            document.querySelector('.container').style.display = 'none';
-            document.getElementById('quotePage').style.display = 'block';
-            currentView = 'quote';
 
-            // 计算总计
-            let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
-            let tempFees = tempItems.filter(item => item.displayType === '费用').reduce((sum, item) => sum + item.actualAmount, 0);
-            let factor = tempItems.filter(item => item.displayType === '系数').reduce((prod, item) => prod * item.value, 1);
-            let total = (baseTotal + tempFees) * factor;
+                                                function generateQuote() {
 
-            let html = `
-                <div class="section">
-                    <h2 style="text-align: center; color: #333;">报价单</h2>
-            `;
 
-            if (showUnitPrice) {
-                // 显示单价的表格
-                html += `
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead>
-                            <tr style="background-color: #f2f2f2;">
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px;">序号</th>
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">型号</th>
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">单价</th>
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">数量</th>
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">小计</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
 
-                // 添加购物车项目
-                cartItems.forEach((item, index) => {
-                    const itemIndex = index + 1; // 序号从1开始
-                    const subtotal = item.actualPrice * item.quantity;
-                    html += `
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
-                                <strong>${item.model}</strong>
-                            </td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualPrice)}</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
-                        </tr>
-                    `;
-                });
+                                                    // 在生成报价单前，批量更新所有使用过的项目次数
 
-                // 添加商品小计行
-                if (cartItems.length > 0) {
-                    html += `
-                        <tr style="background-color: #f0f8ff; font-weight: bold;">
-                            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">商品小计</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
-                        </tr>
-                    `;
-                }
 
-                // 添加其它费用
-                tempItems.filter(item => item.displayType === '费用').forEach(item => {
-                    html += `
-                        <tr style="background-color: #f9f9f9;">
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>其它费用</strong></td>
-                            <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualAmount)}</td>
-                        </tr>
-                    `;
-                });
 
-                // 添加系数
-                tempItems.filter(item => item.displayType === '系数').forEach(item => {
-                    html += `
-                        <tr style="background-color: #f9f9f9;">
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>系数</strong></td>
-                            <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.value}</td>
-                        </tr>
-                    `;
-                });
+                                                    batchUpdateItemUsage();
 
-                // 添加总计行
-                html += `
-                        <tr style="background-color: #e8f5e9; font-weight: bold;">
-                            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            `;
 
+
+                                        
+
+
+
+                                                    // 使用当前的显示状态，默认为false（不显示单价）
+
+
+
+                                                    const showUnitPrice = window.currentShowUnitPrice !== undefined ? window.currentShowUnitPrice : false;
+
+
+
+                                                    closeCartModal();
+
+
+
+                                        
+
+
+
+                                                    // 切换到报价单页面
+
+
+
+                                                    document.querySelector('.container').style.display = 'none';
+
+
+
+                                                    document.getElementById('quotePage').style.display = 'block';
+
+
+
+                                                    currentView = 'quote';
+
+
+
+                                        
+
+
+
+                                                    // 获取当前汇率设置
+
+
+
+                                                    const currencyCode = window.currencyCode || 'CNY'; // 默认为CNY (人民币)
+
+
+
+                                                    const exchangeRate = window.exchangeRate || 1.0; // 默认汇率为1.0
+
+
+
+                                                    // 保存当前币种到全局变量，以便后续使用
+
+
+
+                                                    window.currentCurrencyCode = currencyCode;
+
+
+
+                                                    window.currentExchangeRate = exchangeRate;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                // 创建购物车和临时项目的副本用于显示，不修改原始数据
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                const quoteCartItems = cartItems.map(item => {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    // 创建项目副本
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    const itemCopy = {...item};
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    // 保留基准价格（原始人民币价格），如果未定义则使用当前价格作为基准
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    if (item.basePrice === undefined) {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        itemCopy.basePrice = itemCopy.actualPrice;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    } else {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        itemCopy.basePrice = item.basePrice;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    // 应用汇率转换（如果当前设置了汇率）
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    if (window.showForeignCurrency && exchangeRate) {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 使用两步计算公式：
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 1. 当前数值 / 当前汇率 = 基准数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 2. 基准数值 * 新汇率 = 新数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 获取当前汇率（切换前的汇率）
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        const currentRate = window.currentExchangeRate || 1.0;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 第一步：当前数值 / 当前汇率 = 基准数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        const baseValue = itemCopy.actualPrice / currentRate;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 第二步：基准数值 * 新汇率 = 新数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        itemCopy.displayPrice = baseValue * exchangeRate;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    } else {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        // 如果不显示外币，则直接使用当前的实际价格
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                        itemCopy.displayPrice = itemCopy.actualPrice;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                    return itemCopy;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                });
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                            const quoteTempItems = tempItems.map(item => {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                // 创建项目副本
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                const itemCopy = {...item};
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                // 保留基准金额（原始人民币金额），如果未定义则使用当前金额
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                if (item.displayType === '费用' && item.baseAmount === undefined) {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    itemCopy.baseAmount = itemCopy.actualAmount;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                } else if (item.displayType === '费用') {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    itemCopy.baseAmount = item.baseAmount;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                }
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                // 应用汇率转换（如果当前设置了汇率）
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                if (item.displayType === '费用' && window.showForeignCurrency && exchangeRate) {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 使用两步计算公式：
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 1. 当前数值 / 当前汇率 = 基准数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 2. 基准数值 * 新汇率 = 新数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 获取当前汇率（切换前的汇率）
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    const currentRate = window.currentExchangeRate || 1.0;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 第一步：当前数值 / 当前汇率 = 基准数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    const baseValue = itemCopy.actualAmount / currentRate;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 第二步：基准数值 * 新汇率 = 新数值
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    itemCopy.displayAmount = baseValue * exchangeRate;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                } else if (item.displayType === '费用') {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 如果不显示外币，则直接使用当前的实际金额
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    itemCopy.displayAmount = itemCopy.actualAmount;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                } else {
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    // 对于系数，不需要汇率转换
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                    itemCopy.displayValue = itemCopy.value;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                }
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                return itemCopy;
+
+
+
+                                                    
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                            });
+
+
+
+                                        
+
+
+
+                                                    // 计算总计（使用显示价格，已应用汇率转换）
+
+
+
+                                                    let baseTotal = quoteCartItems.reduce((sum, item) => sum + (item.displayPrice * item.quantity), 0);
+
+
+
+                                                    let tempFees = quoteTempItems.filter(item => item.displayType === '费用').reduce((sum, item) => sum + item.displayAmount, 0);
+
+
+
+                                                    let factor = quoteTempItems.filter(item => item.displayType === '系数').reduce((prod, item) => prod * item.value, 1);
+
+
+
+                                                    let total = (baseTotal + tempFees) * factor;
+
+
+
+                                        
+
+
+
+                                                    // 语言设置
+
+
+
+                                                    const isEnglish = window.isEnglishDisplay || false;
+
+
+
+                                        
+
+
+
+                                                    // 根据语言设置定义标签，确保币种尾标正确显示
+
+
+
+                                                    const labels = isEnglish ? {
+
+
+
+                                                        quotation: 'Quotation',
+
+
+
+                                                        no: 'No.',
+
+
+
+                                                        name: 'Name',
+
+
+
+                                                        unitPrice: 'Unit Price',
+
+
+
+                                                        qty: 'Qty.',
+
+
+
+                                                        subtotal: 'Subtotal',
+
+
+
+                                                        subtotalExcludingFees: 'Subtotal (Excluding Additional Fees)',
+
+
+
+                                                        add: 'Add',
+
+
+
+                                                        total: `TOTAL (${currencyCode})`  // 总计后显示正确的币种代码
+
+
+
+                                                    } : {
+
+
+
+                                                        quotation: '报价单',
+
+
+
+                                                        no: '序号',
+
+
+
+                                                        name: '型号',
+
+
+
+                                                        unitPrice: '单价',
+
+
+
+                                                        qty: '数量',
+
+
+
+                                                        subtotal: '小计',
+
+
+
+                                                        subtotalExcludingFees: '商品小计',
+
+
+
+                                                        add: '其它费用',
+
+
+
+                                                        total: `总计 (${currencyCode})`  // 总计后显示正确的币种代码
+
+
+
+                                                    };
+
+
+
+                                        
+
+
+
+                                                    let html = `
+
+
+
+                                                        <div class="section">
+
+
+
+                                                            <h2 style="text-align: center; color: #333;">${labels.quotation}</h2>
+
+
+
+                                                    `;
+
+
+
+                                        
+
+
+
+                                                    if (showUnitPrice) {
+
+
+
+                                                        // 显示单价的表格
+
+
+
+                                                        html += `
+
+
+
+                                                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+
+
+
+                                                                <thead>
+
+
+
+                                                                    <tr style="background-color: #f2f2f2;">
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px; white-space: nowrap;">${labels.no}</th>
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.name}</th>
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.unitPrice}</th>
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.qty}</th>
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.subtotal}</th>
+
+
+
+                                                                    </tr>
+
+
+
+                                                                </thead>
+
+
+
+                                                                <tbody>
+
+
+
+                                                        `;
+
+
+
+                                        
+
+
+
+                                                        // 添加购物车项目（使用报价单副本的显示价格）
+
+
+
+                                                        quoteCartItems.forEach((item, index) => {
+
+
+
+                                                            const itemIndex = index + 1; // 序号从1开始
+
+
+
+                                                            const subtotal = item.displayPrice * item.quantity;
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;">${itemIndex}</td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+
+
+
+                                                                        <strong>${item.model}</strong>
+
+
+
+                                                                    </td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.displayPrice)}</td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        });
+
+
+
+                                        
+
+
+
+                                                        // 添加商品小计行
+
+
+
+                                                        if (quoteCartItems.length > 0) {
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr style="background-color: #f0f8ff; font-weight: bold;">
+
+
+
+                                                                    <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.subtotalExcludingFees}</td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        }
+
+
+
+                                        
+
+
+
+                                                        // 添加其它费用（使用报价单副本的显示金额）
+
+
+
+                                                        quoteTempItems.filter(item => item.displayType === '费用').forEach(item => {
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr style="background-color: #f9f9f9;">
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${labels.add}</strong></td>
+
+
+
+                                                                    <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.displayAmount)}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        });
+
+
+
+                                        
+
+
+
+                                                        // 添加系数（使用原始值，因为系数不涉及汇率转换）
+
+
+
+                                                        quoteTempItems.filter(item => item.displayType === '系数').forEach(item => {
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr style="background-color: #f9f9f9;">
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${isEnglish ? 'Factor' : '系数'}</strong></td>
+
+
+
+                                                                    <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.value}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        });
+
+
+
+                                        
+
+
+
+                                                        // 显示总计，确保币种代码正确显示
+
+
+
+                                                        html += `
+
+
+
+                                                            <tr style="background-color: #e8f5e9; font-weight: bold;">
+
+
+
+                                                                <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.total}</td>
+
+
+
+                                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+
+
+
+                                                            </tr>
+
+
+
+                                                        `;
+
+
+
+                                        
+
+
+
+                                                        html += `
+
+
+
+                                                                </tbody>
+
+
+
+                                                            </table>
+
+
+
+                                                        `;
+
+
+
+                                        
+
+
+
+                                                    } else {
+
+
+
+                                                        // 不显示单价的表格
+
+
+
+                                                        html += `
+
+
+
+                                                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+
+
+
+                                                                <thead>
+
+
+
+                                                                    <tr style="background-color: #f2f2f2;">
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px; white-space: nowrap;">${labels.no}</th>
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.name}</th>
+
+
+
+                                                                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.qty}</th>
+
+
+
+                                                                    </tr>
+
+
+
+                                                                </thead>
+
+
+
+                                                                <tbody>
+
+
+
+                                                        `;
+
+
+
+                                        
+
+
+
+                                                        // 添加购物车项目（使用报价单副本）
+
+
+
+                                                        quoteCartItems.forEach((item, index) => {
+
+
+
+                                                            const itemIndex = index + 1; // 序号从1开始
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;">${itemIndex}</td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+
+
+
+                                                                        <strong>${item.model}</strong>
+
+
+
+                                                                    </td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        });
+
+
+
+                                        
+
+
+
+                                                        // 添加商品小计行
+
+
+
+                                                        if (quoteCartItems.length > 0) {
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr style="background-color: #f0f8ff; font-weight: bold;">
+
+
+
+                                                                    <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.subtotalExcludingFees}</td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        }
+
+
+
+                                        
+
+
+
+                                                        // 添加其它费用（使用报价单副本的显示金额）
+
+
+
+                                                        quoteTempItems.filter(item => item.displayType === '费用').forEach(item => {
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr style="background-color: #f9f9f9;">
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${labels.add}</strong></td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.displayAmount)}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        });
+
+
+
+                                        
+
+
+
+                                                        // 添加系数（使用原始值）
+
+
+
+                                                        quoteTempItems.filter(item => item.displayType === '系数').forEach(item => {
+
+
+
+                                                            html += `
+
+
+
+                                                                <tr style="background-color: #f9f9f9;">
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${isEnglish ? 'Factor' : '系数'}</strong></td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
+
+
+
+                                                                    <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.value}</td>
+
+
+
+                                                                </tr>
+
+
+
+                                                            `;
+
+
+
+                                                        });
+
+
+
+                                        
+
+
+
+                                                        // 显示总计，确保币种代码正确显示
+
+
+
+                                                        html += `
+
+
+
+                                                            <tr style="background-color: #e8f5e9; font-weight: bold;">
+
+
+
+                                                                <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.total}</td>
+
+
+
+                                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+
+
+
+                                                            </tr>
+
+
+
+                                                        `;
+
+
+
+                                        
+
+
+
+                                                        html += `
+
+
+
+                                                                </tbody>
+
+
+
+                                                            </table>
+
+
+
+                                                        `;
+
+
+
+                                                    }
+
+
+
+                                        
+
+
+
+                                                    html += `
+
+
+
+                                                        </div>
+
+
+
+                                                    `;
+
+
+
+                                        
+
+
+
+                                                    document.getElementById('quoteContent').innerHTML = html;
+
+
+
+                                        
+
+
+
+                                                    // 保存当前的显示状态
+
+
+
+                                                    if (window.currentShowUnitPrice === undefined) {
+
+
+
+                                                        window.currentShowUnitPrice = false;  // 初始状态为false
+
+
+
+                                                    }
+
+
+
+                                                    // 保持当前的显示状态，不重置
+
+
+
+                                        
+
+
+
+                                                    // 更新浮动按钮显示
+
+
+
+                                                    updateFloatingButtons();
+
+
+
+                                                }
+
+        // 格式化外币金额
+        function foreignCurrencyFormat(amount, currencyCode) {
+            return `${amount.toFixed(2)} ${currencyCode}`;
+        }
+
+        // 显示/隐藏外币设置框
+        function toggleCurrencySettings() {
+            const settingsBox = document.getElementById('currencySettingsBox');
+            if (settingsBox.style.display === 'block' || settingsBox.style.display === '') {
+                settingsBox.style.display = 'none';
             } else {
-                // 不显示单价的表格
-                html += `
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead>
-                            <tr style="background-color: #f2f2f2;">
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px;">序号</th>
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">型号</th>
-                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">数量</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
+                settingsBox.style.display = 'block';
+            }
+        }
 
-                // 添加购物车项目
-                cartItems.forEach((item, index) => {
-                    const itemIndex = index + 1; // 序号从1开始
-                    html += `
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${itemIndex}</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
-                                <strong>${item.model}</strong>
-                            </td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity}</td>
-                        </tr>
-                    `;
-                });
+        // 切换语言显示 - 只切换中英显示，不涉及汇率计算
+        function toggleLanguageDisplay() {
+            // 切换语言显示状态
+            window.isEnglishDisplay = !window.isEnglishDisplay;
 
-                // 计算商品小计
-                let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice * item.quantity), 0);
+            // 重新生成报价单以反映更改
+            generateQuote();
+        }
+        
 
-                // 添加商品小计行
-                if (cartItems.length > 0) {
-                    html += `
-                        <tr style="background-color: #f0f8ff; font-weight: bold;">
-                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: right;">商品小计</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
-                        </tr>
-                    `;
+        
+        // 更新计算按钮文本和样式
+        function updateCalculationButtonText(text, backgroundColor) {
+            // 遍历所有按钮找到正确的按钮
+            const buttons = document.querySelectorAll('#currencySettingsBox button');
+            for (let button of buttons) {
+                if (button.getAttribute('onclick') === 'toggleCurrencyCalculation()') {
+                    button.textContent = text;
+                    button.style.backgroundColor = backgroundColor;
+                    break;
                 }
-
-                // 添加其它费用
-                tempItems.filter(item => item.displayType === '费用').forEach(item => {
-                    html += `
-                        <tr style="background-color: #f9f9f9;">
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>其它费用</strong></td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.actualAmount)}</td>
-                        </tr>
-                    `;
-                });
-
-                // 添加系数
-                tempItems.filter(item => item.displayType === '系数').forEach(item => {
-                    html += `
-                        <tr style="background-color: #f9f9f9;">
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>系数</strong></td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name}</strong></td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.value}</td>
-                        </tr>
-                    `;
-                });
-
-                // 计算总计
-                let tempFees = tempItems.filter(item => item.displayType === '费用').reduce((sum, item) => sum + item.actualAmount, 0);
-                let factor = tempItems.filter(item => item.displayType === '系数').reduce((prod, item) => prod * item.value, 1);
-                let total = (baseTotal + tempFees) * factor;
-
-                // 添加总计行
-                html += `
-                        <tr style="background-color: #e8f5e9; font-weight: bold;">
-                            <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: right;">总计</td>
-                            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            `;
             }
-
-            html += `
-                </div>
-            `;
-
-            document.getElementById('quoteContent').innerHTML = html;
-
-            // 保存当前的显示状态（修复问题：不再强制重置为false）
-            if (window.currentShowUnitPrice === undefined) {
-                window.currentShowUnitPrice = false;  // 初始状态为false
+        }
+        
+        // 选择内置货币
+        function selectCurrency(code, rate) {
+            // 填充币种代码和汇率输入框
+            document.getElementById('currencyCodeInput').value = code;
+            document.getElementById('exchangeRateInput').value = rate;
+            
+            // 应用汇率计算
+            applyCurrencyRate(code, rate);
+        }
+        
+        // 应用汇率计算
+        function applyCurrencyRate(currencyCode, exchangeRate) {
+            // 记录切换前的币种和汇率状态
+            const previousCurrencyCode = window.currentCurrencyCode || 'CNY';
+            const previousExchangeRate = window.currentExchangeRate || 1.0;
+            
+            // 保存设置到全局变量
+            window.currencyCode = currencyCode;
+            window.exchangeRate = exchangeRate;
+            window.showForeignCurrency = true; // 启用外币显示
+            
+            // 在更新当前汇率前，先对购物车中的项目进行汇率转换
+            // 使用两步计算法：当前数值/当前汇率*新汇率
+            // 实际上是：(当前数值/当前汇率)*新汇率
+            cartItems.forEach(item => {
+                // 第一步：当前数值 / 当前汇率 = 基准数值
+                const baseValue = item.actualPrice / previousExchangeRate;
+                
+                // 第二步：基准数值 * 新汇率 = 新数值
+                item.actualPrice = baseValue * exchangeRate;
+                
+                // 保存基准价格（如果尚未保存）
+                if (item.basePrice === undefined) {
+                    item.basePrice = item.actualPrice / exchangeRate; // 反算基准价格
+                }
+            });
+            
+            // 对临时费用项目也进行同样的转换
+            tempItems.forEach(item => {
+                if (item.displayType === '费用') {
+                    // 第一步：当前数值 / 当前汇率 = 基准数值
+                    const baseValue = item.actualAmount / previousExchangeRate;
+                    
+                    // 第二步：基准数值 * 新汇率 = 新数值
+                    item.actualAmount = baseValue * exchangeRate;
+                    
+                    // 保存基准金额（如果尚未保存）
+                    if (item.baseAmount === undefined) {
+                        item.baseAmount = item.actualAmount / exchangeRate; // 反算基准金额
+                    }
+                }
+            });
+            
+            // 保存当前币种状态（已经更新了项目价格）
+            window.currentCurrencyCode = currencyCode;
+            window.currentExchangeRate = exchangeRate;
+            
+            // 保存切换前的币种和汇率，用于计算
+            window.previousCurrencyCode = previousCurrencyCode;
+            window.previousExchangeRate = previousExchangeRate;
+            
+            // 更新外币设置框标题
+            updateCurrencySettingsTitle(currencyCode);
+            
+            // 重新生成报价单以反映更改
+            generateQuote();
+        }
+        
+        // 更新外币设置框标题
+        function updateCurrencySettingsTitle(currencyCode) {
+            const titleElement = document.getElementById('currencySettingsTitle');
+            if (titleElement) {
+                titleElement.textContent = `当前币种：${currencyCode}`;
             }
-            // 保持当前的显示状态，不重置
+        }
+        
+        // 处理币种输入框回车事件
+        function handleCurrencyInputKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // 阻止表单提交
+                
+                const currencyCode = document.getElementById('currencyCodeInput').value;
+                const exchangeRate = parseFloat(document.getElementById('exchangeRateInput').value);
+                
+                if (currencyCode && exchangeRate) {
+                    applyCurrencyRate(currencyCode, exchangeRate);
+                }
+            }
+        }
+        
+        // 处理币种输入框失焦事件
+        function handleCurrencyInputBlur() {
+            const currencyCode = document.getElementById('currencyCodeInput').value;
+            const exchangeRate = parseFloat(document.getElementById('exchangeRateInput').value);
+            
+            if (currencyCode && exchangeRate) {
+                applyCurrencyRate(currencyCode, exchangeRate);
+            }
+        }
+        
+        // 更新外币设置
+        function updateCurrencySettings() {
+            const currencyCode = document.getElementById('currencyCodeInput').value || 'CNY';
+            const exchangeRate = parseFloat(document.getElementById('exchangeRateInput').value) || 1.0;
+            const showForeignCurrency = document.getElementById('showForeignCurrencyCheckbox').checked;
 
-            // 更新浮动按钮显示
-            updateFloatingButtons();
+            // 保存设置到全局变量
+            window.currencyCode = currencyCode;
+            window.exchangeRate = exchangeRate;
+            window.showForeignCurrency = showForeignCurrency;
+
+            // 重新生成报价单以反映更改
+            generateQuote();
         }
 
         // 返回主页
@@ -4366,20 +5795,6 @@
           return null;
         }
 
-        // 控制零件管理按钮的显示
-        async function controlPartsManagementButtonVisibility() {
-          const partsManagementBtn = document.getElementById('parts-management-btn');
-          if (!partsManagementBtn) {
-            console.error('找不到零件管理按钮');
-            return;
-          }
-
-          const userRole = await checkUserRole();
-          if (userRole !== 'admin') {
-            // 如果不是管理员，隐藏零件管理按钮
-            partsManagementBtn.style.display = 'none';
-          }
-        }
 
         // 跳转到零件管理页面
         function goToPartsManagement() {

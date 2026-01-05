@@ -321,6 +321,21 @@
           <label for="machine-price" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">基础价格 <span class="text-red-500">*</span></label>
           <input type="number" id="machine-price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入基础价格" min="0" step="0.01">
         </div>
+        
+        <div>
+          <label for="machine-description" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">描述</label>
+          <input type="text" id="machine-description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入机器描述">
+        </div>
+        
+        <div>
+          <label for="machine-category" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">分类</label>
+          <input type="text" id="machine-category" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入机器分类">
+        </div>
+        
+        <div>
+          <label for="machine-specification" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">规格</label>
+          <input type="text" id="machine-specification" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600" placeholder="请输入机器规格">
+        </div>
       </div>
       
       <div class="mt-6 flex justify-end space-x-3">
@@ -490,9 +505,12 @@
       async request(endpoint, options = {}) {
         // 为不同的端点类型使用正确的API前缀
         let url;
-        if (endpoint.startsWith('/machines')) {
+        // 检查端点是否已经包含/api前缀，避免重复
+        if (endpoint.startsWith('/api/')) {
+          url = endpoint;
+        } else if (endpoint.startsWith('/machines')) {
           // 机器管理使用/machines端点
-          url = `/api/machines${endpoint.substring(9)}`; // 移除/machines并替换为/machines
+          url = `/api${endpoint}`;
         } else if (endpoint.startsWith('/parts')) {
           // 部件管理使用/parts端点
           url = `/api${endpoint}`;
@@ -503,6 +521,7 @@
           // 系数管理使用/temp-factors端点
           url = `/api${endpoint}`;
         } else {
+          // 对于其他端点，直接添加/api前缀
           url = `/api${endpoint}`;
         }
         
@@ -821,6 +840,9 @@
       machineModel: document.getElementById('machine-model'),
       machineName: document.getElementById('machine-name'),
       machinePrice: document.getElementById('machine-price'),
+      machineDescription: document.getElementById('machine-description'),
+      machineCategory: document.getElementById('machine-category'),
+      machineSpecification: document.getElementById('machine-specification'),
       cancelMachineBtn: document.getElementById('cancel-machine-btn'),
       saveMachineBtn: document.getElementById('save-machine-btn'),
       
@@ -1575,6 +1597,9 @@
       elements.machineModel.value = '';
       elements.machineName.value = '';
       elements.machinePrice.value = '';
+      elements.machineDescription.value = '';
+      elements.machineCategory.value = '';
+      elements.machineSpecification.value = '';
       elements.addEditMachineModal.classList.remove('hidden');
     }
     
@@ -1586,6 +1611,9 @@
         elements.machineModel.value = state.currentEditItem.Model || state.currentEditItem.model || '';
         elements.machineName.value = state.currentEditItem.OriginalModel || state.currentEditItem.name || '';
         elements.machinePrice.value = state.currentEditItem.ShowPrice || state.currentEditItem.basePrice || '';
+        elements.machineDescription.value = state.currentEditItem.Description || state.currentEditItem.description || '';
+        elements.machineCategory.value = state.currentEditItem.Category || state.currentEditItem.category || '';
+        elements.machineSpecification.value = state.currentEditItem.Specification || state.currentEditItem.specification || '';
         elements.addEditMachineModal.classList.remove('hidden');
       }
     }
@@ -1594,6 +1622,9 @@
       const model = elements.machineModel.value.trim();
       const name = elements.machineName.value.trim();
       const price = parseFloat(elements.machinePrice.value);
+      const description = elements.machineDescription.value.trim();
+      const category = elements.machineCategory.value.trim();
+      const specification = elements.machineSpecification.value.trim();
       
       if (!model || !name || isNaN(price) || price < 0) {
         showToast('请填写完整且有效的信息', true);
@@ -1604,20 +1635,30 @@
         Model: model,        // 使用Machine的标准字段
         OriginalModel: name, // 使用Machine的标准字段
         ShowPrice: price,    // 使用Machine的标准字段
-        id: state.currentEditItem ? state.currentEditItem.id : null  // 保留原始ID或为新项目设置为null（服务器将生成）
+        Description: description, // 新增字段
+        Category: category,   // 新增字段
+        Specification: specification // 新增字段
       };
+      
+      // 只有在值存在时才添加字段，避免发送空值
+      if (description) machineData.Description = description;
+      if (category) machineData.Category = category;
+      if (specification) machineData.Specification = specification;
       
       try {
         let response;
+        let url;
         if (state.currentEditItem) {
           // 编辑现有机器
-          response = await apiClient.request(`/machines/${encodeURIComponent(state.currentEditItem.id)}`, {
+          url = `/machines/${encodeURIComponent(state.currentEditItem.id)}`;
+          response = await apiClient.request(url, {
             method: 'PUT',
             body: JSON.stringify(machineData)
           });
         } else {
           // 添加新机器
-          response = await apiClient.request('/machines', {
+          url = '/machines';
+          response = await apiClient.request(url, {
             method: 'POST',
             body: JSON.stringify(machineData)
           });
@@ -1655,6 +1696,7 @@
           // 设置删除标志
           state.deletingMachineId = id;
           
+          // 使用ID进行删除请求，因为后端现在使用ID而不是型号(model)
           const response = await apiClient.request(`/machines/${encodeURIComponent(id)}`, {
             method: 'DELETE'
           });

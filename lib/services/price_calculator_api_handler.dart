@@ -78,13 +78,10 @@ class PriceCalculatorApiHandler {
         machinesList.add(machineMap);
       }
 
-      // 更新时间戳
-      updateMachinesTimestamp();
-
       // 生成响应数据，包含数据和时间戳
       final responseData = {
         'data': machinesList,
-        'timestamp': _lastMachinesUpdate, // 添加时间戳信息
+        'timestamp': _lastMachinesUpdate, // 使用当前的时间戳（仅在数据修改时更新）
       };
 
       return Response.ok(
@@ -210,17 +207,14 @@ class PriceCalculatorApiHandler {
         );
       } else {
         // 处理普通的更新操作
-
-        // 从URL参数获取ID（模型名称）
-        final model = decodedId; // URL中的id参数实际上是模型名称
-
+        // 使用ID而不是型号(model)来查找机器
         final machinesBox = Hive.box<Machine>('machines');
 
-        // 遍历box中的所有项目找到匹配的model
+        // 遍历box中的所有项目找到匹配的ID
         for (final key in machinesBox.keys) {
           final machine = machinesBox.get(key)!;
 
-          if (machine.model == model) {
+          if (machine.id == decodedId) {
             // 注意：如果只是addedCount变化，不更新时间戳；其他字段变化则更新时间戳
             bool isOnlyAddedCountChange =
                 _isOnlyAddedCountChangedForMachine(machine, params);
@@ -304,7 +298,7 @@ class PriceCalculatorApiHandler {
   Future<Response> handleDeleteMachine(Request request, String id) async {
     try {
       // 从Hive数据库删除机器
-      // 这里需要实现实际的删除逻辑
+      // 使用ID而不是型号(model)来删除机器
       final machinesBox = Hive.box<Machine>('machines');
       
       // 解码URL参数，处理空格和特殊字符
@@ -314,7 +308,8 @@ class PriceCalculatorApiHandler {
       for (final key in machinesBox.keys) {
         final machine = machinesBox.get(key)!;
         
-        if (machine.model == decodedId) { // 机器使用model作为标识
+        // 使用ID进行匹配而不是型号(model)
+        if (machine.id == decodedId) {
           await machinesBox.delete(key);
           found = true;
           break;
