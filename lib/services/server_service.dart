@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:convert' as convert;
-import 'dart:convert' show base64;
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
@@ -12,26 +10,22 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf_static/shelf_static.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'web_api_handler.dart';
 import 'user_service.dart'; // 新增导入
 import 'video_api_handler.dart'; // 新增导入
 import 'price_calculator_api_handler.dart'; // 新增导入
 import 'user_api_handler.dart'; // 新增导入
 import 'file_upload_handler.dart'; // 新增导入
+import 'quotation_api_handler.dart'; // 新增导入
 
 import '../utils/storage_utils.dart'; // 新增导入
-import '../utils/file_utils.dart'; // 新增导入
 import 'database_export_service.dart'; // 新增导入
 import '../repositories/video_repository.dart'; // 新增导入
 import '../repositories/tag_repository.dart'; // 新增导入
 import '../models/machine.dart'; // 新增导入
-import '../models/part.dart'; // 新增导入
 import '../models/temp_fee.dart'; // 新增导入
 import '../models/temp_factor.dart'; // 新增导入
-import '../models/user.dart'; // 新增导入
 
 // import '../providers/tag_provider.dart';
 
@@ -64,20 +58,23 @@ class ServerService with ChangeNotifier {
   late PriceCalculatorApiHandler _priceCalculatorApiHandler; // 新增价格计算器API处理器
   late UserApiHandler _userApiHandler; // 新增用户API处理器
   late FileUploadHandler _fileUploadHandler; // 新增文件上传处理器
+  late QuotationApiHandler _quotationApiHandler; // 新增报价单API处理器
 
   // bool _isInitialized = false; // 新增初始化标记
   // bool get isInitialized => _isInitialized;
 
-  // 数据版本时间戳 - 追踪机器、部件、费用和系数的最后修改时间
+  // 数据版本时间戳 - 追踪机器、部件、费用、系数和报价单的最后修改时间
   int _lastMachinesUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastPartsUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastFeesUpdate = DateTime.now().millisecondsSinceEpoch;
   int _lastFactorsUpdate = DateTime.now().millisecondsSinceEpoch;
+  int _lastQuotationsUpdate = DateTime.now().millisecondsSinceEpoch; // 新增报价单数据版本时间戳
 
   int get lastMachinesUpdate => _lastMachinesUpdate;
   int get lastPartsUpdate => _lastPartsUpdate;
   int get lastFeesUpdate => _lastFeesUpdate;
   int get lastFactorsUpdate => _lastFactorsUpdate;
+  int get lastQuotationsUpdate => _lastQuotationsUpdate; // 新增报价单数据版本获取方法
 
   // 更新机器最后修改时间
   void updateMachinesTimestamp() {
@@ -104,6 +101,13 @@ class ServerService with ChangeNotifier {
     _lastFactorsUpdate = DateTime.now().millisecondsSinceEpoch;
     print(
         '系数数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastFactorsUpdate)}');
+  }
+
+  // 更新报价单最后修改时间
+  void updateQuotationsTimestamp() {
+    _lastQuotationsUpdate = DateTime.now().millisecondsSinceEpoch;
+    print(
+        '报价单数据版本已更新: ${DateTime.fromMillisecondsSinceEpoch(_lastQuotationsUpdate)}');
   }
 
   // void initApiHandler(TagProvider tagProvider, VideoProvider videoProvider) {
@@ -208,6 +212,7 @@ class ServerService with ChangeNotifier {
     _priceCalculatorApiHandler = PriceCalculatorApiHandler(); // 初始化价格计算器API处理器
     _userApiHandler = UserApiHandler(_userService); // 初始化用户API处理器
     _fileUploadHandler = FileUploadHandler(_webApiHandler); // 初始化文件上传处理器
+    _quotationApiHandler = QuotationApiHandler(); // 初始化报价单API处理器
 
     if (customPort != null) {
       if (customPort < 1024 || customPort > 65535) {
@@ -431,6 +436,14 @@ class ServerService with ChangeNotifier {
         _userApiHandler.handleSessionValidation); // 会话验证
     router.post('/api/current-user-info',
         _userApiHandler.handleGetCurrentUserInfo); // 获取当前用户信息
+
+    // HTTP API端点 - 报价单相关
+    router.get('/api/quotations', _quotationApiHandler.handleGetQuotations);
+    router.get('/api/quotations/<id>', _quotationApiHandler.handleGetQuotationById);
+    router.post('/api/quotations', _quotationApiHandler.handleCreateQuotation);
+    router.put('/api/quotations/<id>', _quotationApiHandler.handleUpdateQuotation);
+    router.delete('/api/quotations/<id>', _quotationApiHandler.handleDeleteQuotation);
+    router.get('/api/search-quotations', _quotationApiHandler.handleSearchQuotations);
 
     // 视频流处理路由 - 支持Range和HEAD请求
     router.get('/videoStream/<videoId>', _handleVideoStream);

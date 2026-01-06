@@ -134,28 +134,30 @@ async function addToCart(item) {
     (cartItem) => cartItem.model === item.Model
   );
 
-  if (existingItemIndex !== -1) {
-    // 如果已在购物车中，增加数量
-    cartItems[existingItemIndex].quantity += 1;
-  } else {
-    // 如果不在购物车中，添加新项目
-    const cartItem = {
-      id: Date.now(), // 唯一ID
-      type: "机器",
-      model: item.Model,
-      name: item.OriginalModel,
-      basePrice: item.ShowPrice,
-      actualPrice: item.ShowPrice, // 默认实际价格等于基础价格
-      quantity: 1, // 默认数量为1
-      image: item.image,
-    };
+    if (existingItemIndex !== -1) {
+      // 如果已在购物车中，增加数量
+      cartItems[existingItemIndex].quantity += 1;
+    } else {
+      // 如果不在购物车中，添加新项目
+      // 优先使用项目的真实ID，按优先级顺序：Id、id、_id、ID
+      const itemId = item.Id || item.id || item._id || item.ID || Date.now() + Math.random();
+      const cartItem = {
+        id: itemId, // 使用项目的真实ID
+        type: "machines",
+        model: item.Model,
+        name: item.OriginalModel,
+        basePrice: item.ShowPrice,
+        actualPrice: item.ShowPrice, // 默认实际价格等于基础价格
+        quantity: 1, // 默认数量为1
+        image: item.image,
+      };
 
-    cartItems.push(cartItem);
-  }
+      cartItems.push(cartItem);
+    }
 
-  // 记录需要更新使用次数的项目（在生成报价单时统一更新）
-      const itemId = item.id || item.Id || item._id || item.ID || encodeURIComponent(item.Model);
-      recordItemUsageForBatchUpdate(itemId, "machines");
+    // 记录需要更新使用次数的项目（在生成报价单时统一更新）
+    const usageItemId = item.Id || item.id || item._id || item.ID || encodeURIComponent(item.Model);
+    recordItemUsageForBatchUpdate(usageItemId, "machines");
   // 更新购物车计数
   updateCartCount();
 

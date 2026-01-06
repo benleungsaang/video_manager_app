@@ -298,8 +298,18 @@ async function addTempFeeToCart() {
 
   const createCartObjectFn = (inputs) => {
     const amount = parseFloat(inputs.amount) || 0;
+
+    // 查找对应的真实费用对象，以获取其真实ID
+    let realFeeId = Date.now(); // 默认ID
+    if (window.feesData && Array.isArray(window.feesData)) {
+      const realFee = window.feesData.find(fee => fee.name === inputs.name || fee.Model === inputs.name);
+      if (realFee) {
+        realFeeId = realFee.id || realFee.Id || realFee._id || realFee.ID || realFeeId;
+      }
+    }
+
     return {
-      id: Date.now(),
+      id: realFeeId,
       displayType: "费用", // 用于显示的类型
       name: inputs.name,
       baseAmount: amount, // 原始金额
@@ -347,8 +357,18 @@ async function addTempFactorToCart() {
 
   const createCartObjectFn = (inputs) => {
     const value = parseFloat(inputs.value) || 1;
+
+    // 查找对应的真实系数对象，以获取其真实ID
+    let realFactorId = Date.now(); // 默认ID
+    if (window.factorsData && Array.isArray(window.factorsData)) {
+      const realFactor = window.factorsData.find(factor => factor.name === inputs.name || factor.Model === inputs.name);
+      if (realFactor) {
+        realFactorId = realFactor.id || realFactor.Id || realFactor._id || realFactor.ID || realFactorId;
+      }
+    }
+
     return {
-      id: Date.now(),
+      id: realFactorId,
       displayType: "系数", // 用于显示的类型
       name: inputs.name,
       value: value,
@@ -415,8 +435,17 @@ async function addPartToCart() {
   const createCartObjectFn = (inputs) => {
     const price = parseFloat(inputs.price) || 0;
 
+    // 查找对应的真实部件对象，以获取其真实ID
+    let realPartId = Date.now(); // 默认ID
+    if (window.partsData && Array.isArray(window.partsData)) {
+      const realPart = window.partsData.find(part => part.model === inputs.model || part.Model === inputs.model);
+      if (realPart) {
+        realPartId = realPart.id || realPart.Id || realPart._id || realPart.ID || realPartId;
+      }
+    }
+
     return {
-      id: Date.now(),
+      id: realPartId,
       type: "部件",
       model: inputs.model,
       name: inputs.model, // 使用型号作为名称
