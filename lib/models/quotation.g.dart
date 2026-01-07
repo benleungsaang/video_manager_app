@@ -29,13 +29,15 @@ class QuotationAdapter extends TypeAdapter<Quotation> {
       createdAt: fields[7] as DateTime?,
       updatedAt: fields[8] as DateTime?,
       createdBy: fields[9] as String,
+      subtotal_remark: fields[10] as String,
+      total_remark: fields[11] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, Quotation obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -55,7 +57,11 @@ class QuotationAdapter extends TypeAdapter<Quotation> {
       ..writeByte(8)
       ..write(obj.updatedAt)
       ..writeByte(9)
-      ..write(obj.createdBy);
+      ..write(obj.createdBy)
+      ..writeByte(10)
+      ..write(obj.subtotal_remark)
+      ..writeByte(11)
+      ..write(obj.total_remark);
   }
 
   @override

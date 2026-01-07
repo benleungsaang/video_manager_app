@@ -283,7 +283,7 @@ function generateQuote() {
     const totalRemark = loadRemarkFromLocalStorage('total', 'summary');
     html += `
           <tr style="background-color: #e8f5e9; font-weight: bold;">
-              <td colspan="5" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${
+              <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${
       labels.total
     }</td>
               <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(
@@ -357,9 +357,12 @@ function generateQuote() {
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${
       labels.add
     }</strong></td>
-                  <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${
+                  <td colspan="1" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${
       item.name
     }</strong></td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(
+      item.displayAmount
+    )}</td>
                   <td style="border: 1px solid #ddd; padding: 10px; text-align: center; cursor: pointer;" data-index="${quoteCartItems.length + quoteTempItems.findIndex(i => i.id === item.id)}" data-type="fee" data-item-id="${item.id}">${remark}</td>
               </tr>
           `;
@@ -377,9 +380,12 @@ function generateQuote() {
         ? "Factor"
         : "系数"
     }</strong></td>
-              <td colspan="2" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${
+              <td colspan="1" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${
       item.name
     }</strong></td>
+              <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${
+      item.value
+    }</td>
               <td style="border: 1px solid #ddd; padding: 10px; text-align: center; cursor: pointer;" data-index="${quoteCartItems.length + quoteTempItems.findIndex(i => i.id === item.id)}" data-type="factor" data-item-id="${item.id}">${remark}</td>
           </tr>
       `;
@@ -694,35 +700,172 @@ function editRemark(cell, index, type, itemId) {
 
 // 保存备注到本地存储
 function saveRemarkToLocalStorage(itemId, remark, type) {
-  // 从localStorage获取现有的备注对象
-  const allRemarks = JSON.parse(localStorage.getItem('allRemarks') || '{}');
+  // 从localStorage获取tempData
+  let tempData = JSON.parse(localStorage.getItem('tempData') || '{}');
 
-  // 构建备注的键值
-  const remarkKey = `${type}_${itemId}`;
+  // 如果tempData不存在或格式不正确，创建一个默认结构
+  if (!tempData.id || !tempData.items) {
+    tempData = {
+      "id": "temp",
+      "title": "临时报价单",
+      "items": [],
+      "subtotal": 0,
+      "subtotal_remark": "",
+      "total": 0,
+      "total_remark": "",
+      "currency": "CNY",
+      "createdBy": localStorage.getItem('username') || 'user'
+    };
+  }
 
-  // 核心：纯文本\n→<br>，适配innerHTML展示换行
-  const htmlText = remark.replace(/\n/g, '<br>');
+  // 根据类型处理备注存储
+  if (type === 'cart' || type === 'fee' || type === 'factor') {
+    // 对于项目备注，更新items数组中对应项目的remark字段
+    tempData.items = tempData.items.map(item => {
+      if (item.id == itemId) {
+        // 创建项目副本并更新备注
+        return { ...item, remark: remark };
+      }
+      return item;
+    });
+  } else if (type === 'summary') {
+    // 对于小计和总计备注
+    if (itemId === 'subtotal') {
+      tempData.subtotal_remark = remark;
+    } else if (itemId === 'total') {
+      tempData.total_remark = remark;
+    }
+  }
 
-  // 将备注保存到对象中
-  allRemarks[remarkKey] = htmlText;
-
-  // 保存整个对象到localStorage
-  localStorage.setItem('allRemarks', JSON.stringify(allRemarks));
+  // 保存tempData到localStorage
+  localStorage.setItem('tempData', JSON.stringify(tempData));
 }
 
 // 从本地存储加载备注
 function loadRemarkFromLocalStorage(itemId, type) {
-  // 从localStorage获取现有的备注对象
-  const allRemarks = JSON.parse(localStorage.getItem('allRemarks') || '{}');
+  // 从localStorage获取tempData
+  const tempData = JSON.parse(localStorage.getItem('tempData') || '{}');
 
-  // 构建备注的键值
-  const remarkKey = `${type}_${itemId}`;
+  // 根据类型处理备注加载
+  if (type === 'cart' || type === 'fee' || type === 'factor') {
+    // 对于项目备注，查找items数组中对应项目的remark字段
+    if (tempData && tempData.items) {
+      const item = tempData.items.find(item => item.id == itemId);
+      if (item && item.remark !== undefined) {
+        return item.remark || '';
+      }
+    }
+    // 为了向后兼容，如果在新位置找不到备注，尝试从旧位置加载
+    if (tempData && tempData.remarks) {
+      const remarkKey = `${type}_${itemId}`;
+      return tempData.remarks[remarkKey] || '';
+    }
+  } else if (type === 'summary') {
+    // 对于小计和总计备注
+    if (itemId === 'subtotal') {
+      return tempData.subtotal_remark || '';
+    } else if (itemId === 'total') {
+      return tempData.total_remark || '';
+    }
+  }
 
-  // 从对象中获取备注内容
-  const storedHtml = allRemarks[remarkKey];
+  // 如果tempData不存在或没有找到备注，返回空字符串
+  return '';
+}
 
-  // 直接返回存储的HTML内容，保证换行展示
-  return storedHtml || '';
+// 初始化tempData，如果不存在的话
+function initializeTempData() {
+  const tempDataStr = localStorage.getItem('tempData');
+  if (!tempDataStr) {
+    // 创建默认的tempData结构
+    const defaultTempData = {
+      "id": "temp",
+      "title": "临时报价单",
+      "items": [],
+      "subtotal": 0,
+      "subtotal_remark": "",
+      "total": 0,
+      "total_remark": "",
+      "currency": "CNY",
+      "createdBy": localStorage.getItem('username') || 'user',
+      "createdAt": new Date().toISOString()
+    };
+    localStorage.setItem('tempData', JSON.stringify(defaultTempData));
+  }
+}
+
+// 从tempData加载数据到购物车和报价单
+function loadTempDataToCart() {
+  const tempDataStr = localStorage.getItem('tempData');
+  if (!tempDataStr) {
+    return; // 如果没有tempData，则返回
+  }
+
+  const tempData = JSON.parse(tempDataStr);
+  if (!tempData || !tempData.items) {
+    return; // 如果tempData格式不正确，则返回
+  }
+
+  // 清空当前购物车
+  cartItems = [];
+  tempItems = [];
+
+  // 遍历tempData.items并根据类型加载到相应数组
+  tempData.items.forEach(item => {
+    let displayType = "部件";
+    if (item.type === "fees" || item.type === "费用") {
+      displayType = "费用";
+    } else if (item.type === "factors" || item.type === "系数") {
+      displayType = "系数";
+    }
+
+    if (displayType === "费用") {
+      // 添加到临时项目中作为费用
+      const tempItem = {
+        id: item.id || Date.now() + Math.random(),
+        displayType: "费用",
+        name: item.name || "",
+        baseAmount: item.price || item.amount || 0,
+        actualAmount: item.price || item.amount || 0,
+        remark: item.remark || "",
+        type: "fees"
+      };
+      tempItems.push(tempItem);
+    } else if (displayType === "系数") {
+      // 添加到临时项目中作为系数
+      const tempItem = {
+        id: item.id || Date.now() + Math.random(),
+        displayType: "系数",
+        name: item.name || "",
+        value: item.price || item.value || 1,
+        remark: item.remark || "",
+        type: "factors"
+      };
+      tempItems.push(tempItem);
+    } else {
+      // 添加到购物车项目
+      const cartItem = {
+        id: item.id || Date.now() + Math.random(),
+        type: item.type || "部件",
+        model: item.name || item.model || "",
+        name: item.name || item.model || "",
+        basePrice: item.price || 0,
+        actualPrice: item.price || 0,
+        quantity: item.quantity || 1,
+        remark: item.remark || "",
+        image: item.image || "./sample.jpg"
+      };
+      cartItems.push(cartItem);
+    }
+  });
+
+  // 更新购物车计数
+  updateCartCount();
+
+  // 重新生成报价单以显示备注
+  if (currentView === 'quote') {
+    generateQuote();
+  }
 }
 
 // 保存当前报价单到服务器和localStorage
@@ -731,136 +874,328 @@ async function saveCurrentQuoteToStorage() {
   const titleElement = document.getElementById('quoteTitle');
   const title = titleElement ? titleElement.textContent : '报价单';
 
-  // 统一收集所有项目数据
-  const allItems = [];
+  // 从localStorage获取tempData，并直接使用其中的数据
+  let tempData = JSON.parse(localStorage.getItem('tempData') || '{}');
 
-  // 收集购物车项目
-  cartItems.forEach(item => {
-    allItems.push({
-      id: item.id,
-      type: item.type,
-      name: item.model,  // 使用model作为名称
-      price: item.actualPrice,
-      quantity: item.quantity,
-    });
-  });
+  // 如果tempData不存在或格式不正确，创建一个包含当前购物车数据的tempData
+  if (!tempData.id) {
+    // 计算总计
+    const baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice || 0) * (item.quantity || 0), 0);
+    const tempFees = tempItems
+      .filter(item => item.displayType === '费用')
+      .reduce((sum, item) => sum + (item.actualAmount || 0), 0);
+    const factor = tempItems
+      .filter(item => item.displayType === '系数')
+      .reduce((prod, item) => prod * (item.value || 1), 1);
+    const total = (baseTotal + tempFees) * factor;
 
-  // 收集费用项目
-  tempItems
-    .filter(item => item.displayType === '费用')
-    .forEach(item => {
-      allItems.push({
+    // 创建临时的tempData结构，包含当前购物车数据
+    tempData = {
+      "id": "temp",
+      "title": title,
+      "items": [],
+      "subtotal": baseTotal,
+      "subtotal_remark": "",
+      "total": total,
+      "total_remark": "",
+      "currency": window.currentCurrencyCode || 'CNY',
+      "createdBy": localStorage.getItem('username') || 'user'
+    };
+
+    // 添加购物车项目
+    cartItems.forEach(item => {
+      tempData.items.push({
         id: item.id,
-        type: item.type,
-        name: item.name,
-        price: item.actualAmount,
-        quantity: 1,  // 费用项目数量为1
+        type: item.type || "parts",
+        name: item.model,
+        model: item.model,
+        price: item.actualPrice,
+        quantity: item.quantity,
+        remark: item.remark || ""
       });
     });
 
-  // 收集系数项目
-  tempItems
-    .filter(item => item.displayType === '系数')
-    .forEach(item => {
-      allItems.push({
-        id: item.id,
-        type: item.type,
-        name: item.name,
-        price: item.value,  // 系数值作为价格
-        quantity: 1,  // 系数项目数量为1
+    // 添加费用项目
+    tempItems
+      .filter(item => item.displayType === '费用')
+      .forEach(item => {
+        tempData.items.push({
+          id: item.id,
+          type: "fees",
+          name: item.name,
+          price: item.actualAmount,
+          quantity: 1,
+          remark: item.remark || ""
+        });
       });
-    });
 
-  // 统一收集所有备注
-  const remarks = JSON.parse(localStorage.getItem('allRemarks') || '{}');
+    // 添加系数项目
+    tempItems
+      .filter(item => item.displayType === '系数')
+      .forEach(item => {
+        tempData.items.push({
+          id: item.id,
+          type: "factors",
+          name: item.name,
+          price: item.value,
+          quantity: 1,
+          remark: item.remark || ""
+        });
+      });
+  }
 
+  // 检查tempData的id是否为temp
+  if (tempData.id === "temp") {
+    // tempData的id是temp，直接执行原来的保存流程
+    // 准备报价单数据（不需要提供ID，服务器将自动生成UUID）
+    const quotationData = {
+      ...tempData,  // 使用tempData中的所有数据
+      title: title,  // 更新标题
+      items: tempData.items || [],  // 确保items字段存在
+      createdAt: new Date().toISOString()  // 设置创建时间为当前时间
+    };
 
-  // 计算总计
-  let baseTotal = cartItems.reduce((sum, item) => sum + (item.actualPrice || 0) * (item.quantity || 0), 0);
-  let tempFees = tempItems
-    .filter(item => item.displayType === '费用')
-    .reduce((sum, item) => sum + (item.actualAmount || 0), 0);
-  let factor = tempItems
-    .filter(item => item.displayType === '系数')
-    .reduce((prod, item) => prod * (item.value || 1), 1);
-  let total = (baseTotal + tempFees) * factor;
+    try {
+      // 首先尝试将报价单保存到服务器
+      const response = await fetch('/api/quotations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(quotationData)
+      });
 
-  // 准备报价单数据（不需要提供ID，服务器将自动生成UUID）
-  const quotationData = {
-    title: title,
-    items: allItems,  // 统一的项目列表
-    remarks: remarks,  // 统一的备注列表
-    subtotal: baseTotal,
-    total: total,
-    currency: window.currentCurrencyCode || 'CNY',
-    createdBy: localStorage.getItem('username') || 'user' // 从localStorage获取用户名
-  };
+      let finalId = null; // 服务器生成的UUID
 
-  try {
-    // 首先尝试将报价单保存到服务器
-    const response = await fetch('/api/quotations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(quotationData)
-    });
+      if (response.ok) {
+        // 从服务器响应中获取新的UUID
+        const responseData = await response.json();
+        finalId = responseData.id;
+        showMessage('报价单已保存到服务器', 'success');
+      } else {
+        console.error('保存到服务器失败:', response.status, response.statusText);
+        // 如果服务器保存失败，至少保留本地保存
+        showMessage('服务器保存失败，已保存到本地', 'warning');
+      }
 
-    let finalId = null; // 服务器生成的UUID
+      // 如果服务器保存成功，使用服务器返回的ID
+      if (finalId) {
+        // 更新报价单数据，加入服务器返回的ID
+        quotationData.id = finalId;
+      } else {
+        // 如果服务器保存失败，使用本地生成的ID
+        finalId = 'local_' + Date.now();
+        quotationData.id = finalId;
+      }
 
-    if (response.ok) {
-      // 从服务器响应中获取新的UUID
-      const responseData = await response.json();
-      finalId = responseData.id;
-      showMessage('报价单已保存到服务器', 'success');
-    } else {
-      console.error('保存到服务器失败:', response.status, response.statusText);
-      // 如果服务器保存失败，至少保留本地保存
-      showMessage('服务器保存失败，已保存到本地', 'warning');
-    }
+      // 从localStorage获取现有报价单列表
+      const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
 
-    // 如果服务器保存成功，使用服务器返回的ID
-    if (finalId) {
-      // 更新报价单数据，加入服务器返回的ID
-      quotationData.id = finalId;
-    } else {
-      // 如果服务器保存失败，使用本地生成的ID
-      finalId = 'local_' + Date.now();
-      quotationData.id = finalId;
-    }
+      // 检查是否已有相同ID的报价单，如果有则更新，否则添加新的
+      const existingIndex = existingQuotations.findIndex(q => q.id === finalId);
+      if (existingIndex !== -1) {
+        existingQuotations[existingIndex] = quotationData;
+      } else {
+        existingQuotations.push(quotationData);
+      }
 
-    // 从localStorage获取现有报价单列表
-    const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
+      // 保存到localStorage（限制保存最近的50个报价单）
+      const limitedQuotations = existingQuotations.slice(-50);
+      localStorage.setItem('savedQuotations', JSON.stringify(limitedQuotations));
 
-    // 检查是否已有相同ID的报价单，如果有则更新，否则添加新的
-    const existingIndex = existingQuotations.findIndex(q => q.id === finalId);
-    if (existingIndex !== -1) {
-      existingQuotations[existingIndex] = quotationData;
-    } else {
+      // 更新tempData，将ID从temp改为新ID
+      const updatedTempData = {
+        ...tempData,
+        id: finalId,
+        title: title,
+      };
+      localStorage.setItem('tempData', JSON.stringify(updatedTempData));
+
+      return finalId;
+    } catch (error) {
+      console.error('保存报价单时发生错误:', error);
+
+      // 发生网络错误时，至少将报价单保存到本地
+      const finalId = 'local_' + Date.now();
+      const quotationData = {
+        ...tempData,  // 使用tempData中的所有数据
+        id: finalId,
+        title: title,
+        items: tempData.items || []  // 确保items字段存在
+      };
+
+      const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
       existingQuotations.push(quotationData);
+
+      // 保存到localStorage（限制保存最近的50个报价单）
+      const limitedQuotations = existingQuotations.slice(-50);
+      localStorage.setItem('savedQuotations', JSON.stringify(limitedQuotations));
+
+      // 更新tempData，将ID从temp改为新ID
+      const updatedTempData = {
+        ...tempData,
+        id: finalId,
+        title: title
+      };
+      localStorage.setItem('tempData', JSON.stringify(updatedTempData));
+
+      showMessage('报价单已保存到本地（服务器连接失败）', 'warning');
+      return finalId;
     }
+  } else {
+    // tempData的id不是temp，询问用户是覆盖、新建还是取消
+    const shouldOverride = confirm(`当前报价单为: ${tempData.title} 金额为：${formatCurrency(tempData.total)}\n\n选择操作：\n"确定" - 覆盖原报价单\n"取消" - 其他选项`);
 
-    // 保存到localStorage（限制保存最近的50个报价单）
-    const limitedQuotations = existingQuotations.slice(-50);
-    localStorage.setItem('savedQuotations', JSON.stringify(limitedQuotations));
+    if (shouldOverride) {
+      // 用户选择覆盖原报价单
+      const quotationData = {
+        ...tempData,  // 使用tempData中的所有数据
+        title: title,  // 更新标题
+        id: tempData.id, // 使用现有ID
+        items: tempData.items || []  // 确保items字段存在
+      };
 
-    return finalId;
-  } catch (error) {
-    console.error('保存报价单时发生错误:', error);
+      try {
+        // 尝试更新服务器上的报价单
+        const response = await fetch(`/api/quotations/${tempData.id}`, {
+          method: 'PUT', // 使用PUT方法更新
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(quotationData)
+        });
 
-    // 发生网络错误时，至少将报价单保存到本地
-    const finalId = 'local_' + Date.now();
-    quotationData.id = finalId;
+        if (response.ok) {
+          showMessage('报价单已更新到服务器', 'success');
+        } else {
+          console.error('更新服务器报价单失败:', response.status, response.statusText);
+          showMessage('更新服务器报价单失败，但已保存到本地', 'warning');
+        }
 
-    const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
-    existingQuotations.push(quotationData);
+        // 从localStorage获取现有报价单列表并更新
+        const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
+        const existingIndex = existingQuotations.findIndex(q => q.id === tempData.id);
+        if (existingIndex !== -1) {
+          existingQuotations[existingIndex] = quotationData;
+        } else {
+          existingQuotations.push(quotationData);
+        }
 
-    // 保存到localStorage（限制保存最近的50个报价单）
-    const limitedQuotations = existingQuotations.slice(-50);
-    localStorage.setItem('savedQuotations', JSON.stringify(limitedQuotations));
+        // 保存到localStorage
+        localStorage.setItem('savedQuotations', JSON.stringify(existingQuotations));
 
-    showMessage('报价单已保存到本地（服务器连接失败）', 'warning');
-    return finalId;
+        // 更新tempData
+        const updatedTempData = {
+          ...tempData,
+          title: title
+        };
+        localStorage.setItem('tempData', JSON.stringify(updatedTempData));
+
+        return tempData.id;
+      } catch (error) {
+        console.error('更新报价单时发生错误:', error);
+        showMessage('更新报价单时发生错误', 'error');
+        return tempData.id;
+      }
+    } else {
+      // 用户选择不是覆盖，询问是否新建
+      const shouldCreateNew = confirm('是否新建报价单？\n"确定" - 新建报价单\n"取消" - 取消操作');
+
+      if (!shouldCreateNew) {
+        // 用户选择取消操作
+        showMessage('保存操作已取消', 'info');
+        return tempData.id;
+      }
+      // 用户选择新建报价单，继续执行新建逻辑
+      const quotationData = {
+        ...tempData,  // 使用tempData中的所有数据
+        title: title,  // 更新标题
+        items: tempData.items || []  // 确保items字段存在
+      };
+
+      try {
+        // 首先尝试将报价单保存到服务器
+        const response = await fetch('/api/quotations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(quotationData)
+        });
+
+        let finalId = null; // 服务器生成的UUID
+
+        if (response.ok) {
+          // 从服务器响应中获取新的UUID
+          const responseData = await response.json();
+          finalId = responseData.id;
+          showMessage('新报价单已保存到服务器', 'success');
+        } else {
+          console.error('保存到服务器失败:', response.status, response.statusText);
+          // 如果服务器保存失败，至少保留本地保存
+          showMessage('服务器保存失败，已保存到本地', 'warning');
+        }
+
+        // 如果服务器保存成功，使用服务器返回的ID
+        if (finalId) {
+          // 更新报价单数据，加入服务器返回的ID
+          quotationData.id = finalId;
+        } else {
+          // 如果服务器保存失败，使用本地生成的ID
+          finalId = 'local_' + Date.now();
+          quotationData.id = finalId;
+        }
+
+        // 从localStorage获取现有报价单列表
+        const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
+
+        // 检查是否已有相同ID的报价单，如果有则更新，否则添加新的
+        const existingIndex = existingQuotations.findIndex(q => q.id === finalId);
+        if (existingIndex !== -1) {
+          existingQuotations[existingIndex] = quotationData;
+        } else {
+          existingQuotations.push(quotationData);
+        }
+
+        // 保存到localStorage（限制保存最近的50个报价单）
+        const limitedQuotations = existingQuotations.slice(-50);
+        localStorage.setItem('savedQuotations', JSON.stringify(limitedQuotations));
+
+        // 创建新的tempData，ID为新生成的ID
+        const newTempData = {
+          ...tempData,
+          id: finalId,
+          title: title
+        };
+        localStorage.setItem('tempData', JSON.stringify(newTempData));
+
+        return finalId;
+      } catch (error) {
+        console.error('保存新报价单时发生错误:', error);
+
+        // 发生网络错误时，至少将报价单保存到本地
+        const finalId = 'local_' + Date.now();
+        quotationData.id = finalId;
+
+        const existingQuotations = JSON.parse(localStorage.getItem('savedQuotations') || '[]');
+        existingQuotations.push(quotationData);
+
+        // 保存到localStorage（限制保存最近的50个报价单）
+        const limitedQuotations = existingQuotations.slice(-50);
+        localStorage.setItem('savedQuotations', JSON.stringify(limitedQuotations));
+
+        // 创建新的tempData，ID为新生成的ID
+        const newTempData = {
+          ...tempData,
+          id: finalId,
+          title: title
+        };
+        localStorage.setItem('tempData', JSON.stringify(newTempData));
+
+        showMessage('新报价单已保存到本地（服务器连接失败）', 'warning');
+        return finalId;
+      }
+    }
   }
 }
 
@@ -921,6 +1256,17 @@ function editQuoteTitle(element) {
   });
 }
 
+// 报价单搜索结果简明信息（作者、金额、时间）
+function getQuoteSummaryHTML(quote, source) {
+  return `
+    <div style="font-size: 0.8em; color: #666;">
+      作者: ${quote.createdBy} |
+      金额：${formatCurrency(quote.total)} |
+      更新时间：${new Date(quote.updatedAt).toLocaleString()} | ${source}
+    </div>
+  `;
+}
+
 // 本地搜索报价单
 function searchQuotesLocal(query) {
   const searchResultsDiv = document.getElementById('quoteSearchResults');
@@ -944,13 +1290,22 @@ function searchQuotesLocal(query) {
   const resultCount = filteredQuotations.length;
   let resultHTML = '';
   if (resultCount > 0) {
-    resultHTML += `<div style="font-weight: bold; margin-bottom: 5px;">本地搜索结果 (${resultCount}):</div>`;
+    resultHTML += `<div style="font-weight: bold; margin-bottom: 5px;">本地搜索结果 (${resultCount}):
+                    <div style="font-style: italic;color: darkgray;display: inline-block;font-size: smaller;font-weight: 400;">当前展示为本地数据，回车确认搜索服务器数据</div>
+    </div>`;
+
+
     filteredQuotations.forEach(quote => {
       resultHTML += `
-        <div class="quote-result-item" style="padding: 5px; border-bottom: 1px solid #eee; cursor: pointer;"
-             onclick="loadQuotation('${quote.id}', false)">
-          <div style="font-weight: bold;">${quote.title}</div>
-          <div style="font-size: 0.8em; color: #666;">ID: ${quote.id} | 本地数据</div>
+        <div class="quote-result-item" style="padding: 5px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
+             onclick="showQuotationDetail('${quote.id}', false)">
+          <div style="flex: 1;">
+            <div style="font-weight: bold;">标题：${quote.title}</div>
+            ${getQuoteSummaryHTML(quote, '本地数据')}
+          </div>
+          <button class="secondary" onclick="loadQuotationToCartFromId('${quote.id}', false); event.stopPropagation();" style="background-color: #4caf50; color: white; margin-left: 10px; flex-shrink: 0;">
+            🛒 加载到购物车
+          </button>
         </div>
       `;
     });
@@ -959,7 +1314,7 @@ function searchQuotesLocal(query) {
   }
 
   // 添加提示信息，告诉用户可以按回车搜索服务器
-  resultHTML += `<div style="padding: 10px; font-style: italic; color: #888; border-top: 1px dashed #ccc;">当前展示为本地数据，回车确认搜索服务器数据</div>`;
+  // resultHTML += `<div style="padding: 10px; font-style: italic; color: #888; border-top: 1px dashed #ccc;">当前展示为本地数据，回车确认搜索服务器数据</div>`;
 
   searchResultsDiv.innerHTML = resultHTML;
   searchResultsDiv.style.display = 'block';
@@ -1035,43 +1390,23 @@ function displaySearchResults(localResults, serverResults, query) {
     serverResults = [];
   }
 
-  // 显示本地搜索结果
-  if (localResults && localResults.length > 0) {
-    resultHTML += `<div style="font-weight: bold; margin: 10px 0 5px 0;">本地搜索结果 (${localResults.length}):</div>`;
-    localResults.forEach(quote => {
-      resultHTML += `
-        <div class="quote-result-item" style="padding: 5px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
-             onclick="showQuotationDetail('${quote.id}', false)">
-          <div style="flex: 1;">
-            <div style="font-weight: bold;">${quote.title}</div>
-            <div style="font-size: 0.8em; color: #666;">ID: ${quote.id} | 本地数据</div>
-          </div>
-          <button class="secondary" onclick="loadQuotationToCartFromId('${quote.id}', false); event.stopPropagation();" style="background-color: #4caf50; color: white; margin-left: 10px; flex-shrink: 0;">
-            🛒 加载到购物车
-          </button>
-        </div>
-      `;
-    });
-  } else if (query) {
-    resultHTML += `<div style="padding: 5px; color: #666;">本地未找到匹配的报价单</div>`;
-  }
-
   // 显示服务器搜索结果
   if (serverResults && serverResults.length > 0) {
     // 如果本地和服务器结果都存在，添加分隔线
-    if (localResults && localResults.length > 0) {
-      resultHTML += `<div style="height: 1px; background-color: #ccc; margin: 10px 0;"></div>`;
-    }
-
+    // if (localResults && localResults.length > 0) {
+    //   resultHTML += `<div style="height: 1px; background-color: #ccc; margin: 10px 0;"></div>`;
+    // }
     resultHTML += `<div style="font-weight: bold; margin: 10px 0 5px 0;">服务器搜索结果 (${serverResults.length}):</div>`;
     serverResults.forEach(quote => {
       resultHTML += `
         <div class="quote-result-item" style="padding: 5px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
              onclick="showQuotationDetail('${quote.id}', true)">
           <div style="flex: 1;">
-            <div style="font-weight: bold;">${quote.title}</div>
-            <div style="font-size: 0.8em; color: #666;">ID: ${quote.id} | 服务器数据</div>
-          </div>
+            <div style="font-weight: bold;">标题：${quote.title}</div>
+              <div style="font-size: 0.8em; color: #666;">
+              ${getQuoteSummaryHTML(quote, '服务器数据')}
+              </div>
+            </div>
           <button class="secondary" onclick="loadQuotationToCartFromId('${quote.id}', true); event.stopPropagation();" style="background-color: #4caf50; color: white; margin-left: 10px; flex-shrink: 0;">
             🛒 加载到购物车
           </button>
@@ -1079,12 +1414,27 @@ function displaySearchResults(localResults, serverResults, query) {
       `;
     });
   } else if (query) {
-    resultHTML += `<div style="padding: 5px; color: #666;">服务器未找到匹配的报价单</div>`;
-  }
-
-  // 如果没有查询词，显示提示信息
-  if (!query) {
-    resultHTML += `<div style="padding: 10px; font-style: italic; color: #888; border-top: 1px dashed #ccc;">当前展示为本地数据，回车确认搜索服务器数据</div>`;
+    resultHTML += `<div style="padding: 5px; color: #666;">服务器未找到匹配的报价单，以下为本地数据</div>`;
+    // 显示本地搜索结果
+    if (localResults && localResults.length > 0) {
+      resultHTML += `<div style="background-color: darkgray;color: white;padding-left: 10px;border-radius: 5px;font-weight: bold; margin: 10px 0 5px 0;">本地搜索结果 (${localResults.length}):</div>`;
+      localResults.forEach(quote => {
+        resultHTML += `
+          <div class="quote-result-item" style="background-color: whitesmoke; padding: 5px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
+              onclick="showQuotationDetail('${quote.id}', false)">
+            <div style="flex: 1;">
+              <div style="font-weight: bold;">标题：${quote.title}</div>
+              <div style="font-size: 0.8em; color: #666;">
+              ${getQuoteSummaryHTML(quote, '本地数据')}
+              </div>
+              </div>
+            <button class="secondary" onclick="loadQuotationToCartFromId('${quote.id}', false); event.stopPropagation();" style="background-color: #4caf50; color: white; margin-left: 10px; flex-shrink: 0;">
+              🛒 加载到购物车
+            </button>
+          </div>
+        `;
+      });
+    }
   }
 
   searchResultsDiv.innerHTML = resultHTML;
@@ -1179,7 +1529,10 @@ async function loadQuotation(quoteId, fromServer = false) {
 async function loadQuotationToCartFromId(quoteId, fromServer = false) {
   let quotation = null;
 
-  if (fromServer) {
+  // 检查是否当前页面已经显示了报价单详情且来自服务器，如果是则直接使用
+  if (window.currentQuotationDetail && window.currentQuotationDetail.id === quoteId) {
+    quotation = window.currentQuotationDetail;
+  } else if (fromServer) {
     // 从服务器加载报价单
     quotation = await fetchQuotationFromServer(quoteId);
   } else {
@@ -1195,6 +1548,7 @@ async function loadQuotationToCartFromId(quoteId, fromServer = false) {
 
   // 调用加载到购物车的函数
   loadQuotationToCartFromObject(quotation);
+  closeQuotationDetailModal();
 }
 
 // 从报价单对象加载到购物车
@@ -1312,6 +1666,21 @@ function loadQuotationToCartFromObject(quotation) {
     // 更新购物车计数
     updateCartCount();
 
+    // 更新tempData以确保数据同步
+    if (typeof updateTempData === 'function') {
+      updateTempData();
+    }
+
+    // 更新tempData中的小计和总计备注内容
+    const tempDataStr = localStorage.getItem('tempData');
+    if (tempDataStr) {
+      const tempData = JSON.parse(tempDataStr);
+      tempData.subtotal_remark = quotation.subtotal_remark || "";
+      tempData.total_remark = quotation.total_remark || "";
+      tempData.id = quotation.id; // 确保ID同步
+      localStorage.setItem('tempData', JSON.stringify(tempData));
+    }
+
     showMessage('报价单已加载到购物车', 'success');
 
   } catch (error) {
@@ -1341,132 +1710,169 @@ async function showQuotationDetail(quotationId, fromServer = false) {
   // 存储当前报价单到全局变量，供加载到购物车时使用
   window.currentQuotationDetail = quotation;
 
-  // 构建详情内容
+  // 语言设置
+  const isEnglish = window.isEnglishDisplay || false;
+
+  // 根据语言设置定义标签
+  const labels = isEnglish
+    ? {
+        quotation: "Quotation",
+        no: "No.",
+        name: "Name",
+        unitPrice: "Unit Price",
+        qty: "Qty.",
+        subtotal: "Subtotal",
+        subtotalExcludingFees: "Subtotal (Excluding Additional Fees)",
+        add: "Add",
+        total: `TOTAL (${quotation.currency || 'CNY'})`,
+        remark: "Remark",
+      }
+    : {
+        quotation: "报价单",
+        no: "序号",
+        name: "型号",
+        unitPrice: "单价",
+        qty: "数量",
+        subtotal: "小计",
+        subtotalExcludingFees: "商品小计",
+        add: "其它费用",
+        total: `总计 (${quotation.currency || 'CNY'})`,
+        remark: "备注",
+      };
+
+  // 构建详情内容 - 使用表格格式
   let detailHtml = `
     <div style="margin-bottom: 15px;">
       <h3>${quotation.title}</h3>
       <p><strong>总计:</strong> ${quotation.total ? formatCurrency(quotation.total) : 'N/A'} ${quotation.currency || ''}</p>
       <p><strong>创建时间:</strong> ${new Date(quotation.createdAt).toLocaleString()}</p>
+      <p><strong>更新时间:</strong> ${new Date(quotation.updatedAt).toLocaleString()}</p>
     </div>
   `;
 
-  // 显示项目列表
-  if (quotation.items && quotation.items.length > 0) {
-    detailHtml += '<h4>商品项目:</h4><ul>';
-    quotation.items.forEach(item => {
-      // 跳过费用和系数项目，在单独的区域显示
-      if (item.type !== 'fees' && item.type !== 'factors' && 
-          item.displayType !== '费用' && item.displayType !== '系数') {
-        detailHtml += `
-          <li>
-            <strong>${item.model || item.name || 'N/A'}</strong> -
-            数量: ${item.quantity || 0},
-            单价: ${item.price ? formatCurrency(item.price) : 'N/A'},
-            备注: ${item.remark || ''}
-          </li>
-        `;
-      }
-    });
-    detailHtml += '</ul>';
+  // 从报价单中提取项目数据
+  const allItems = quotation.items || [];
+  const cartItems = allItems.filter(item =>
+    item.type !== 'fees' && item.type !== 'factors' &&
+    item.displayType !== '费用' && item.displayType !== '系数'
+  );
+  const feeItems = allItems.filter(item =>
+    item.type === 'fees' || item.displayType === '费用'
+  );
+  const factorItems = allItems.filter(item =>
+    item.type === 'factors' || item.displayType === '系数'
+  );
+
+  // 计算基础总计、费用总计和系数
+  const baseTotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+  const tempFees = feeItems.reduce((sum, item) => sum + (item.price || 0), 0);
+  const factor = factorItems.reduce((prod, item) => prod * (item.price || item.value || 1), 1);
+  const total = (baseTotal + tempFees) * factor;
+
+  // 使用表格格式展示
+  detailHtml += `
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px; white-space: nowrap;">${labels.no}</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.name}</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.unitPrice}</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.qty}</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.subtotal}</th>
+                <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.remark}</th>
+            </tr>
+        </thead>
+        <tbody>
+  `;
+
+  // 添加购物车项目（商品项目）
+  cartItems.forEach((item, index) => {
+    const itemIndex = index + 1; // 序号从1开始
+    const subtotal = (item.price || 0) * (item.quantity || 1);
+
+    detailHtml += `
+        <tr>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;">${itemIndex}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                <strong>${item.model || item.name || 'N/A'}</strong>
+            </td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.price || 0)}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity || 1}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+        </tr>
+    `;
+  });
+
+  // 添加商品小计行
+  if (cartItems.length > 0) {
+    detailHtml += `
+        <tr style="background-color: #f0f8ff; font-weight: bold;">
+            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.subtotalExcludingFees}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${quotation.subtotal_remark || ''}</td>
+        </tr>
+    `;
   }
 
-  // 显示费用项目
-  if (quotation.items) {
-    const fees = quotation.items.filter(item => 
-      item.type === 'fees' || item.displayType === '费用');
-    if (fees.length > 0) {
-      detailHtml += '<h4>其它费用:</h4><ul>';
-      fees.forEach(fee => {
-        detailHtml += `
-          <li>
-            <strong>${fee.name || 'N/A'}</strong> -
-            金额: ${fee.price ? formatCurrency(fee.price) : 'N/A'},
-            备注: ${fee.remark || ''}
-          </li>
-        `;
-      });
-      detailHtml += '</ul>';
-    }
-  }
+  // 添加其它费用
+  feeItems.forEach((item, index) => {
+    const itemIndex = cartItems.length + index + 1;
+    detailHtml += `
+        <tr style="background-color: #f9f9f9;">
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${labels.add}</strong></td>
+            <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name || 'N/A'}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.price || 0)}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+        </tr>
+    `;
+  });
 
-  // 显示系数项目
-  if (quotation.items) {
-    const factors = quotation.items.filter(item => 
-      item.type === 'factors' || item.displayType === '系数');
-    if (factors.length > 0) {
-      detailHtml += '<h4>系数:</h4><ul>';
-      factors.forEach(factor => {
-        detailHtml += `
-          <li>
-            <strong>${factor.name || 'N/A'}</strong> -
-            值: ${factor.value || 0},
-            备注: ${factor.remark || ''}
-          </li>
-        `;
-      });
-      detailHtml += '</ul>';
-    }
-  }
+  // 添加系数
+  factorItems.forEach((item, index) => {
+    const itemIndex = cartItems.length + feeItems.length + index + 1;
+    detailHtml += `
+        <tr style="background-color: #f9f9f9;">
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${isEnglish ? "Factor" : "系数"}</strong></td>
+            <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name || 'N/A'}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.price || item.value || 1}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+        </tr>
+    `;
+  });
 
-  // 如果报价单有专门的购物车项目、费用项目和系数项目，则使用这些
-  if (quotation.cartItems && quotation.cartItems.length > 0) {
-    detailHtml += '<h4>商品项目:</h4><ul>';
-    quotation.cartItems.forEach(item => {
-      detailHtml += `
-        <li>
-          <strong>${item.model || item.name || 'N/A'}</strong> -
-          数量: ${item.quantity || 0},
-          单价: ${item.actualPrice ? formatCurrency(item.actualPrice) : 'N/A'},
-          备注: ${item.remark || ''}
-        </li>
-      `;
-    });
-    detailHtml += '</ul>';
-  }
+  // 显示总计
+  detailHtml += `
+      <tr style="background-color: #e8f5e9; font-weight: bold;">
+          <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.total}</td>
+          <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+          <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${quotation.total_remark || ''}</td>
+      </tr>
+  `;
 
-  // 显示费用项目
-  if (quotation.tempFees && quotation.tempFees.length > 0) {
-    detailHtml += '<h4>其它费用:</h4><ul>';
-    quotation.tempFees.forEach(fee => {
-      detailHtml += `
-        <li>
-          <strong>${fee.name || 'N/A'}</strong> -
-          金额: ${fee.actualAmount ? formatCurrency(fee.actualAmount) : 'N/A'},
-          备注: ${fee.remark || ''}
-        </li>
-      `;
-    });
-    detailHtml += '</ul>';
-  }
-
-  // 显示系数项目
-  if (quotation.tempFactors && quotation.tempFactors.length > 0) {
-    detailHtml += '<h4>系数:</h4><ul>';
-    quotation.tempFactors.forEach(factor => {
-      detailHtml += `
-        <li>
-          <strong>${factor.name || 'N/A'}</strong> -
-          值: ${factor.value || 0},
-          备注: ${factor.remark || ''}
-        </li>
-      `;
-    });
-    detailHtml += '</ul>';
-  }
-
-  // 显示小计和总计备注
-  if (quotation.subtotalRemark) {
-    detailHtml += `<p><strong>小计备注:</strong> ${quotation.subtotalRemark}</p>`;
-  }
-  if (quotation.totalRemark) {
-    detailHtml += `<p><strong>总计备注:</strong> ${quotation.totalRemark}</p>`;
-  }
+  detailHtml += `
+        </tbody>
+    </table>
+  `;
 
   document.getElementById("quotationDetailContent").innerHTML = detailHtml;
   document.getElementById("quotationDetailModal").style.display = "block";
 
-  // 隐藏搜索结果
-  document.getElementById('quoteSearchResults').style.display = 'none';
-  // 清空搜索框
-  document.getElementById('quoteSearchInput').value = '';
+  // 动态设置加载到购物车按钮的点击事件，传递正确的报价单ID
+  const loadToCartBtn = document.getElementById("loadQuotationToCartBtn");
+  if (loadToCartBtn) {
+    loadToCartBtn.onclick = function() {
+      loadQuotationToCartFromId(quotationId, fromServer);
+    };
+  }
+
+  // // 隐藏搜索结果
+  // document.getElementById('quoteSearchResults').style.display = 'none';
+  // // 清空搜索框
+  // document.getElementById('quoteSearchInput').value = '';
+}
+
+// 关闭详情模态框
+function closeQuotationDetailModal() {
+  document.getElementById("quotationDetailModal").style.display = "none";
 }

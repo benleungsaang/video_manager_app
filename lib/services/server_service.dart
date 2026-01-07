@@ -444,6 +444,8 @@ class ServerService with ChangeNotifier {
     router.put('/api/quotations/<id>', _quotationApiHandler.handleUpdateQuotation);
     router.delete('/api/quotations/<id>', _quotationApiHandler.handleDeleteQuotation);
     router.get('/api/search-quotations', _quotationApiHandler.handleSearchQuotations);
+    // 清空报价单数据库 - 放在更通用的路由之前
+    router.delete('/api/quotations/clear', _quotationApiHandler.handleClearQuotations);
 
     // 视频流处理路由 - 支持Range和HEAD请求
     router.get('/videoStream/<videoId>', _handleVideoStream);

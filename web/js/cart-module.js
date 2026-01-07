@@ -5,6 +5,7 @@
 function showCart() {
   currentView = "cart";
   renderCart();
+  updateTempData(); // 确保tempData与当前cartItems和tempItems同步
 
   // 显示购物车模态框
   document.getElementById("cartModal").style.display = "block";
@@ -238,6 +239,7 @@ function updateCartItemPrice(index, value) {
     cartItems[index].actualPrice = parsedValue;
     renderCart(); // 重新渲染以更新总计
     updateCartSummary(); // 更新主页面购物车摘要
+    updateTempData(); // 更新tempData
   } else {
     showMessage("请输入有效的价格", "error");
   }
@@ -251,6 +253,7 @@ function updateCartItemQuantity(index, value) {
     renderCart(); // 重新渲染以更新总计
     updateCartSummary(); // 更新主页面购物车摘要
     updateCartCount(); // 更新计数
+    updateTempData(); // 更新tempData
   } else {
     showMessage("请输入有效的数量（至少为1）", "error");
   }
@@ -490,6 +493,7 @@ function updateTempFeeAmount(index, value) {
     tempItems[index].actualAmount = parsedValue;
     renderCart(); // 重新渲染以更新总计
     updateCartSummary(); // 更新主页面购物车摘要
+    updateTempData(); // 更新tempData
   } else {
     showMessage("请输入有效的金额", "error");
   }
@@ -502,6 +506,7 @@ function updateTempFactorValue(index, value) {
     tempItems[index].value = parsedValue;
     renderCart(); // 重新渲染以更新总计
     updateCartSummary(); // 更新主页面购物车摘要
+    updateTempData(); // 更新tempData
   } else {
     showMessage("请输入有效的系数", "error");
   }
@@ -513,6 +518,7 @@ function removeTempItemFromCart(index) {
     tempItems.splice(index, 1);
     renderCart();
     updateCartSummary(); // 更新主页面购物车摘要
+    updateTempData(); // 更新tempData
   }
 }
 
@@ -523,6 +529,7 @@ function removeCartItem(index) {
     renderCart();
     updateCartSummary(); // 更新主页面购物车摘要
     updateCartCount(); // 更新计数
+    updateTempData(); // 更新tempData
   }
 }
 
@@ -559,6 +566,9 @@ async function addToCartGeneric(
   } else {
     tempItems.push(cartItem);
   }
+
+  // 更新tempData
+  updateTempData();
 
   // 记录使用次数 - 使用创建的购物车项目ID
   if (cartItem.id) {
@@ -700,10 +710,101 @@ function clearCartConfirmation() {
   }
 }
 
+// 更新tempData
+function updateTempData() {
+  // 计算总计
+  const baseTotal = cartItems.reduce((sum, item) => sum + item.actualPrice * item.quantity, 0);
+  const tempFees = tempItems
+    .filter((item) => item.displayType === "费用")
+    .reduce((sum, item) => sum + item.actualAmount, 0);
+  const factor = tempItems
+    .filter((item) => item.displayType === "系数")
+    .reduce((prod, item) => prod * item.value, 1);
+  const total = (baseTotal + tempFees) * factor;
+
+  // 获取tempData，如果不存在则创建默认结构
+  let tempData = JSON.parse(localStorage.getItem('tempData') || '{}');
+  if (!tempData.id) {
+    tempData = {
+      "id": "temp",
+      "title": "临时报价单",
+      "items": [],
+      "subtotal": 0,
+      "subtotal_remark": "",
+      "total": 0,
+      "total_remark": "",
+      "currency": "CNY",
+      "createdBy": localStorage.getItem('username') || 'user'
+    };
+  }
+
+  // 同步购物车项目
+  const allItems = [];
+
+  // 添加购物车项目
+  cartItems.forEach(item => {
+    allItems.push({
+      id: item.id,
+      type: item.type || "parts",
+      name: item.name || item.model,
+      model: item.model,  // 保留model字段
+      price: item.actualPrice,
+      quantity: item.quantity,
+      remark: item.remark || ""
+    });
+  });
+
+  // 添加费用项目
+  tempItems
+    .filter(item => item.displayType === "费用")
+    .forEach(item => {
+      allItems.push({
+        id: item.id,
+        type: "fees",
+        name: item.name,
+        price: item.actualAmount,
+        quantity: 1,
+        remark: item.remark || ""
+      });
+    });
+
+  // 添加系数项目
+  tempItems
+    .filter(item => item.displayType === "系数")
+    .forEach(item => {
+      allItems.push({
+        id: item.id,
+        type: "factors",
+        name: item.name,
+        price: item.value,  // 系数值存储在price字段中
+        quantity: 1,
+        remark: item.remark || ""
+      });
+    });
+
+  // 更新tempData
+  tempData.items = allItems;
+  tempData.subtotal = baseTotal;
+  tempData.total = total;
+  
+  // 保留原有的备注（如果存在）
+  if (tempData.subtotal_remark === undefined) {
+    tempData.subtotal_remark = "";
+  }
+  if (tempData.total_remark === undefined) {
+    tempData.total_remark = "";
+  }
+
+  // 保存更新后的tempData
+  localStorage.setItem('tempData', JSON.stringify(tempData));
+}
+
 // 清空购物车
 function clearCart() {
   cartItems = [];
   tempItems = [];
+  // 删除tempData
+  localStorage.removeItem('tempData');
   renderCart();
   updateCartCount();
   updateCartSummary();

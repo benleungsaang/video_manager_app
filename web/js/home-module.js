@@ -161,6 +161,11 @@ async function addToCart(item) {
   // 更新购物车计数
   updateCartCount();
 
+  // 更新tempData
+  if (typeof updateTempData === 'function') {
+    updateTempData();
+  }
+
   // 显示成功消息
   showMessage(`已将 ${item.Model} 添加到购物车`, "success");
 }

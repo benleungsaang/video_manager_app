@@ -18,6 +18,8 @@ class QuotationApiHandler {
         total: (params['total'] ?? 0).toDouble(),
         currency: params['currency'] ?? 'CNY',
         createdBy: params['createdBy'] ?? 'user',
+        subtotal_remark: params['subtotal_remark'] ?? '',
+        total_remark: params['total_remark'] ?? '',
       );
 
       final quotationsBox = Hive.box<Quotation>('quotations');
@@ -27,6 +29,7 @@ class QuotationApiHandler {
         json.encode({
           'success': true,
           'id': quotation.id, // 返回生成的UUID
+          'createdAt': quotation.createdAt.toIso8601String(),
           'message': '报价单创建成功'
         }),
         headers: {'Content-Type': 'application/json'},
@@ -52,10 +55,7 @@ class QuotationApiHandler {
       }
 
       return Response.ok(
-        json.encode({
-          'success': true,
-          'data': quotationsData
-        }),
+        json.encode({'success': true, 'data': quotationsData}),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -72,9 +72,9 @@ class QuotationApiHandler {
     try {
       final quotationsBox = Hive.box<Quotation>('quotations');
       final decodedId = Uri.decodeComponent(id);
-      
+
       Quotation? targetQuotation;
-      
+
       // 在Hive box中查找指定ID的报价单
       for (final key in quotationsBox.keys) {
         final quotation = quotationsBox.get(key)!;
@@ -86,10 +86,7 @@ class QuotationApiHandler {
 
       if (targetQuotation != null) {
         return Response.ok(
-          json.encode({
-            'success': true,
-            'data': targetQuotation.toJson()
-          }),
+          json.encode({'success': true, 'data': targetQuotation.toJson()}),
           headers: {'Content-Type': 'application/json'},
         );
       } else {
@@ -120,20 +117,26 @@ class QuotationApiHandler {
       // 根据查询参数过滤报价单
       final matchingQuotations = allQuotations.where((quotation) {
         return quotation.title.toLowerCase().contains(query) ||
-               quotation.createdBy.toLowerCase().contains(query) ||
-               quotation.currency.toLowerCase().contains(query);
+            quotation.createdBy.toLowerCase().contains(query) ||
+            quotation.currency.toLowerCase().contains(query);
       }).toList();
 
       final quotationsData = <Map<String, dynamic>>[];
       for (final quotation in matchingQuotations) {
-        quotationsData.add(quotation.toJson());
+        // 只返回标题、作者、金额和创建时间，节省带宽
+        quotationsData.add({
+          'id': quotation.id,
+          'title': quotation.title,
+          'createdBy': quotation.createdBy,
+          'total': quotation.total,
+          'createdAt': quotation.createdAt.toIso8601String(),
+          'updatedAt': quotation.updatedAt.toIso8601String(),
+          'currency': quotation.currency, // 保留币种信息
+        });
       }
 
       return Response.ok(
-        json.encode({
-          'success': true,
-          'data': quotationsData
-        }),
+        json.encode({'success': true, 'data': quotationsData}),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -153,10 +156,10 @@ class QuotationApiHandler {
 
       final quotationsBox = Hive.box<Quotation>('quotations');
       final decodedId = Uri.decodeComponent(id);
-      
+
       Quotation? targetQuotation;
       int? targetKey;
-      
+
       // 在Hive box中查找指定ID的报价单
       for (final key in quotationsBox.keys) {
         final quotation = quotationsBox.get(key)!;
@@ -171,17 +174,17 @@ class QuotationApiHandler {
         // 创建更新后的报价单
         final updatedQuotation = targetQuotation.copyWith(
           title: params['title'] ?? targetQuotation.title,
-          items: params['items'] != null 
-              ? List<Map<String, dynamic>>.from(params['items']) 
+          items: params['items'] != null
+              ? List<Map<String, dynamic>>.from(params['items'])
               : targetQuotation.items,
-          remarks: params['remarks'] != null 
-              ? Map<String, String>.from(params['remarks']) 
+          remarks: params['remarks'] != null
+              ? Map<String, String>.from(params['remarks'])
               : targetQuotation.remarks,
-          subtotal: params['subtotal'] != null 
-              ? (params['subtotal'] as num).toDouble() 
+          subtotal: params['subtotal'] != null
+              ? (params['subtotal'] as num).toDouble()
               : targetQuotation.subtotal,
-          total: params['total'] != null 
-              ? (params['total'] as num).toDouble() 
+          total: params['total'] != null
+              ? (params['total'] as num).toDouble()
               : targetQuotation.total,
           currency: params['currency'] ?? targetQuotation.currency,
           updatedAt: DateTime.now(),
@@ -192,10 +195,7 @@ class QuotationApiHandler {
         await quotationsBox.put(targetKey, updatedQuotation);
 
         return Response.ok(
-          json.encode({
-            'success': true,
-            'data': updatedQuotation.toJson()
-          }),
+          json.encode({'success': true, 'data': updatedQuotation.toJson()}),
           headers: {'Content-Type': 'application/json'},
         );
       } else {
@@ -218,7 +218,7 @@ class QuotationApiHandler {
     try {
       final quotationsBox = Hive.box<Quotation>('quotations');
       final decodedId = Uri.decodeComponent(id);
-      
+
       bool found = false;
       for (final key in quotationsBox.keys) {
         final quotation = quotationsBox.get(key)!;
@@ -231,10 +231,7 @@ class QuotationApiHandler {
 
       if (found) {
         return Response.ok(
-          json.encode({
-            'success': true,
-            'message': '报价单删除成功'
-          }),
+          json.encode({'success': true, 'message': '报价单删除成功'}),
           headers: {'Content-Type': 'application/json'},
         );
       } else {
@@ -245,6 +242,27 @@ class QuotationApiHandler {
       }
     } catch (e) {
       print('删除报价单失败: $e');
+      return Response.internalServerError(
+        body: json.encode({'success': false, 'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  // 清空报价单数据库
+  Future<Response> handleClearQuotations(Request request) async {
+    try {
+      final quotationsBox = Hive.box<Quotation>('quotations');
+      
+      // 清空整个box
+      await quotationsBox.clear();
+      
+      return Response.ok(
+        json.encode({'success': true, 'message': '报价单数据库已清空'}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      print('清空报价单数据库失败: $e');
       return Response.internalServerError(
         body: json.encode({'success': false, 'error': e.toString()}),
         headers: {'Content-Type': 'application/json'},

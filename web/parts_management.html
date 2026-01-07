@@ -90,6 +90,7 @@
             <button id="parts-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">部件管理</button>
             <button id="fees-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">费用管理</button>
             <button id="factors-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">系数管理</button>
+            <button id="quotations-tab" class="tab-button py-4 px-6 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 rounded-t-lg">报价单管理</button>
           </nav>
         </div>
         
@@ -107,7 +108,7 @@
               <button id="delete-selected-machines-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
               </button>
-              <button id="clear-machines-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+              <button id="clear-machines-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition dark:bg-red-800 dark:hover:bg-red-900">
                 <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
@@ -157,7 +158,7 @@
               <button id="delete-selected-parts-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
               </button>
-              <button id="clear-parts-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+              <button id="clear-parts-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition dark:bg-red-800 dark:hover:bg-red-900">
                 <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
@@ -206,7 +207,7 @@
               <button id="delete-selected-fees-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
               </button>
-              <button id="clear-fees-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+              <button id="clear-fees-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition dark:bg-red-800 dark:hover:bg-red-900">
                 <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
@@ -255,7 +256,7 @@
               <button id="delete-selected-factors-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                 <i class="fa fa-trash mr-1"></i> 批量删除
               </button>
-              <button id="clear-factors-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition">
+              <button id="clear-factors-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition dark:bg-red-800 dark:hover:bg-red-900">
                 <i class="fa fa-ban mr-1"></i> 清空数据库
               </button>
             </div>
@@ -287,6 +288,57 @@
                 <!-- 系数数据将通过JavaScript动态加载 -->
                 <tr>
                   <td colspan="4" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">暂无数据</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- 报价单管理内容 -->
+        <div id="quotations-content" class="tab-content hidden">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-semibold">报价单管理</h2>
+            <div class="button-group">
+              <button id="add-quotation-btn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+                <i class="fa fa-plus mr-1"></i> 添加报价单
+              </button>
+              <button id="delete-selected-quotations-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                <i class="fa fa-trash mr-1"></i> 批量删除
+              </button>
+              <button id="clear-quotations-btn" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800 transition dark:bg-red-800 dark:hover:bg-red-900">
+                <i class="fa fa-ban mr-1"></i> 清空数据库
+              </button>
+            </div>
+          </div>
+          
+          <!-- 搜索框 -->
+          <div class="mb-6">
+            <div class="relative">
+              <input type="text" id="quotation-search" placeholder="搜索报价单标题或作者..." 
+                class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+              <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"></i>
+            </div>
+          </div>
+          
+          <!-- 报价单表格 -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">
+                    <input type="checkbox" id="select-all-quotations" class="rounded">
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">标题</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">作者</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">金额</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">创建时间</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">操作</th>
+                </tr>
+              </thead>
+              <tbody id="quotations-table-body" class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                <!-- 报价单数据将通过JavaScript动态加载 -->
+                <tr>
+                  <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">暂无数据</td>
                 </tr>
               </tbody>
             </table>
@@ -470,6 +522,31 @@
     </div>
   </div>
 
+  <!-- 报价单详情模态框 -->
+  <div id="quotation-detail-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
+    <div class="bg-white rounded-xl w-full max-w-4xl p-6 dark:bg-gray-800 dark:text-white" style="max-height: 90vh; overflow-y: auto;">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="quotation-detail-title" class="text-xl font-bold dark:text-white">报价单详情</h3>
+        <button id="close-quotation-detail-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div id="quotation-detail-content" class="dark:text-gray-200">
+        <!-- 报价单详情内容将动态填充 -->
+      </div>
+      
+      <div class="mt-6 flex justify-end space-x-3">
+        <button id="load-quotation-to-cart-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition dark:bg-green-600 dark:hover:bg-green-700">
+          <i class="fa fa-shopping-cart mr-1"></i> 加载到购物车
+        </button>
+        <button id="edit-from-quotation-detail-btn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition dark:bg-blue-600 dark:hover:bg-blue-700">
+          <i class="fa fa-edit mr-1"></i> 编辑
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 确认删除模态框 -->
   <div id="confirm-delete-modal" class="fixed inset-0 bg-black/50 modal-backdrop flex items-center justify-center hidden z-50 dark:bg-black/70">
     <div class="bg-white rounded-xl w-full max-w-md p-6 dark:bg-gray-800 dark:text-white">
@@ -646,6 +723,30 @@
       }
     };
     
+    apiClient.clearQuotations = async function() {
+      const url = '/api/quotations/clear';
+      const config = {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      try {
+        const response = await fetch(url, config);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return data;
+      } catch (error) {
+        console.error(`清空报价单数据库失败 ${url}:`, error);
+        throw error;
+      }
+    };
+    
     // 检查用户会话和角色
     async function checkUserSession() {
       try {
@@ -770,12 +871,14 @@
       parts: [],
       fees: [],
       factors: [],
+      quotations: [],
       selectedTab: 'machines',
       selectedItems: {
         machines: [],
         parts: [],
         fees: [],
-        factors: []
+        factors: [],
+        quotations: []
       },
       currentEditItem: null,
       currentEditType: null,
@@ -789,41 +892,48 @@
       partsTab: document.getElementById('parts-tab'),
       feesTab: document.getElementById('fees-tab'),
       factorsTab: document.getElementById('factors-tab'),
+      quotationsTab: document.getElementById('quotations-tab'),
       
       // 标签页内容
       machinesContent: document.getElementById('machines-content'),
       partsContent: document.getElementById('parts-content'),
       feesContent: document.getElementById('fees-content'),
       factorsContent: document.getElementById('factors-content'),
+      quotationsContent: document.getElementById('quotations-content'),
       
       // 搜索框
       machineSearch: document.getElementById('machine-search'),
       partSearch: document.getElementById('part-search'),
       feeSearch: document.getElementById('fee-search'),
       factorSearch: document.getElementById('factor-search'),
+      quotationSearch: document.getElementById('quotation-search'),
       
       // 表格主体
       machinesTableBody: document.getElementById('machines-table-body'),
       partsTableBody: document.getElementById('parts-table-body'),
       feesTableBody: document.getElementById('fees-table-body'),
       factorsTableBody: document.getElementById('factors-table-body'),
+      quotationsTableBody: document.getElementById('quotations-table-body'),
       
       // 选择框
       selectAllMachines: document.getElementById('select-all-machines'),
       selectAllParts: document.getElementById('select-all-parts'),
       selectAllFees: document.getElementById('select-all-fees'),
       selectAllFactors: document.getElementById('select-all-factors'),
+      selectAllQuotations: document.getElementById('select-all-quotations'),
       
       // 操作按钮
       addMachineBtn: document.getElementById('add-machine-btn'),
       addPartBtn: document.getElementById('add-part-btn'),
       addFeeBtn: document.getElementById('add-fee-btn'),
       addFactorBtn: document.getElementById('add-factor-btn'),
+      addQuotationBtn: document.getElementById('add-quotation-btn'),
       
       deleteSelectedMachinesBtn: document.getElementById('delete-selected-machines-btn'),
       deleteSelectedPartsBtn: document.getElementById('delete-selected-parts-btn'),
       deleteSelectedFeesBtn: document.getElementById('delete-selected-fees-btn'),
       deleteSelectedFactorsBtn: document.getElementById('delete-selected-factors-btn'),
+      deleteSelectedQuotationsBtn: document.getElementById('delete-selected-quotations-btn'),
       
       // 模态框
       addEditMachineModal: document.getElementById('add-edit-machine-modal'),
@@ -833,6 +943,8 @@
       confirmDeleteModal: document.getElementById('confirm-delete-modal'),
       machineDetailModal: document.getElementById('machine-detail-modal'),
       machineDetailContent: document.getElementById('machine-detail-content'),
+      quotationDetailModal: document.getElementById('quotation-detail-modal'),
+      quotationDetailContent: document.getElementById('quotation-detail-content'),
       
       // 机器模态框元素
       machineModalTitle: document.getElementById('machine-modal-title'),
@@ -937,6 +1049,324 @@
       }).format(amount);
     }
     
+    // 显示项目详情（通用函数，适用于机器、部件等）
+    function showItemDetail(item, itemType = 'machine') {
+      // 保存当前项目数据以供后续操作使用
+      state.currentDetailItem = JSON.parse(JSON.stringify(item));
+      state.currentDetailItemType = itemType;
+      
+      // 显示详情内容
+      showItemDetailView(item, itemType);
+    }
+
+    // 显示项目详情视图
+    function showItemDetailView(item, itemType = 'machine') {
+      let fieldsTable = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+      
+      // 显示不同类型的项目详情（除了ID和内部属性）
+      for (const key in item) {
+        if (item.hasOwnProperty(key) && 
+            key !== 'id' && 
+            key !== 'Id' && 
+            key !== '_id' && 
+            key !== '__proto__' && 
+            key !== 'constructor') {
+          // 根据字段类型显示不同格式
+          let value = item[key];
+          if (typeof value === 'number' && key.toLowerCase().includes('price') || key.toLowerCase().includes('amount') || key.toLowerCase().includes('value')) {
+            // 对价格相关字段格式化显示
+            value = formatCurrency(value);
+          } else if (value instanceof Date) {
+            // 对日期字段格式化显示
+            value = value.toLocaleString();
+          } else if (typeof value === 'object' && value !== null) {
+            // 对对象类型字段转换为字符串显示
+            value = JSON.stringify(value);
+          }
+          
+          // 以只读形式显示字段值
+          fieldsTable += `<div class="border border-gray-200 dark:border-gray-700 p-2 rounded"><strong class="text-gray-700 dark:text-gray-300">${key}:</strong> <span class="text-gray-900 dark:text-gray-100">${value}</span></div>`;
+        }
+      }
+      
+      fieldsTable += '</div>';
+      
+      const detailContent = elements.machineDetailContent;
+      if (detailContent) {
+        detailContent.innerHTML = fieldsTable;
+        
+        // 设置标题，根据项目类型
+        const detailTitle = document.getElementById('machine-detail-title');
+        if (detailTitle) {
+          let titlePrefix = '';
+          switch(itemType) {
+            case 'machine':
+              titlePrefix = '机器';
+              break;
+            case 'part':
+              titlePrefix = '部件';
+              break;
+            case 'fee':
+              titlePrefix = '费用';
+              break;
+            case 'factor':
+              titlePrefix = '系数';
+              break;
+            default:
+              titlePrefix = '项目';
+          }
+          const isEnglish = window.isEnglishDisplay || false;
+          detailTitle.textContent = `${isEnglish ? titlePrefix + ' Details' : titlePrefix + '详情'} - ${item.Model || item.model || item.name || item.title || item.id || '未知'}`;
+        }
+      }
+      
+      // 更新按钮文本为"编辑"，并显示编辑按钮
+      const editButton = document.getElementById('edit-from-detail-btn');
+      if (editButton) {
+        const isEnglish = window.isEnglishDisplay || false;
+        editButton.innerHTML = '<i class="fa fa-edit mr-1"></i> ' + (isEnglish ? 'Edit' : '编辑');
+        editButton.onclick = function() {
+          showItemDetailEditForm(item, itemType);
+        };
+        editButton.style.display = 'inline-block'; // 确保编辑按钮可见
+      }
+      
+      // 显示机器详情模态框
+      elements.machineDetailModal.classList.remove('hidden');
+    }
+
+    // 显示项目详情编辑表单
+    function showItemDetailEditForm(item, itemType) {
+      let fieldsForm = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+      
+      // 保存原始数据用于取消编辑
+      state.originalDetailItem = JSON.parse(JSON.stringify(item));
+      state.currentDetailItemType = itemType;
+      
+      // 遍历项目的所有属性（除了ID和内部属性）
+      for (const key in item) {
+        if (item.hasOwnProperty(key) && 
+            key !== 'id' && 
+            key !== 'Id' && 
+            key !== '_id' && 
+            key !== '__proto__' && 
+            key !== 'constructor') {
+          // 以可编辑的输入框形式显示字段值
+          const value = item[key];
+          let inputField;
+          
+          // 根据值的类型决定输入框类型
+          if (typeof value === 'number') {
+            inputField = `<input type="number" class="detail-field-input w-full px-2 py-1 border rounded dark:bg-gray-700 dark:text-white" data-field="${key}" value="${value}" step="0.01">`;
+          } else if (typeof value === 'string' && (value.startsWith('http') || value.startsWith('data:image'))) {
+            // 如果是图片URL，则显示图片预览和链接输入
+            inputField = `
+              <div>
+                <img src="${value}" alt="Preview" class="max-w-xs max-h-32 mb-2" style="max-width: 100px; max-height: 100px;">
+                <input type="text" class="detail-field-input w-full px-2 py-1 border rounded dark:bg-gray-700 dark:text-white" data-field="${key}" value="${value ? value.toString().replace(/"/g, '&quot;') : ''}">
+              </div>
+            `;
+          } else {
+            inputField = `<input type="text" class="detail-field-input w-full px-2 py-1 border rounded dark:bg-gray-700 dark:text-white" data-field="${key}" value="${value ? value.toString().replace(/"/g, '&quot;') : ''}">`;
+          }
+          
+          fieldsForm += `<div class="border border-gray-200 dark:border-gray-700 p-2 rounded"><strong class="text-gray-700 dark:text-gray-300">${key}:</strong> ${inputField}</div>`;
+        }
+      }
+      
+      fieldsForm += '</div>';
+      
+      const detailContent = elements.machineDetailContent;
+      if (detailContent) {
+        detailContent.innerHTML = fieldsForm;
+        
+        // 设置标题
+        const detailTitle = document.getElementById('machine-detail-title');
+        if (detailTitle) {
+          let titlePrefix = '';
+          switch(itemType) {
+            case 'machine':
+              titlePrefix = '编辑机器';
+              break;
+            case 'part':
+              titlePrefix = '编辑部件';
+              break;
+            case 'fee':
+              titlePrefix = '编辑费用';
+              break;
+            case 'factor':
+              titlePrefix = '编辑系数';
+              break;
+            default:
+              titlePrefix = '编辑项目';
+          }
+          const isEnglish = window.isEnglishDisplay || false;
+          detailTitle.textContent = (isEnglish ? titlePrefix + ' Editing' : titlePrefix) + ` - ${item.Model || item.model || item.name || item.title || item.id || '未知'}`;
+        }
+      }
+      
+      // 更新按钮文本为"保存"
+      const editButton = document.getElementById('edit-from-detail-btn');
+      if (editButton) {
+        const isEnglish = window.isEnglishDisplay || false;
+        editButton.innerHTML = '<i class="fa fa-save mr-1"></i> ' + (isEnglish ? 'Save' : '保存');
+        editButton.onclick = function() {
+          saveItemDetailChanges();
+        };
+      }
+    }
+
+    // 保存项目详情更改
+    async function saveItemDetailChanges() {
+      if (!state.originalDetailItem || !state.currentDetailItemType) {
+        showToast('没有可保存的编辑数据', true);
+        return;
+      }
+
+      // 获取表单中的所有更改值
+      const inputFields = document.querySelectorAll('.detail-field-input');
+      
+      // 创建更新后的项目副本
+      const updatedItem = { ...state.originalDetailItem };
+      
+      inputFields.forEach(input => {
+        const fieldName = input.getAttribute('data-field');
+        const value = input.value;
+        
+        // 尝试将数字字段转换为数字类型
+        if (!isNaN(value) && value !== '') {
+          // 检查原来的值是否是数字类型
+          if (typeof state.originalDetailItem[fieldName] === 'number') {
+            updatedItem[fieldName] = parseFloat(value);
+          } else {
+            updatedItem[fieldName] = value;
+          }
+        } else {
+          updatedItem[fieldName] = value;
+        }
+      });
+      
+      // 检查是否有实际更改
+      let hasChanges = false;
+      for (const key in updatedItem) {
+        if (updatedItem.hasOwnProperty(key) && 
+            key !== 'id' && 
+            key !== 'Id' && 
+            key !== '_id' && 
+            key !== 'ID' && 
+            key !== '__proto__' && 
+            key !== 'constructor') {
+          if (updatedItem[key] !== state.originalDetailItem[key]) {
+            hasChanges = true;
+            break;
+          }
+        }
+      }
+      
+      if (!hasChanges) {
+        showToast('没有检测到更改，无需保存', 'info');
+        // 切回查看模式
+        showItemDetailView(updatedItem, state.currentDetailItemType);
+        return;
+      }
+      
+      try {
+        let response;
+        let updateSuccess = false;
+        let errorMessage = '';
+        
+        // 根据项目类型调用不同的API端点
+        switch(state.currentDetailItemType) {
+          case 'machine':
+            response = await apiClient.request(`/machines/${encodeURIComponent(updatedItem.id || updatedItem.Id || updatedItem._id || updatedItem.ID || '')}`, {
+              method: 'PUT',
+              body: JSON.stringify(updatedItem)
+            });
+            updateSuccess = response.success;
+            errorMessage = response.error;
+            break;
+          case 'part':
+            response = await apiClient.request(`/parts/${encodeURIComponent(updatedItem.id)}`, {
+              method: 'PUT',
+              body: JSON.stringify(updatedItem)
+            });
+            updateSuccess = response.success;
+            errorMessage = response.error;
+            break;
+          case 'fee':
+            response = await apiClient.request(`/temp-fees/${encodeURIComponent(updatedItem.id)}`, {
+              method: 'PUT',
+              body: JSON.stringify(updatedItem)
+            });
+            updateSuccess = response.success;
+            errorMessage = response.error;
+            break;
+          case 'factor':
+            response = await apiClient.request(`/temp-factors/${encodeURIComponent(updatedItem.id)}`, {
+              method: 'PUT',
+              body: JSON.stringify(updatedItem)
+            });
+            updateSuccess = response.success;
+            errorMessage = response.error;
+            break;
+          default:
+            showToast('未知的项目类型，无法保存', true);
+            return;
+        }
+        
+        if (updateSuccess) {
+          // 更新本地状态
+          let itemIndex = -1;
+          let itemList = [];
+          let renderFunction = null;
+          
+          // 根据项目类型更新对应的状态数组
+          switch(state.currentDetailItemType) {
+            case 'machine':
+              itemList = state.machines;
+              renderFunction = renderMachines;
+              itemIndex = itemList.findIndex(m => 
+                m.id === updatedItem.id || 
+                m.Id === updatedItem.Id || 
+                m._id === updatedItem._id || 
+                m.ID === updatedItem.ID
+              );
+              break;
+            case 'part':
+              itemList = state.parts;
+              renderFunction = renderParts;
+              itemIndex = itemList.findIndex(p => p.id === updatedItem.id);
+              break;
+            case 'fee':
+              itemList = state.fees;
+              renderFunction = renderFees;
+              itemIndex = itemList.findIndex(f => f.id === updatedItem.id);
+              break;
+            case 'factor':
+              itemList = state.factors;
+              renderFunction = renderFactors;
+              itemIndex = itemList.findIndex(f => f.id === updatedItem.id);
+              break;
+          }
+          
+          if (itemIndex !== -1) {
+            itemList[itemIndex] = { ...updatedItem };
+            // 重新渲染列表
+            if (renderFunction) renderFunction();
+          }
+          
+          showToast(`${state.currentDetailItemType === 'machine' ? '机器' : state.currentDetailItemType === 'part' ? '部件' : state.currentDetailItemType === 'fee' ? '费用' : '系数'}信息已保存`, 'success');
+          // 切回查看模式
+          showItemDetailView(updatedItem, state.currentDetailItemType);
+        } else {
+          showToast(`保存失败: ${errorMessage || '未知错误'}`, 'error');
+        }
+      } catch (error) {
+        console.error(`保存${state.currentDetailItemType}信息失败:`, error);
+        showToast(`保存失败: ${error.message}`, 'error');
+      }
+    }
+
     // 显示机器详情
     function showMachineDetail(machine, isEditing = false) {
       // 保存当前机器数据以供编辑使用
@@ -949,6 +1379,197 @@
       } else {
         // 查看模式：显示只读的详情
         showMachineDetailView();
+      }
+    }
+    
+    // 显示报价单详情
+    async function showQuotationDetail(quotationId) {
+      try {
+        // 从服务器获取完整的报价单数据
+        const response = await fetch(`/api/quotations/${quotationId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const quotation = result.data;
+
+          if (quotation) {
+            // 保存当前报价单数据以供后续操作使用
+            state.currentDetailQuotation = JSON.parse(JSON.stringify(quotation));
+            
+            // 语言设置
+            const isEnglish = window.isEnglishDisplay || false;
+
+            // 根据语言设置定义标签
+            const labels = isEnglish
+              ? {
+                  quotation: "Quotation",
+                  no: "No.",
+                  name: "Name",
+                  unitPrice: "Unit Price",
+                  qty: "Qty.",
+                  subtotal: "Subtotal",
+                  subtotalExcludingFees: "Subtotal (Excluding Additional Fees)",
+                  add: "Add",
+                  total: `TOTAL (${quotation.currency || 'CNY'})`,
+                  remark: "Remark",
+                }
+              : {
+                  quotation: "报价单",
+                  no: "序号",
+                  name: "型号",
+                  unitPrice: "单价",
+                  qty: "数量",
+                  subtotal: "小计",
+                  subtotalExcludingFees: "商品小计",
+                  add: "其它费用",
+                  total: `总计 (${quotation.currency || 'CNY'})`,
+                  remark: "备注",
+                };
+
+            // 构建详情内容 - 使用表格格式
+            let detailHtml = `
+              <div style="margin-bottom: 15px;">
+                <h3>${quotation.title}</h3>
+                <p><strong>${isEnglish ? 'Created by:' : '创建者:'}</strong> ${quotation.createdBy || 'N/A'}</p>
+                <p><strong>${isEnglish ? 'Total:' : '总计:'}</strong> ${formatCurrency(quotation.total || 0)} ${quotation.currency || ''}</p>
+                <p><strong>${isEnglish ? 'Created at:' : '创建时间:'}</strong> ${new Date(quotation.createdAt).toLocaleString()}</p>
+              </div>
+            `;
+
+            // 从报价单中提取项目数据
+            const allItems = quotation.items || [];
+            const cartItems = allItems.filter(item => 
+              item.type !== 'fees' && item.type !== 'factors' &&
+              item.displayType !== '费用' && item.displayType !== '系数'
+            );
+            const feeItems = allItems.filter(item => 
+              item.type === 'fees' || item.displayType === '费用'
+            );
+            const factorItems = allItems.filter(item => 
+              item.type === 'factors' || item.displayType === '系数'
+            );
+
+            // 计算基础总计、费用总计和系数
+            const baseTotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+            const tempFees = feeItems.reduce((sum, item) => sum + (item.price || 0), 0);
+            const factor = factorItems.reduce((prod, item) => prod * (item.price || item.value || 1), 1);
+            const total = (baseTotal + tempFees) * factor;
+
+            // 使用表格格式展示
+            detailHtml += `
+              <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                  <thead>
+                      <tr style="background-color: #f2f2f2;">
+                          <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px; white-space: nowrap;">${labels.no}</th>
+                          <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.name}</th>
+                          <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.unitPrice}</th>
+                          <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.qty}</th>
+                          <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.subtotal}</th>
+                          <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.remark}</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+            `;
+
+            // 添加购物车项目（商品项目）
+            cartItems.forEach((item, index) => {
+              const itemIndex = index + 1; // 序号从1开始
+              const subtotal = (item.price || 0) * (item.quantity || 1);
+
+              detailHtml += `
+                  <tr>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;">${itemIndex}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                          <strong>${item.model || item.name || 'N/A'}</strong>
+                      </td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.price || 0)}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity || 1}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+                  </tr>
+              `;
+            });
+
+            // 添加商品小计行
+            if (cartItems.length > 0) {
+              detailHtml += `
+                  <tr style="background-color: #f0f8ff; font-weight: bold;">
+                      <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.subtotalExcludingFees}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${quotation.subtotal_remark || ''}</td>
+                  </tr>
+              `;
+            }
+
+            // 添加其它费用
+            feeItems.forEach((item, index) => {
+              const itemIndex = cartItems.length + index + 1;
+              detailHtml += `
+                  <tr style="background-color: #f9f9f9;">
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${labels.add}</strong></td>
+                      <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name || 'N/A'}</strong></td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.price || 0)}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+                  </tr>
+              `;
+            });
+
+            // 添加系数
+            factorItems.forEach((item, index) => {
+              const itemIndex = cartItems.length + feeItems.length + index + 1;
+              detailHtml += `
+                  <tr style="background-color: #f9f9f9;">
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${isEnglish ? "Factor" : "系数"}</strong></td>
+                      <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name || 'N/A'}</strong></td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.price || item.value || 1}</td>
+                      <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+                  </tr>
+              `;
+            });
+
+            // 显示总计
+            detailHtml += `
+              <tr style="background-color: #e8f5e9; font-weight: bold;">
+                  <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.total}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+                  <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${quotation.total_remark || ''}</td>
+              </tr>
+            `;
+
+            detailHtml += `
+                  </tbody>
+              </table>
+            `;
+
+            // 显示详情内容
+            const detailContent = elements.quotationDetailContent;
+            if (detailContent) {
+              detailContent.innerHTML = detailHtml;
+              
+              // 设置标题
+              const detailTitle = document.getElementById('quotation-detail-title');
+              if (detailTitle) {
+                detailTitle.textContent = `${isEnglish ? 'Quotation Details' : '报价单详情'} - ${quotation.title}`;
+              }
+            }
+
+            // 显示模态框
+            elements.quotationDetailModal.classList.remove('hidden');
+          } else {
+            showToast('未找到指定的报价单', true);
+          }
+        } else {
+          console.error('获取服务器报价单失败:', response.status, response.statusText);
+          showToast('获取服务器报价单失败', true);
+        }
+      } catch (error) {
+        console.error('获取报价单详情时发生错误:', error);
+        showToast('获取报价单详情时发生错误', true);
       }
     }
     
@@ -1174,7 +1795,7 @@
             return;
           }
           // 点击行的其他部分时，显示详情
-          showMachineDetail(machine);
+          showItemDetail(machine, 'machine');
         });
         
         // 绑定删除按钮事件
@@ -1278,14 +1899,14 @@
             </button>
           </td>
         `;
-        // 添加行点击事件，用于编辑
+        // 添加行点击事件，用于显示详情
         row.addEventListener('click', (e) => {
           // 防止点击按钮时触发行点击事件
           if (e.target.closest('.edit-part-btn, .delete-part-btn, .part-checkbox')) {
             return;
           }
-          // 点击行的其他部分时，编辑该项
-          editPart(part.id);
+          // 点击行的其他部分时，显示详情
+          showItemDetail(part, 'part');
         });
         elements.partsTableBody.appendChild(row);
       });
@@ -1359,14 +1980,14 @@
             </button>
           </td>
         `;
-        // 添加行点击事件，用于编辑
+        // 添加行点击事件，用于显示详情
         row.addEventListener('click', (e) => {
           // 防止点击按钮时触发行点击事件
           if (e.target.closest('.edit-fee-btn, .delete-fee-btn, .fee-checkbox')) {
             return;
           }
-          // 点击行的其他部分时，编辑该项
-          editFee(fee.id);
+          // 点击行的其他部分时，显示详情
+          showItemDetail(fee, 'fee');
         });
         elements.feesTableBody.appendChild(row);
       });
@@ -1440,14 +2061,14 @@
             </button>
           </td>
         `;
-        // 添加行点击事件，用于编辑
+        // 添加行点击事件，用于显示详情
         row.addEventListener('click', (e) => {
           // 防止点击按钮时触发行点击事件
           if (e.target.closest('.edit-factor-btn, .delete-factor-btn, .factor-checkbox')) {
             return;
           }
-          // 点击行的其他部分时，编辑该项
-          editFactor(factor.id);
+          // 点击行的其他部分时，显示详情
+          showItemDetail(factor, 'factor');
         });
         elements.factorsTableBody.appendChild(row);
       });
@@ -1480,6 +2101,129 @@
             }
           } else {
             state.selectedItems.factors = state.selectedItems.factors.filter(item => item !== id);
+          }
+        });
+      });
+    }
+    
+        // 显示报价单详情（点击行时从服务器获取详细信息）
+        async function showQuotationDetail(quotationId) {
+          try {
+            // 从服务器获取完整的报价单数据（仅获取点击的报价单详细信息，实现按需加载）
+            const response = await fetch(`/api/quotations/${quotationId}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+    
+            if (response.ok) {
+              const result = await response.json();
+              const quotation = result.data;
+    
+              if (quotation) {
+                // 调用报价单详情展示函数
+                showQuotationDetailFromManagement(quotation);
+              } else {
+                showToast('未找到指定的报价单', true);
+              }
+            } else {
+              console.error('获取服务器报价单失败:', response.status, response.statusText);
+              showToast('获取服务器报价单失败', true);
+            }
+          } catch (error) {
+            console.error('获取报价单详情时发生错误:', error);
+            showToast('获取报价单详情时发生错误', true);
+          }
+        }
+    
+        // 渲染报价单列表
+        function renderQuotations(quotations = state.quotations) {
+          if (!elements.quotationsTableBody) return;
+          
+          elements.quotationsTableBody.innerHTML = '';
+          
+          if (quotations.length === 0) {
+            elements.quotationsTableBody.innerHTML = `
+              <tr>
+                <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">暂无数据</td>
+              </tr>
+            `;
+            return;
+          }
+          
+          quotations.forEach(quotation => {
+            const row = document.createElement('tr');
+            row.className = 'hover-row';
+            const displayTitle = quotation.title || '';
+            const displayAuthor = quotation.createdBy || '';
+            const displayTotal = quotation.total || 0;
+            const displayCreatedAt = new Date(quotation.createdAt).toLocaleString() || '';
+            
+            row.innerHTML = `
+              <td class="px-6 py-4 whitespace-nowrap">
+                <input type="checkbox" class="quotation-checkbox rounded" value="${quotation.id}" ${state.selectedItems.quotations.includes(quotation.id) ? 'checked' : ''}>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${displayTitle}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${displayAuthor}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${formatCurrency(displayTotal)}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${displayCreatedAt}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button class="view-quotation-btn text-blue-600 hover:text-blue-900 mr-3" data-id="${quotation.id}">
+                  <i class="fa fa-eye"></i>
+                </button>
+                <button class="delete-quotation-btn text-red-600 hover:text-red-900" data-id="${quotation.id}">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </td>
+            `;
+            // 添加行点击事件，用于查看详情（优化：使用本地完整数据）
+            row.addEventListener('click', (e) => {
+              // 防止点击按钮时触发行点击事件
+              if (e.target.closest('.view-quotation-btn, .delete-quotation-btn, .quotation-checkbox')) {
+                return;
+              }
+              // 点击行的其他部分时，使用本地完整数据直接显示详情
+              showQuotationDetailFromManagement(quotation);
+            });
+            elements.quotationsTableBody.appendChild(row);
+          }); // 添加缺失的闭合括号
+      
+      // 绑定查看和删除按钮事件
+      document.querySelectorAll('.view-quotation-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // 防止冒泡到行点击事件
+          const id = e.target.closest('.view-quotation-btn').dataset.id;
+          // 使用本地完整数据
+          const quotation = state.quotations.find(q => q.id === id);
+          if (quotation) {
+            showQuotationDetailFromManagement(quotation);
+          } else {
+            // 如果本地没有完整数据，则从服务器获取
+            showQuotationDetail(id);
+          }
+        });
+      });
+      
+      document.querySelectorAll('.delete-quotation-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // 防止冒泡到行点击事件
+          const id = e.target.closest('.delete-quotation-btn').dataset.id;
+          deleteQuotation(id);
+        });
+      });
+      
+      // 绑定选择框事件
+      document.querySelectorAll('.quotation-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+          e.stopPropagation(); // 防止冒泡到行点击事件
+          const id = e.target.value;
+          if (e.target.checked) {
+            if (!state.selectedItems.quotations.includes(id)) {
+              state.selectedItems.quotations.push(id);
+            }
+          } else {
+            state.selectedItems.quotations = state.selectedItems.quotations.filter(item => item !== id);
           }
         });
       });
@@ -1581,12 +2325,37 @@
       }
     }
     
+    // 加载报价单数据
+    async function loadQuotations() {
+      try {
+        const response = await fetch('/api/quotations', {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          // 直接使用result.data，因为服务器返回的数据格式是 {data: [...], timestamp: ...}
+          state.quotations = result.data || [];
+          renderQuotations();
+        } else {
+          console.error('获取报价单数据失败:', response.status, response.statusText);
+          showToast('获取报价单数据失败', true);
+        }
+      } catch (error) {
+        console.error('获取报价单数据时出错:', error);
+        showToast('获取报价单数据时出错', true);
+      }
+    }
+    
     // 加载所有数据
     async function loadData() {
       await loadMachines();
       await loadParts();
       await loadFees();
       await loadFactors();
+      await loadQuotations();
     }
     
     // 机器操作
@@ -1970,6 +2739,26 @@
       }
     }
     
+    async function deleteQuotation(id) {
+      if (confirm('确定要删除这个报价单吗？此操作无法撤销。')) {
+        try {
+          const response = await apiClient.request(`/quotations/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.success) {
+            showToast('报价单删除成功');
+            await loadQuotations(); // 重新加载数据
+          } else {
+            showToast(`删除失败: ${response.error || '未知错误'}`, true);
+          }
+        } catch (error) {
+          console.error('删除报价单时出错:', error);
+          showToast(`删除报价单时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
     // 批量删除操作
     async function deleteSelectedMachines() {
       if (state.selectedItems.machines.length === 0) {
@@ -2075,6 +2864,32 @@
       }
     }
     
+    async function deleteSelectedQuotations() {
+      if (state.selectedItems.quotations.length === 0) {
+        showToast('请先选择要删除的报价单', true);
+        return;
+      }
+      
+      if (confirm(`确定要删除选中的 ${state.selectedItems.quotations.length} 个报价单吗？此操作无法撤销。`)) {
+        try {
+          // 批量删除选中的报价单
+          for (const id of state.selectedItems.quotations) {
+            await apiClient.request(`/quotations/${encodeURIComponent(id)}`, {
+              method: 'DELETE'
+            });
+          }
+          
+          showToast(`成功删除 ${state.selectedItems.quotations.length} 个报价单`);
+          state.selectedItems.quotations = [];
+          await loadQuotations(); // 重新加载数据
+          elements.selectAllQuotations.checked = false; // 取消全选
+        } catch (error) {
+          console.error('批量删除报价单时出错:', error);
+          showToast(`批量删除报价单时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
     // 清空数据库操作
     async function clearMachinesDatabase() {
       if (confirm('确定要清空所有机器数据吗？此操作将删除所有机器记录且无法撤销！')) {
@@ -2152,6 +2967,29 @@
       }
     }
     
+        async function clearQuotationsDatabase() {
+      if (confirm('确定要清空所有报价单数据吗？此操作将删除所有报价单记录且无法撤销！')) {
+        try {
+          const response = await apiClient.request('/quotations/clear', {
+            method: 'DELETE'
+          });
+          if (response.success) {
+            // 清空本地数据
+            state.quotations = [];
+            state.selectedItems.quotations = []; // 清空选中项
+            renderQuotations(); // 重新渲染空列表
+            elements.selectAllQuotations.checked = false; // 取消全选
+            showToast(response.message || '成功清空报价单数据库');
+          } else {
+            showToast(response.error || '清空报价单数据库失败', true);
+          }
+        } catch (error) {
+          console.error('清空报价单数据库时出错:', error);
+          showToast(`清空报价单数据库时出错: ${error.message}`, true);
+        }
+      }
+    }
+    
     // 搜索功能
     function initSearch() {
       // 机器搜索
@@ -2212,6 +3050,21 @@
           (factor.name && factor.name.toLowerCase().includes(searchTerm))
         );
         renderFactors(filtered);
+      });
+      
+      // 报价单搜索
+      elements.quotationSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        if (searchTerm === '') {
+          renderQuotations();
+          return;
+        }
+        
+        const filtered = state.quotations.filter(quotation => 
+          (quotation.title && quotation.title.toLowerCase().includes(searchTerm)) || 
+          (quotation.createdBy && quotation.createdBy.toLowerCase().includes(searchTerm))
+        );
+        renderQuotations(filtered);
       });
     }
     
@@ -2280,6 +3133,22 @@
           }
         });
       });
+      
+      // 报价单表全选
+      elements.selectAllQuotations.addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('.quotation-checkbox');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = e.target.checked;
+          const id = checkbox.value;
+          if (e.target.checked) {
+            if (!state.selectedItems.quotations.includes(id)) {
+              state.selectedItems.quotations.push(id);
+            }
+          } else {
+            state.selectedItems.quotations = state.selectedItems.quotations.filter(item => item !== id);
+          }
+        });
+      });
     }
     
     // 绑定事件
@@ -2313,6 +3182,14 @@
       elements.addFactorBtn.addEventListener('click', addFactor);
       elements.deleteSelectedFactorsBtn.addEventListener('click', deleteSelectedFactors);
       document.getElementById('clear-factors-btn').addEventListener('click', clearFactorsDatabase);
+      
+      // 报价单操作按钮
+      elements.addQuotationBtn.addEventListener('click', () => {
+        // 报价单管理页面不支持添加报价单，仅用于查看和删除
+        showToast('通过价格计算器页面生成和保存报价单', true);
+      });
+      elements.deleteSelectedQuotationsBtn.addEventListener('click', deleteSelectedQuotations);
+      document.getElementById('clear-quotations-btn').addEventListener('click', clearQuotationsDatabase);
       
       // 机器模态框操作
       elements.closeMachineModal.addEventListener('click', () => {
@@ -2393,6 +3270,222 @@
           closeDetailModal();
         }
       });
+      
+      // 报价单详情模态框操作
+      document.getElementById('close-quotation-detail-modal').addEventListener('click', () => {
+        elements.quotationDetailModal.classList.add('hidden');
+      });
+      
+      document.getElementById('edit-from-quotation-detail-btn').addEventListener('click', () => {
+        // 报价单管理页面不支持编辑报价单，仅用于查看和删除
+        showToast('请在价格计算器页面编辑报价单', true);
+      });
+      
+      document.getElementById('load-quotation-to-cart-btn').addEventListener('click', async () => {
+        if (state.currentDetailQuotation) {
+          // 使用价格计算器模块中的函数加载报价单到购物车
+          try {
+            // 检查是否已加载quote-module.js
+            if (typeof loadQuotationToCartFromObject === 'function') {
+              loadQuotationToCartFromObject(state.currentDetailQuotation);
+              showToast('报价单已加载到购物车');
+              elements.quotationDetailModal.classList.add('hidden');
+            } else {
+              // 如果没有加载quote-module.js，向服务器请求报价单详情然后加载到购物车
+              const response = await fetch(`/api/quotations/${state.currentDetailQuotation.id}`, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                }
+              });
+
+              if (response.ok) {
+                const result = await response.json();
+                const quotation = result.data;
+                if (quotation) {
+                  // 加载报价单到购物车的模拟实现
+                  // 实际应用中需要调用购物车相关函数
+                  showToast('报价单已加载到购物车');
+                  elements.quotationDetailModal.classList.add('hidden');
+                } else {
+                  showToast('获取报价单详情失败', true);
+                }
+              } else {
+                showToast('获取报价单详情失败', true);
+              }
+            }
+          } catch (error) {
+            console.error('加载报价单到购物车时出错:', error);
+            showToast('加载报价单到购物车时出错', true);
+          }
+        }
+      });
+    }
+    
+    // 从报价单对象显示详情（用于parts_management.html中的报价单详情展示）
+    function showQuotationDetailFromManagement(quotation) {
+      // 保存当前报价单数据以供后续操作使用
+      state.currentDetailQuotation = JSON.parse(JSON.stringify(quotation));
+      
+      // 语言设置
+      const isEnglish = window.isEnglishDisplay || false;
+
+      // 根据语言设置定义标签
+      const labels = isEnglish
+        ? {
+            quotation: "Quotation",
+            no: "No.",
+            name: "Name",
+            unitPrice: "Unit Price",
+            qty: "Qty.",
+            subtotal: "Subtotal",
+            subtotalExcludingFees: "Subtotal (Excluding Additional Fees)",
+            add: "Add",
+            total: `TOTAL (${quotation.currency || 'CNY'})`,
+            remark: "Remark",
+          }
+        : {
+            quotation: "报价单",
+            no: "序号",
+            name: "型号",
+            unitPrice: "单价",
+            qty: "数量",
+            subtotal: "小计",
+            subtotalExcludingFees: "商品小计",
+            add: "其它费用",
+            total: `总计 (${quotation.currency || 'CNY'})`,
+            remark: "备注",
+          };
+
+      // 构建详情内容 - 使用表格格式
+      let detailHtml = `
+        <div style="margin-bottom: 15px;">
+          <h3>${quotation.title}</h3>
+          <p><strong>${isEnglish ? 'Created by:' : '创建者:'}</strong> ${quotation.createdBy || 'N/A'}</p>
+          <p><strong>${isEnglish ? 'Total:' : '总计:'}</strong> ${formatCurrency(quotation.total || 0)} ${quotation.currency || ''}</p>
+          <p><strong>${isEnglish ? 'Created at:' : '创建时间:'}</strong> ${new Date(quotation.createdAt).toLocaleString()}</p>
+        </div>
+      `;
+
+      // 从报价单中提取项目数据
+      const allItems = quotation.items || [];
+      const cartItems = allItems.filter(item => 
+        item.type !== 'fees' && item.type !== 'factors' &&
+        item.displayType !== '费用' && item.displayType !== '系数'
+      );
+      const feeItems = allItems.filter(item => 
+        item.type === 'fees' || item.displayType === '费用'
+      );
+      const factorItems = allItems.filter(item => 
+        item.type === 'factors' || item.displayType === '系数'
+      );
+
+      // 计算基础总计、费用总计和系数
+      const baseTotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+      const tempFees = feeItems.reduce((sum, item) => sum + (item.price || 0), 0);
+      const factor = factorItems.reduce((prod, item) => prod * (item.price || item.value || 1), 1);
+      const total = (baseTotal + tempFees) * factor;
+
+      // 使用表格格式展示
+      detailHtml += `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 60px; white-space: nowrap;">${labels.no}</th>
+                    <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.name}</th>
+                    <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.unitPrice}</th>
+                    <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.qty}</th>
+                    <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.subtotal}</th>
+                    <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${labels.remark}</th>
+                </tr>
+            </thead>
+            <tbody>
+      `;
+
+      // 添加购物车项目（商品项目）
+      cartItems.forEach((item, index) => {
+        const itemIndex = index + 1; // 序号从1开始
+        const subtotal = (item.price || 0) * (item.quantity || 1);
+
+        detailHtml += `
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;">${itemIndex}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">
+                    <strong>${item.model || item.name || 'N/A'}</strong>
+                </td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.price || 0)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.quantity || 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(subtotal)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+            </tr>
+        `;
+      });
+
+      // 添加商品小计行
+      if (cartItems.length > 0) {
+        detailHtml += `
+            <tr style="background-color: #f0f8ff; font-weight: bold;">
+                <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.subtotalExcludingFees}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(baseTotal)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${quotation.subtotal_remark || ''}</td>
+            </tr>
+        `;
+      }
+
+      // 添加其它费用
+      feeItems.forEach((item, index) => {
+        const itemIndex = cartItems.length + index + 1;
+        detailHtml += `
+            <tr style="background-color: #f9f9f9;">
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${labels.add}</strong></td>
+                <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name || 'N/A'}</strong></td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(item.price || 0)}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+            </tr>
+        `;
+      });
+
+      // 添加系数
+      factorItems.forEach((item, index) => {
+        const itemIndex = cartItems.length + feeItems.length + index + 1;
+        detailHtml += `
+            <tr style="background-color: #f9f9f9;">
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center; white-space: nowrap;"><strong>${isEnglish ? "Factor" : "系数"}</strong></td>
+                <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: center;"><strong>${item.name || 'N/A'}</strong></td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">x ${item.price || item.value || 1}</td>
+                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${item.remark || ''}</td>
+            </tr>
+        `;
+      });
+
+      // 显示总计
+      detailHtml += `
+        <tr style="background-color: #e8f5e9; font-weight: bold;">
+            <td colspan="4" style="border: 1px solid #ddd; padding: 10px; text-align: right;">${labels.total}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${formatCurrency(total)}</td>
+            <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${quotation.total_remark || ''}</td>
+        </tr>
+      `;
+
+      detailHtml += `
+            </tbody>
+        </table>
+      `;
+
+      // 显示详情内容
+      const detailContent = elements.quotationDetailContent;
+      if (detailContent) {
+        detailContent.innerHTML = detailHtml;
+        
+        // 设置标题
+        const detailTitle = document.getElementById('quotation-detail-title');
+        if (detailTitle) {
+          detailTitle.textContent = `${isEnglish ? 'Quotation Details' : '报价单详情'} - ${quotation.title}`;
+        }
+      }
+
+      // 显示模态框
+      elements.quotationDetailModal.classList.remove('hidden');
     }
     
     // 初始化页面
